@@ -4,6 +4,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/")
 public class Controller {
@@ -26,17 +28,16 @@ public class Controller {
 	}
 
 	@GetMapping(path = "/{topic}")
-	public String getTopic(@PathVariable String topic,
-	                      @RequestParam long offset,
-	                      @RequestParam long limit) {
-
-		return service.getTopicInfo(topic);
+	public int[] getTopic(@PathVariable String topic) {
+		return service.getTopicPartitions(topic);
 	}
 
 	@GetMapping(path = "/{topic}/{partition}")
-	public String getPartition(@PathVariable String topic, @PathVariable int partition,
-	                       @RequestParam long offset, @RequestParam long limit) {
+	public List<String> getPartition(@PathVariable String topic,
+	                                 @PathVariable int partition,
+	                                 @RequestParam long offset,
+	                                 @RequestParam long limit) {
 
-		return service.getPartition(topic, offset, limit);
+		return service.getData(topic, partition, offset, limit);
 	}
 }
