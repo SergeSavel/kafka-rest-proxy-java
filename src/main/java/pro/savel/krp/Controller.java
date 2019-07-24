@@ -6,7 +6,8 @@ import org.springframework.web.bind.annotation.*;
 import pro.savel.krp.objects.Record;
 
 import java.util.Collection;
-import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/")
@@ -21,12 +22,17 @@ public class Controller {
 	@PostMapping(path = "/{topic}", consumes = MediaType.APPLICATION_XML_VALUE)
 	@ResponseStatus(HttpStatus.CREATED)
 	public void postTopic(@PathVariable String topic,
-	                        @RequestParam(required = false) String key,
-	                        @RequestHeader("Content-Length") long contentLength,
-	                        @RequestHeader(name = "Content-Encoding", required = false) String encoding,
-	                        @RequestBody String body) {
+	                      @RequestParam(required = false) String key,
+	                      @RequestHeader("Content-Length") long contentLength,
+	                      @RequestHeader(name = "Content-Encoding", required = false) String encoding,
+	                      @RequestBody String body,
+	                      @RequestHeader Map<String, String> headers) {
 
-		service.postTopic(topic, key, body);
+		var filteredHeaders = headers.entrySet().stream()
+				.filter(entry -> entry.getKey().startsWith("k-"))
+				.collect(Collectors.toMap(stringStringEntry -> stringStringEntry.getKey().substring(2), Map.Entry::getValue));
+
+		service.post(topic, key, filteredHeaders, body);
 	}
 
 	@GetMapping(path = "/{topic}")

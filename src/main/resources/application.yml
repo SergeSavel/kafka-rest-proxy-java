@@ -3,3 +3,8 @@ spring:
     bootstrap-servers: localhost:9092
     consumer:
       enable-auto-commit: false
+  jackson:
+    generator:
+      quote-field-names: true
+    serialization:
+      indent_output: false

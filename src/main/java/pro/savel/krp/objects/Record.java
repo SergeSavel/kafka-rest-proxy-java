@@ -1,5 +1,6 @@
 package pro.savel.krp.objects;
 
+import java.util.Collections;
 import java.util.Map;
 
 public class Record {
@@ -13,7 +14,7 @@ public class Record {
 		this.timestamp = timestamp;
 		this.offset = offset;
 		this.key = key;
-		this.headers = headers;
+		this.headers = Collections.unmodifiableMap(headers);
 		this.value = value;
 	}
 }

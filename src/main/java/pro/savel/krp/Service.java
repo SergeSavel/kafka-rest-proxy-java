@@ -1,6 +1,7 @@
 package pro.savel.krp;
 
 import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.PartitionInfo;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.header.Header;
@@ -22,12 +23,14 @@ public class Service {
 		this.kafkaConsumerFactory = kafkaConsumerFactory;
 	}
 
-	public void postTopic(String topic, String key, String data) {
+	public void post(String topic, String recordKey, Map<String, String> recordHeaders, String recordValue) {
 
-		if (key == null)
-			kafkaTemplate.send(topic, data);
-		else
-			kafkaTemplate.send(topic, key, data);
+		var producerRecord = new ProducerRecord<>(topic, recordKey, recordValue);
+
+		var headers = producerRecord.headers();
+		recordHeaders.forEach((key, value) -> headers.add(key, value.getBytes()));
+
+		kafkaTemplate.send(producerRecord);
 	}
 
 	public int[] getTopicPartitions(String topic) {
@@ -41,25 +44,26 @@ public class Service {
 		}
 	}
 
-	public Collection<Record> getData(String topic, int partition, String group, Long offset, Long limit) {
+	public Collection<Record> getData(String topic, int partition, String consumerGroup, Long offset, Long limit) {
 
-		if (group == null)
-			group = UUID.randomUUID().toString();
+		if (consumerGroup == null)
+			consumerGroup = UUID.randomUUID().toString();
 
 		Properties extraProps = null;
 		if (limit != null) {
 			extraProps = new Properties();
-			extraProps.put("max.poll.records", limit);
+			extraProps.put("max.poll.records", limit.toString());
 		}
 
-		try (var consumer = kafkaConsumerFactory.createConsumer(group, null, null, extraProps)) {
+		try (var consumer = kafkaConsumerFactory.createConsumer(consumerGroup, null, null, extraProps)) {
 
 			var result = new ArrayList<Record>();
 
 			var topicPartition = new TopicPartition(topic, partition);
 			consumer.assign(Collections.singletonList(topicPartition));
 			consumer.seek(topicPartition, offset);
-			var consumerRecords = consumer.poll(Duration.ZERO);
+
+			var consumerRecords = consumer.poll(Duration.ofMillis(1000));
 			var records = consumerRecords.records(topicPartition);
 			for (var record : records)
 				result.add(getRecord(record));
