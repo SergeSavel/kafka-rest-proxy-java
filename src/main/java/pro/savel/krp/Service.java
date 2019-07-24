@@ -30,7 +30,12 @@ public class Service {
 		var headers = producerRecord.headers();
 		recordHeaders.forEach((key, value) -> headers.add(key, value.getBytes()));
 
-		kafkaTemplate.send(producerRecord);
+		var future = kafkaTemplate.send(producerRecord);
+		try {
+			future.get();
+		} catch (Exception e) {
+			throw new RuntimeException("Unable to send message: " + e.getMessage(), e);
+		}
 	}
 
 	public int[] getTopicPartitions(String topic) {
