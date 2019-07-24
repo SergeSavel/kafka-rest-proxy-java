@@ -3,7 +3,9 @@ package pro.savel.krp;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
+import pro.savel.krp.objects.Record;
 
+import java.util.Collection;
 import java.util.List;
 
 @RestController
@@ -33,11 +35,12 @@ public class Controller {
 	}
 
 	@GetMapping(path = "/{topic}/{partition}")
-	public List<String> getPartition(@PathVariable String topic,
-	                                 @PathVariable int partition,
-	                                 @RequestParam long offset,
-	                                 @RequestParam long limit) {
+	public Collection<Record> getPartition(@PathVariable String topic,
+	                                       @PathVariable int partition,
+	                                       @RequestParam(required = false) String group,
+	                                       @RequestParam Long offset,
+	                                       @RequestParam(required = false) Long limit) {
 
-		return service.getData(topic, partition, offset, limit);
+		return service.getData(topic, partition, group, offset, limit);
 	}
 }

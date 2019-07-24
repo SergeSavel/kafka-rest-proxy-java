@@ -3,12 +3,13 @@ package pro.savel.krp;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.common.PartitionInfo;
 import org.apache.kafka.common.TopicPartition;
+import org.apache.kafka.common.header.Header;
 import org.springframework.kafka.core.ConsumerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
+import pro.savel.krp.objects.Record;
 
 import java.time.Duration;
-import java.util.Arrays;
-import java.util.UUID;
+import java.util.*;
 
 @org.springframework.stereotype.Service
 public class Service {
@@ -40,46 +41,43 @@ public class Service {
 		}
 	}
 
-	public String getData(String topic, int partition, long offset, long limit) {
+	public Collection<Record> getData(String topic, int partition, String group, Long offset, Long limit) {
 
-		if (limit == 0)
-			limit = 1000;
+		if (group == null)
+			group = UUID.randomUUID().toString();
 
-		try (var consumer = kafkaConsumerFactory.createConsumer(UUID.randomUUID().toString(), null)) {
+		Properties extraProps = null;
+		if (limit != null) {
+			extraProps = new Properties();
+			extraProps.put("max.poll.records", limit);
+		}
+
+		try (var consumer = kafkaConsumerFactory.createConsumer(group, null, null, extraProps)) {
+
+			var result = new ArrayList<Record>();
 
 			var topicPartition = new TopicPartition(topic, partition);
-			consumer.assign(Arrays.asList(topicPartition));
+			consumer.assign(Collections.singletonList(topicPartition));
 			consumer.seek(topicPartition, offset);
 			var consumerRecords = consumer.poll(Duration.ZERO);
 			var records = consumerRecords.records(topicPartition);
-			for (ConsumerRecord<String, String> record : records) {
-				record.
-			}
+			for (var record : records)
+				result.add(getRecord(record));
 
+			return result;
 		}
+	}
 
-		//props.setProperty("bootstrap.servers", "localhost:9092");
-		//props.setProperty("group.id", "test");
-		//props.setProperty("enable.auto.commit", "false");
-		//props.setProperty("key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
-		//props.setProperty("value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
-		//KafkaConsumer<String, String> consumer = new KafkaConsumer<>(props);
-		//consumer.seek();
-		//consumer.subscribe(Arrays.asList("foo", "bar"));
-		//final int minBatchSize = 200;
-		//List<ConsumerRecord<String, String>> buffer = new ArrayList<>();
-		//while (true) {
-		//	ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(100));
-		//	for (ConsumerRecord<String, String> record : records) {
-		//		buffer.add(record);
-		//	}
-		//	if (buffer.size() >= minBatchSize) {
-		//		insertIntoDb(buffer);
-		//		consumer.commitSync();
-		//		buffer.clear();
-		//	}
-		//}
-
-		return null;
+	private Record getRecord(ConsumerRecord<String, String> consumerRecord) {
+		var headersMap = new HashMap<String, String>();
+		for (Header header : consumerRecord.headers())
+			headersMap.put(header.key(), new String(header.value()));
+		return new Record(
+			consumerRecord.timestamp(),
+			consumerRecord.offset(),
+			consumerRecord.key(),
+			headersMap,
+			consumerRecord.value()
+		);
 	}
 }
