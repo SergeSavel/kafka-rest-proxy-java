@@ -1,4 +1,6 @@
 spring:
+  application:
+    name: "Kafka REST Proxy"
   kafka:
     bootstrap-servers: localhost:9092
     consumer:
@@ -8,3 +10,6 @@ spring:
       quote-field-names: true
     serialization:
       indent_output: false
+logging:
+  level:
+    org.apache.kafka: WARN
