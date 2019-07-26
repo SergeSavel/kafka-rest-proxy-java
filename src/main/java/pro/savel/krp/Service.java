@@ -49,10 +49,10 @@ public class Service {
 		}
 	}
 
-	public Collection<Record> getData(String topic, int partition, String consumerGroup, Long offset, Long limit) {
+	public Collection<Record> getData(String topic, int partition, String group, Long offset, Long limit) {
 
-		if (consumerGroup == null)
-			consumerGroup = UUID.randomUUID().toString();
+		if (group == null)
+			group = UUID.randomUUID().toString();
 
 		Properties extraProps = null;
 		if (limit != null) {
@@ -60,7 +60,7 @@ public class Service {
 			extraProps.put("max.poll.records", limit.toString());
 		}
 
-		try (var consumer = kafkaConsumerFactory.createConsumer(consumerGroup, null, null, extraProps)) {
+		try (var consumer = kafkaConsumerFactory.createConsumer(group, null, null, extraProps)) {
 
 			var result = new ArrayList<Record>();
 
