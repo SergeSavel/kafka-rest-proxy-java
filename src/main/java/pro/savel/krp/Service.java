@@ -37,8 +37,9 @@ public class Service {
 		recordHeaders.forEach((key, value) -> headers.add(key, value.getBytes()));
 
 		ListenableFuture<SendResult<String, String>> future = kafkaTemplate.send(producerRecord);
+		SendResult<String, String> sendResult;
 		try {
-			future.get();
+			sendResult = future.get();
 		} catch (Exception e) {
 			throw new RuntimeException("Unable to send message: " + e.getMessage(), e);
 		}
