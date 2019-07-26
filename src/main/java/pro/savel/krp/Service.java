@@ -1,16 +1,22 @@
 package pro.savel.krp;
 
+import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.PartitionInfo;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.header.Header;
+import org.apache.kafka.common.header.Headers;
 import org.springframework.kafka.core.ConsumerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.kafka.support.SendResult;
+import org.springframework.util.concurrent.ListenableFuture;
 import pro.savel.krp.objects.Record;
 
 import java.time.Duration;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @org.springframework.stereotype.Service
 public class Service {
@@ -25,12 +31,12 @@ public class Service {
 
 	public void post(String topic, String recordKey, Map<String, String> recordHeaders, String recordValue) {
 
-		var producerRecord = new ProducerRecord<>(topic, recordKey, recordValue);
+		ProducerRecord<String, String> producerRecord = new ProducerRecord<>(topic, recordKey, recordValue);
 
-		var headers = producerRecord.headers();
+		Headers headers = producerRecord.headers();
 		recordHeaders.forEach((key, value) -> headers.add(key, value.getBytes()));
 
-		var future = kafkaTemplate.send(producerRecord);
+		ListenableFuture<SendResult<String, String>> future = kafkaTemplate.send(producerRecord);
 		try {
 			future.get();
 		} catch (Exception e) {
@@ -40,8 +46,8 @@ public class Service {
 
 	public int[] getTopicPartitions(String topic) {
 
-		try (var consumer = kafkaConsumerFactory.createConsumer(UUID.randomUUID().toString(), null)) {
-			var partitions = consumer.partitionsFor(topic);
+		try (Consumer<String, String> consumer = kafkaConsumerFactory.createConsumer(UUID.randomUUID().toString(), null)) {
+			List<PartitionInfo> partitions = consumer.partitionsFor(topic);
 
 			return partitions.stream()
 					.mapToInt(PartitionInfo::partition)
@@ -60,25 +66,26 @@ public class Service {
 			extraProps.put("max.poll.records", limit.toString());
 		}
 
-		try (var consumer = kafkaConsumerFactory.createConsumer(group, null, null, extraProps)) {
+		try (Consumer<String, String> consumer = kafkaConsumerFactory.createConsumer(group, null, null, extraProps)) {
 
-			var result = new ArrayList<Record>();
+			List<Record> result;
 
-			var topicPartition = new TopicPartition(topic, partition);
+			TopicPartition topicPartition = new TopicPartition(topic, partition);
 			consumer.assign(Collections.singletonList(topicPartition));
 			consumer.seek(topicPartition, offset);
 
-			var consumerRecords = consumer.poll(Duration.ofMillis(1000));
-			var records = consumerRecords.records(topicPartition);
-			for (var record : records)
-				result.add(getRecord(record));
+			ConsumerRecords<String, String> consumerRecords = consumer.poll(Duration.ofMillis(1000));
+			List<ConsumerRecord<String, String>> records = consumerRecords.records(topicPartition);
+			result = records.stream()
+					.map(this::getRecord)
+					.collect(Collectors.toList());
 
 			return result;
 		}
 	}
 
 	private Record getRecord(ConsumerRecord<String, String> consumerRecord) {
-		var headersMap = new HashMap<String, String>();
+		Map<String, String> headersMap = new HashMap<String, String>();
 		for (Header header : consumerRecord.headers())
 			headersMap.put(header.key(), new String(header.value()));
 		return new Record(

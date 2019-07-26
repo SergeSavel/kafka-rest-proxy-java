@@ -28,7 +28,7 @@ public class Controller {
 	                      @RequestBody String body,
 	                      @RequestHeader Map<String, String> headers) {
 
-		var filteredHeaders = headers.entrySet().stream()
+		Map<String, String> filteredHeaders = headers.entrySet().stream()
 				.filter(entry -> entry.getKey().startsWith("k-"))
 				.collect(Collectors.toMap(stringStringEntry -> stringStringEntry.getKey().substring(2), Map.Entry::getValue));
 
