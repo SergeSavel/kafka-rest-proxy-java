@@ -5,6 +5,10 @@ spring:
     bootstrap-servers: localhost:9092
     consumer:
       enable-auto-commit: false
+    producer:
+      properties:
+        enable.idempotence: true
+        linger.ms: 1
   jackson:
     generator:
       quote-field-names: true
