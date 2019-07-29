@@ -1,7 +1,6 @@
 package pro.savel.krp;
 
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import pro.savel.krp.objects.Record;
 
@@ -19,7 +18,7 @@ public class Controller {
 		this.service = service;
 	}
 
-	@PostMapping(path = "/{topic}", consumes = MediaType.APPLICATION_XML_VALUE)
+	@PostMapping(path = "/{topic}")
 	@ResponseStatus(HttpStatus.CREATED)
 	public void postTopic(@PathVariable String topic,
 	                      @RequestParam(required = false) String key,
