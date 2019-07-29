@@ -44,7 +44,11 @@ public class Controller {
 	                                       @PathVariable int partition,
 	                                       @RequestParam(required = false) String group,
 	                                       @RequestParam Long offset,
-	                                       @RequestParam(required = false) Long limit) {
+	                                       @RequestParam(required = false) Long limit,
+	                                       @RequestHeader(required = false) String consumerGroup) {
+
+		if (consumerGroup != null)
+			group = consumerGroup;
 
 		return service.getData(topic, partition, group, offset, limit);
 	}
