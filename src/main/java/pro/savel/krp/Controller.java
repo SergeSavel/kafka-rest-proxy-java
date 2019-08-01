@@ -3,6 +3,7 @@ package pro.savel.krp;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import pro.savel.krp.objects.Record;
+import pro.savel.krp.objects.Topic;
 
 import java.util.Collection;
 import java.util.Map;
@@ -35,8 +36,8 @@ public class Controller {
 	}
 
 	@GetMapping(path = "/{topic}")
-	public int[] getTopic(@PathVariable String topic) {
-		return service.getTopicPartitions(topic);
+	public Topic getTopic(@PathVariable String topic) {
+		return service.getTopic(topic);
 	}
 
 	@GetMapping(path = "/{topic}/{partition}")

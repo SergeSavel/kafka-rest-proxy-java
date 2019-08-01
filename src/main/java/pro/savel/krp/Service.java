@@ -13,6 +13,7 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.SendResult;
 import org.springframework.util.concurrent.ListenableFuture;
 import pro.savel.krp.objects.Record;
+import pro.savel.krp.objects.Topic;
 
 import java.time.Duration;
 import java.util.*;
@@ -45,14 +46,31 @@ public class Service {
 		}
 	}
 
-	public int[] getTopicPartitions(String topic) {
+	public Topic getTopic(String topicName) {
 
-		try (Consumer<String, String> consumer = kafkaConsumerFactory.createConsumer(UUID.randomUUID().toString(), null)) {
-			List<PartitionInfo> partitions = consumer.partitionsFor(topic);
+		String consumerGroup = UUID.randomUUID().toString();
 
-			return partitions.stream()
-					.mapToInt(PartitionInfo::partition)
-					.toArray();
+		try (Consumer<String, String> consumer = kafkaConsumerFactory.createConsumer(consumerGroup, null)) {
+
+			Map<TopicPartition, PartitionInfo> partitionInfos = consumer.partitionsFor(topicName)
+					.stream().collect(Collectors.toMap(
+							info -> new TopicPartition(info.topic(), info.partition()),
+							info -> info));
+
+			Map<TopicPartition, Long> beginningOffsets = consumer.beginningOffsets(partitionInfos.keySet());
+			Map<TopicPartition, Long> endOffsets = consumer.endOffsets(partitionInfos.keySet());
+
+			List<Topic.Partition> partitions = new ArrayList<>(partitionInfos.size());
+			for (Map.Entry<TopicPartition, PartitionInfo> entry : partitionInfos.entrySet()) {
+				TopicPartition tp = entry.getKey();
+				PartitionInfo pi = entry.getValue();
+				topicName = pi.topic();
+				Topic.Partition partition = Topic.createPartiton(
+						pi.partition(), beginningOffsets.get(tp), endOffsets.get(tp));
+				partitions.add(partition);
+			}
+
+			return new Topic(topicName, partitions);
 		}
 	}
 
@@ -78,14 +96,14 @@ public class Service {
 			ConsumerRecords<String, String> consumerRecords = consumer.poll(Duration.ofMillis(1000));
 			List<ConsumerRecord<String, String>> records = consumerRecords.records(topicPartition);
 			result = records.stream()
-					.map(this::getRecord)
+					.map(this::createRecord)
 					.collect(Collectors.toList());
 
 			return result;
 		}
 	}
 
-	private Record getRecord(ConsumerRecord<String, String> consumerRecord) {
+	private Record createRecord(ConsumerRecord<String, String> consumerRecord) {
 		Map<String, String> headersMap = new HashMap<String, String>();
 		for (Header header : consumerRecord.headers())
 			headersMap.put(header.key(), new String(header.value()));
