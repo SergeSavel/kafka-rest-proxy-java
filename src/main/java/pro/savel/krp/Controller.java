@@ -23,8 +23,6 @@ public class Controller {
 	@ResponseStatus(HttpStatus.CREATED)
 	public void postTopic(@PathVariable String topic,
 	                      @RequestParam(required = false) String key,
-	                      @RequestHeader("Content-Length") long contentLength,
-	                      @RequestHeader(name = "Content-Encoding", required = false) String encoding,
 	                      @RequestBody String body,
 	                      @RequestHeader Map<String, String> headers) {
 
