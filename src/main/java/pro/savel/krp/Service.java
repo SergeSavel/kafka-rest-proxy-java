@@ -46,11 +46,13 @@ public class Service {
 		}
 	}
 
-	public Topic getTopic(String topicName) {
+	public Topic getTopic(String topicName, String consumerGroup, String clientIdPrefix, String clientIdSuffix) {
 
-		String consumerGroup = UUID.randomUUID().toString();
+		if (consumerGroup == null)
+			consumerGroup = getDefaultConsumerGroup();
 
-		try (Consumer<String, String> consumer = kafkaConsumerFactory.createConsumer(consumerGroup, null)) {
+		try (Consumer<String, String> consumer =
+				     kafkaConsumerFactory.createConsumer(consumerGroup, clientIdPrefix, clientIdSuffix)) {
 
 			Map<TopicPartition, PartitionInfo> partitionInfos = consumer.partitionsFor(topicName)
 					.stream().collect(Collectors.toMap(
@@ -74,10 +76,11 @@ public class Service {
 		}
 	}
 
-	public Collection<Record> getData(String topic, int partition, String group, Long offset, Long limit) {
+	public Collection<Record> getData(String topic, int partition, long offset, Long limit,
+	                                  String consumerGroup, String clientIdPrefix, String clientIdSuffix) {
 
-		if (group == null)
-			group = UUID.randomUUID().toString();
+		if (consumerGroup == null)
+			consumerGroup = getDefaultConsumerGroup();
 
 		Properties extraProps = null;
 		if (limit != null) {
@@ -85,7 +88,8 @@ public class Service {
 			extraProps.put("max.poll.records", limit.toString());
 		}
 
-		try (Consumer<String, String> consumer = kafkaConsumerFactory.createConsumer(group, null, null, extraProps)) {
+		try (Consumer<String, String> consumer =
+				     kafkaConsumerFactory.createConsumer(consumerGroup, clientIdPrefix, clientIdSuffix, extraProps)) {
 
 			List<Record> result;
 
@@ -101,6 +105,10 @@ public class Service {
 
 			return result;
 		}
+	}
+
+	private String getDefaultConsumerGroup() {
+		return UUID.randomUUID().toString();
 	}
 
 	private Record createRecord(ConsumerRecord<String, String> consumerRecord) {

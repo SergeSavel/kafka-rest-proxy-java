@@ -34,21 +34,22 @@ public class Controller {
 	}
 
 	@GetMapping(path = "/{topic}")
-	public Topic getTopic(@PathVariable String topic) {
-		return service.getTopic(topic);
+	public Topic getTopic(@PathVariable String topic,
+	                      @RequestHeader(required = false) String consumerGroup,
+	                      @RequestHeader(required = false) String clientIdPrefix,
+	                      @RequestHeader(required = false) String clientIdSuffix) {
+		return service.getTopic(topic, consumerGroup, clientIdPrefix, clientIdSuffix);
 	}
 
 	@GetMapping(path = "/{topic}/{partition}")
 	public Collection<Record> getPartition(@PathVariable String topic,
 	                                       @PathVariable int partition,
-	                                       @RequestParam(required = false) String group,
-	                                       @RequestParam Long offset,
+	                                       @RequestParam long offset,
 	                                       @RequestParam(required = false) Long limit,
-	                                       @RequestHeader(required = false) String consumerGroup) {
+	                                       @RequestHeader(required = false) String consumerGroup,
+	                                       @RequestHeader(required = false) String clientIdPrefix,
+	                                       @RequestHeader(required = false) String clientIdSuffix) {
 
-		if (consumerGroup != null)
-			group = consumerGroup;
-
-		return service.getData(topic, partition, group, offset, limit);
+		return service.getData(topic, partition, offset, limit, consumerGroup, clientIdPrefix, clientIdSuffix);
 	}
 }
