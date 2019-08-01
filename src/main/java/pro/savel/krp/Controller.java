@@ -30,7 +30,7 @@ public class Controller {
 
 		Map<String, String> filteredHeaders = headers.entrySet().stream()
 				.filter(entry -> entry.getKey().startsWith("k-"))
-				.collect(Collectors.toMap(stringStringEntry -> stringStringEntry.getKey().substring(2), Map.Entry::getValue));
+				.collect(Collectors.toMap(entry -> entry.getKey().substring(2), Map.Entry::getValue));
 
 		service.post(topic, key, filteredHeaders, body);
 	}
