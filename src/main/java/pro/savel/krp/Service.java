@@ -48,39 +48,36 @@ public class Service {
 
 	public Topic getTopic(String topicName, String consumerGroup, String clientIdPrefix, String clientIdSuffix) {
 
-		if (consumerGroup == null)
-			consumerGroup = getDefaultConsumerGroup();
-
+		Map<TopicPartition, PartitionInfo> partitionInfos;
+		Map<TopicPartition, Long> beginningOffsets;
+		Map<TopicPartition, Long> endOffsets;
 		try (Consumer<String, String> consumer =
 				     kafkaConsumerFactory.createConsumer(consumerGroup, clientIdPrefix, clientIdSuffix)) {
 
-			Map<TopicPartition, PartitionInfo> partitionInfos = consumer.partitionsFor(topicName)
+			partitionInfos = consumer.partitionsFor(topicName)
 					.stream().collect(Collectors.toMap(
 							info -> new TopicPartition(info.topic(), info.partition()),
 							info -> info));
 
-			Map<TopicPartition, Long> beginningOffsets = consumer.beginningOffsets(partitionInfos.keySet());
-			Map<TopicPartition, Long> endOffsets = consumer.endOffsets(partitionInfos.keySet());
-
-			List<Topic.Partition> partitions = new ArrayList<>(partitionInfos.size());
-			for (Map.Entry<TopicPartition, PartitionInfo> entry : partitionInfos.entrySet()) {
-				TopicPartition tp = entry.getKey();
-				PartitionInfo pi = entry.getValue();
-				topicName = pi.topic();
-				Topic.Partition partition = Topic.createPartiton(
-						pi.partition(), beginningOffsets.get(tp), endOffsets.get(tp));
-				partitions.add(partition);
-			}
-
-			return new Topic(topicName, partitions);
+			beginningOffsets = consumer.beginningOffsets(partitionInfos.keySet());
+			endOffsets = consumer.endOffsets(partitionInfos.keySet());
 		}
+
+		List<Topic.Partition> partitions = new ArrayList<>(partitionInfos.size());
+		for (Map.Entry<TopicPartition, PartitionInfo> entry : partitionInfos.entrySet()) {
+			TopicPartition tp = entry.getKey();
+			PartitionInfo pi = entry.getValue();
+			topicName = pi.topic();
+			Topic.Partition partition = Topic.createPartiton(
+					pi.partition(), beginningOffsets.get(tp), endOffsets.get(tp));
+			partitions.add(partition);
+		}
+
+		return new Topic(topicName, partitions);
 	}
 
 	public Collection<Record> getData(String topic, int partition, long offset, Long limit,
 	                                  String consumerGroup, String clientIdPrefix, String clientIdSuffix) {
-
-		if (consumerGroup == null)
-			consumerGroup = getDefaultConsumerGroup();
 
 		Properties extraProps = null;
 		if (limit != null) {
@@ -88,27 +85,24 @@ public class Service {
 			extraProps.put("max.poll.records", limit.toString());
 		}
 
+		TopicPartition topicPartition = new TopicPartition(topic, partition);
+
+		ConsumerRecords<String, String> consumerRecords;
 		try (Consumer<String, String> consumer =
 				     kafkaConsumerFactory.createConsumer(consumerGroup, clientIdPrefix, clientIdSuffix, extraProps)) {
 
-			List<Record> result;
-
-			TopicPartition topicPartition = new TopicPartition(topic, partition);
 			consumer.assign(Collections.singletonList(topicPartition));
 			consumer.seek(topicPartition, offset);
 
-			ConsumerRecords<String, String> consumerRecords = consumer.poll(Duration.ofMillis(1000));
-			List<ConsumerRecord<String, String>> records = consumerRecords.records(topicPartition);
-			result = records.stream()
-					.map(this::createRecord)
-					.collect(Collectors.toList());
-
-			return result;
+			consumerRecords = consumer.poll(Duration.ofMillis(1000));
 		}
-	}
 
-	private String getDefaultConsumerGroup() {
-		return UUID.randomUUID().toString();
+		List<ConsumerRecord<String, String>> records = consumerRecords.records(topicPartition);
+		List<Record> result = records.stream()
+				.map(this::createRecord)
+				.collect(Collectors.toList());
+
+		return result;
 	}
 
 	private Record createRecord(ConsumerRecord<String, String> consumerRecord) {

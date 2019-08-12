@@ -23,7 +23,7 @@ public class Controller {
 	@ResponseStatus(HttpStatus.CREATED)
 	public void postTopic(@PathVariable String topic,
 	                      @RequestParam(required = false) String key,
-	                      @RequestBody String body,
+	                      @RequestBody(required = false) String body,
 	                      @RequestHeader Map<String, String> headers) {
 
 		Map<String, String> filteredHeaders = headers.entrySet().stream()
