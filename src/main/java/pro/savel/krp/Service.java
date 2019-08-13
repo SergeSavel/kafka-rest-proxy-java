@@ -73,6 +73,8 @@ public class Service {
 			partitions.add(partition);
 		}
 
+		partitions.sort(Comparator.comparingInt(partition -> partition.name));
+
 		return new Topic(topicName, partitions);
 	}
 
