@@ -29,7 +29,8 @@ public class Record {
 			MessageDigest md = threadLocalMD.get();
 			if (md == null) {
 				try {
-					threadLocalMD.set(MessageDigest.getInstance("MD5"));
+					md = MessageDigest.getInstance("MD5");
+					threadLocalMD.set(md);
 				} catch (NoSuchAlgorithmException e) {
 					e.printStackTrace();
 				}
