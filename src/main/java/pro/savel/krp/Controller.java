@@ -2,6 +2,7 @@ package pro.savel.krp;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+import pro.savel.krp.objects.Message;
 import pro.savel.krp.objects.Record;
 import pro.savel.krp.objects.Topic;
 
@@ -19,12 +20,20 @@ public class Controller {
 		this.service = service;
 	}
 
-	@PostMapping(path = "/{topic}")
+	@PostMapping(path = "/{topic}", params = "!key")
 	@ResponseStatus(HttpStatus.CREATED)
 	public void postTopic(@PathVariable String topic,
-	                      @RequestParam(required = false) String key,
-	                      @RequestBody(required = false) String body,
-	                      @RequestHeader Map<String, String> headers) {
+	                      @RequestBody Message message) {
+
+		service.post(topic, message.getKey(), message.getHeaders(), message.getValue());
+	}
+
+	@PostMapping(path = "/{topic}", params = "key")
+	@ResponseStatus(HttpStatus.CREATED)
+	public void postTopicOld(@PathVariable String topic,
+	                         @RequestParam String key,
+	                         @RequestBody(required = false) String body,
+	                         @RequestHeader Map<String, String> headers) {
 
 		Map<String, String> filteredHeaders = headers.entrySet().stream()
 				.filter(entry -> entry.getKey().startsWith("k-"))
