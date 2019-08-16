@@ -96,7 +96,7 @@ public class Service {
 			consumer.assign(Collections.singletonList(topicPartition));
 			consumer.seek(topicPartition, offset);
 
-			consumerRecords = consumer.poll(Duration.ofMillis(1000));
+			consumerRecords = consumer.poll(Duration.ofMillis(100));
 		}
 
 		List<ConsumerRecord<String, String>> records = consumerRecords.records(topicPartition);
