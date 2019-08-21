@@ -3,6 +3,8 @@ spring:
     name: "Kafka REST Proxy"
   kafka:
     bootstrap-servers: localhost:9092
+    producer:
+      client-id: "rest-proxy"
     consumer:
       enable-auto-commit: false
       client-id: "rest-proxy"
