@@ -28,6 +28,7 @@ public class Controller {
 		service.post(topic, message.getKey(), message.getHeaders(), message.getValue());
 	}
 
+	@Deprecated
 	@PostMapping(path = "/{topic}", params = "key")
 	@ResponseStatus(HttpStatus.CREATED)
 	public void postTopicOld(@PathVariable String topic,
