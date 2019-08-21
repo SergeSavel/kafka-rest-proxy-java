@@ -78,7 +78,7 @@ public class Service {
 		return new Topic(topicName, partitions);
 	}
 
-	public Collection<Record> getData(String topic, int partition, long offset, Long limit,
+	public Collection<Record> getData(String topic, int partition, long offset, Long limit, String idHeader,
 	                                  String consumerGroup, String clientIdPrefix, String clientIdSuffix) {
 
 		Properties extraProps = null;
@@ -103,6 +103,10 @@ public class Service {
 		List<Record> result = records.stream()
 				.map(this::createRecord)
 				.collect(Collectors.toList());
+
+		for (Record record : result) {
+			record.calcID(idHeader);
+		}
 
 		return result;
 	}

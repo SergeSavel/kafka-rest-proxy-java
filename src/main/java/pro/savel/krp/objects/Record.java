@@ -24,8 +24,9 @@ public class Record {
 	public final Map<String, String> headers;
 	@JsonProperty("v")
 	public final String value;
-	@JsonProperty("kid")
-	public final UUID keyUUID;
+
+	@JsonProperty("id")
+	private UUID id = null;
 
 	public Record(long timestamp, long offset, String key, Map<String, String> headers, String value) {
 		this.timestamp = timestamp;
@@ -33,21 +34,31 @@ public class Record {
 		this.key = key;
 		this.headers = Collections.unmodifiableMap(headers);
 		this.value = value;
+	}
 
-		if (key == null)
-			keyUUID = null;
-		else {
+	public UUID getId() {
+		return id;
+	}
+
+	public void calcID() {
+		calcID(null);
+	}
+
+	public void calcID(String headerKey) {
+
+		String source = headerKey == null ? key : headers.get(headerKey);
+
+		if (source != null) {
 			MessageDigest md = threadLocalMD.get();
 			if (md == null) {
 				try {
 					md = MessageDigest.getInstance("MD5");
-					threadLocalMD.set(md);
 				} catch (NoSuchAlgorithmException e) {
 					e.printStackTrace();
 				}
 				threadLocalMD.set(md);
 			}
-			keyUUID = UUID.nameUUIDFromBytes(md.digest(key.getBytes()));
+			id = UUID.nameUUIDFromBytes(md.digest(source.getBytes()));
 			md.reset();
 		}
 	}
