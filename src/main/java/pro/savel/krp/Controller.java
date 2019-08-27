@@ -56,12 +56,13 @@ public class Controller {
 	public Collection<Record> getPartition(@PathVariable String topic,
 	                                       @PathVariable int partition,
 	                                       @RequestParam long offset,
+	                                       @RequestParam(required = false) Long timeout,
 	                                       @RequestParam(required = false) Long limit,
 	                                       @RequestParam(required = false) String idHeader,
 	                                       @RequestHeader(required = false) String consumerGroup,
 	                                       @RequestHeader(required = false) String clientIdPrefix,
 	                                       @RequestHeader(required = false) String clientIdSuffix) {
 
-		return service.getData(topic, partition, offset, limit, idHeader, consumerGroup, clientIdPrefix, clientIdSuffix);
+		return service.getData(topic, partition, offset, timeout, limit, idHeader, consumerGroup, clientIdPrefix, clientIdSuffix);
 	}
 }

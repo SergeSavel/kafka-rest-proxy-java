@@ -78,8 +78,11 @@ public class Service {
 		return new Topic(topicName, partitions);
 	}
 
-	public Collection<Record> getData(String topic, int partition, long offset, Long limit, String idHeader,
+	public Collection<Record> getData(String topic, int partition, long offset, Long timeout, Long limit, String idHeader,
 	                                  String consumerGroup, String clientIdPrefix, String clientIdSuffix) {
+
+		if (timeout == null)
+			timeout = 100L;
 
 		Properties extraProps = null;
 		if (limit != null) {
@@ -96,7 +99,7 @@ public class Service {
 			consumer.assign(Collections.singletonList(topicPartition));
 			consumer.seek(topicPartition, offset);
 
-			consumerRecords = consumer.poll(Duration.ofMillis(100));
+			consumerRecords = consumer.poll(Duration.ofMillis(timeout));
 		}
 
 		List<ConsumerRecord<String, String>> records = consumerRecords.records(topicPartition);
