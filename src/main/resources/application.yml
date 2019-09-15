@@ -6,9 +6,11 @@ spring:
     producer:
       client-id: "rest-proxy"
       compression-type: "snappy"
+      acks: "all"
     consumer:
       enable-auto-commit: false
       client-id: "rest-proxy"
+      auto-offset-reset: earliest
   jackson:
     generator:
       quote-field-names: true
