@@ -3,6 +3,7 @@ package pro.savel.krp;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
+import org.apache.kafka.clients.consumer.OffsetAndMetadata;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.PartitionInfo;
 import org.apache.kafka.common.TopicPartition;
@@ -78,8 +79,9 @@ public class Service {
 		return new Topic(topicName, partitions);
 	}
 
-	public Collection<Record> getData(String topic, int partition, long offset, Long timeout, Long limit, String idHeader,
-	                                  String consumerGroup, String clientIdPrefix, String clientIdSuffix) {
+	public Collection<Record> getData(String topic, int partition, long offset, String commit,
+	                                  Long timeout, Long limit, String idHeader, String consumerGroup,
+	                                  String clientIdPrefix, String clientIdSuffix) {
 
 		if (timeout == null)
 			timeout = 100L;
@@ -99,7 +101,13 @@ public class Service {
 			consumer.assign(Collections.singletonList(topicPartition));
 			consumer.seek(topicPartition, offset);
 
+			if (consumerGroup != null && commit != null && "before".equals(commit))
+				consumer.commitSync(Collections.singletonMap(topicPartition, new OffsetAndMetadata(offset)));
+
 			consumerRecords = consumer.poll(Duration.ofMillis(timeout));
+
+			if (consumerGroup != null && commit != null && "after".equals(commit))
+				consumer.commitSync();
 		}
 
 		List<ConsumerRecord<String, String>> records = consumerRecords.records(topicPartition);
