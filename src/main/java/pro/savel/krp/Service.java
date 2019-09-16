@@ -35,8 +35,10 @@ public class Service {
 
 		ProducerRecord<String, String> producerRecord = new ProducerRecord<>(topic, recordKey, recordValue);
 
-		Headers headers = producerRecord.headers();
-		recordHeaders.forEach((key, value) -> headers.add(key, value.getBytes()));
+		if (recordHeaders != null) {
+			Headers headers = producerRecord.headers();
+			recordHeaders.forEach((key, value) -> headers.add(key, value.getBytes()));
+		}
 
 		ListenableFuture<SendResult<String, String>> future = kafkaTemplate.send(producerRecord);
 		SendResult<String, String> sendResult;
