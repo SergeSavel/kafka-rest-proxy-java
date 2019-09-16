@@ -101,12 +101,12 @@ public class Service {
 			consumer.assign(Collections.singletonList(topicPartition));
 			consumer.seek(topicPartition, offset);
 
-			if (consumerGroup != null && commit != null && "before".equals(commit))
+			if (consumerGroup != null && "before".equals(commit))
 				consumer.commitSync(Collections.singletonMap(topicPartition, new OffsetAndMetadata(offset)));
 
 			consumerRecords = consumer.poll(Duration.ofMillis(timeout));
 
-			if (consumerGroup != null && commit != null && "after".equals(commit))
+			if (consumerGroup != null && "after".equals(commit))
 				consumer.commitSync();
 		}
 
