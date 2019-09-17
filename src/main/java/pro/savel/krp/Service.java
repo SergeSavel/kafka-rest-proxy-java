@@ -86,7 +86,7 @@ public class Service {
 	                                  String clientIdPrefix, String clientIdSuffix) {
 
 		if (timeout == null)
-			timeout = 100L;
+			timeout = 1000L;
 
 		Properties extraProps = null;
 		if (limit != null) {
