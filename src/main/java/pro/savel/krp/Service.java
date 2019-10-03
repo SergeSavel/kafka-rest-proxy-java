@@ -128,7 +128,7 @@ public class Service {
 	private Record createRecord(ConsumerRecord<String, String> consumerRecord) {
 		Map<String, String> headersMap = new HashMap<String, String>();
 		for (Header header : consumerRecord.headers())
-			headersMap.put(header.key(), new String(header.value()));
+			headersMap.put(header.key(), new String(header.value(), StandardCharsets.UTF_8));
 		return new Record(
 			consumerRecord.timestamp(),
 			consumerRecord.offset(),
