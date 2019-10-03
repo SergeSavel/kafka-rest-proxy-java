@@ -31,7 +31,7 @@ public class Service {
 		this.kafkaConsumerFactory = kafkaConsumerFactory;
 	}
 
-	public void post(String topic, String recordKey, Map<String, String> recordHeaders, String recordValue) {
+	public void postData(String topic, String recordKey, Map<String, String> recordHeaders, String recordValue) {
 
 		ProducerRecord<String, String> producerRecord = new ProducerRecord<>(topic, recordKey, recordValue);
 
@@ -49,7 +49,7 @@ public class Service {
 		}
 	}
 
-	public Topic getTopic(String topicName, String consumerGroup, String clientIdPrefix, String clientIdSuffix) {
+	public Topic getTopicInfo(String topicName, String consumerGroup, String clientIdPrefix, String clientIdSuffix) {
 
 		Map<TopicPartition, PartitionInfo> partitionInfos;
 		Map<TopicPartition, Long> beginningOffsets;

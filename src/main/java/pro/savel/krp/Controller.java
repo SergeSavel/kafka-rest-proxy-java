@@ -7,8 +7,6 @@ import pro.savel.krp.objects.Record;
 import pro.savel.krp.objects.Topic;
 
 import java.util.Collection;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/")
@@ -20,52 +18,37 @@ public class Controller {
 		this.service = service;
 	}
 
-	@PostMapping(path = "/{topic}", params = "!key")
-	@ResponseStatus(HttpStatus.CREATED)
-	public void postTopic(@PathVariable String topic,
-	                      @RequestBody Message message) {
-
-		service.post(topic, message.getKey(), message.getHeaders(), message.getValue());
-	}
-
-	@Deprecated
-	@PostMapping(path = "/{topic}", params = "key")
-	@ResponseStatus(HttpStatus.CREATED)
-	public void postTopicOld(@PathVariable String topic,
-	                         @RequestParam String key,
-	                         @RequestBody(required = false) String body,
-	                         @RequestHeader Map<String, String> headers) {
-
-		Map<String, String> filteredHeaders = headers.entrySet().stream()
-				.filter(entry -> entry.getKey().startsWith("k-"))
-				.collect(Collectors.toMap(entry -> entry.getKey().substring(2), Map.Entry::getValue));
-
-		service.post(topic, key, filteredHeaders, body);
-	}
-
 	@GetMapping(path = "/{topic}")
-	public Topic getTopic(@PathVariable String topic,
-	                      @RequestHeader(required = false) String consumerGroup,
-	                      @RequestHeader(required = false) String clientIdPrefix,
-	                      @RequestHeader(required = false) String clientIdSuffix) {
+	public Topic getTopicInfo(@PathVariable String topic,
+	                          @RequestHeader(required = false) String consumerGroup,
+	                          @RequestHeader(required = false) String clientIdPrefix,
+	                          @RequestHeader(required = false) String clientIdSuffix) {
 
-		return service.getTopic(topic, consumerGroup, clientIdPrefix, clientIdSuffix);
+		return service.getTopicInfo(topic, consumerGroup, clientIdPrefix, clientIdSuffix);
 	}
 
 	@GetMapping(path = "/{topic}/{partition}")
-	public Collection<Record> getPartition(@PathVariable String topic,
-	                                       @PathVariable int partition,
-	                                       @RequestParam long offset,
-	                                       @RequestParam(required = false) Long timeout,
-	                                       @RequestParam(required = false) Long limit,
-	                                       @RequestParam(required = false) String idHeader,
-	                                       @RequestHeader(required = false) String commit,
-	                                       @RequestHeader(required = false) String consumerGroup,
-	                                       @RequestHeader(required = false) String clientIdPrefix,
-	                                       @RequestHeader(required = false) String clientIdSuffix) {
+	public Collection<Record> getData(@PathVariable String topic,
+	                                  @PathVariable int partition,
+	                                  @RequestParam long offset,
+	                                  @RequestParam(required = false) Long timeout,
+	                                  @RequestParam(required = false) Long limit,
+	                                  @RequestParam(required = false) String idHeader,
+	                                  @RequestHeader(required = false) String commit,
+	                                  @RequestHeader(required = false) String consumerGroup,
+	                                  @RequestHeader(required = false) String clientIdPrefix,
+	                                  @RequestHeader(required = false) String clientIdSuffix) {
 
 		return service.getData(topic, partition, offset, commit,
 				timeout, limit, idHeader, consumerGroup,
 				clientIdPrefix, clientIdSuffix);
+	}
+
+	@PostMapping(path = "/{topic}")
+	@ResponseStatus(HttpStatus.CREATED)
+	public void postData(@PathVariable String topic,
+	                     @RequestBody Message message) {
+
+		service.postData(topic, message.getKey(), message.getHeaders(), message.getValue());
 	}
 }
