@@ -12,7 +12,6 @@ spring:
         max.request.size: 67108864
     consumer:
       enable-auto-commit: false
-      client-id: "rest-proxy"
       auto-offset-reset: earliest
   jackson:
     generator:
