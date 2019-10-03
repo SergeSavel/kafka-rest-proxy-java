@@ -3,6 +3,7 @@ package pro.savel.krp.objects;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlRootElement;
 
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Collections;
@@ -58,7 +59,7 @@ public class Record {
 				}
 				threadLocalMD.set(md);
 			}
-			id = UUID.nameUUIDFromBytes(md.digest(source.getBytes()));
+			id = UUID.nameUUIDFromBytes(md.digest(source.getBytes(StandardCharsets.UTF_8)));
 			md.reset();
 		}
 	}

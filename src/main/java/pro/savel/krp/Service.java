@@ -16,6 +16,7 @@ import org.springframework.util.concurrent.ListenableFuture;
 import pro.savel.krp.objects.Record;
 import pro.savel.krp.objects.Topic;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -37,7 +38,7 @@ public class Service {
 
 		if (recordHeaders != null) {
 			Headers headers = producerRecord.headers();
-			recordHeaders.forEach((key, value) -> headers.add(key, value.getBytes()));
+			recordHeaders.forEach((key, value) -> headers.add(key, value.getBytes(StandardCharsets.UTF_8)));
 		}
 
 		ListenableFuture<SendResult<String, String>> future = kafkaTemplate.send(producerRecord);
