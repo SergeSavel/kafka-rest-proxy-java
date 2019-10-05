@@ -18,6 +18,11 @@ public class Controller {
 		this.service = service;
 	}
 
+	@GetMapping(path = "/")
+	public String getVersion() {
+		return "1.9.0";
+	}
+
 	@GetMapping(path = "/{topic}")
 	public Topic getTopicInfo(@PathVariable String topic,
 	                          @RequestHeader(required = false) String consumerGroup,
