@@ -4,7 +4,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import pro.savel.krp.objects.Message;
 import pro.savel.krp.objects.Record;
-import pro.savel.krp.objects.Topic;
+import pro.savel.krp.objects.TopicInfo;
 
 import java.util.Collection;
 
@@ -20,16 +20,12 @@ public class Controller {
 
 	@GetMapping(path = "/")
 	public String getVersion() {
-		return "1.9.0";
+		return "1.10.0";
 	}
 
 	@GetMapping(path = "/{topic}")
-	public Topic getTopicInfo(@PathVariable String topic,
-	                          @RequestHeader(required = false) String consumerGroup,
-	                          @RequestHeader(required = false) String clientIdPrefix,
-	                          @RequestHeader(required = false) String clientIdSuffix) {
-
-		return service.getTopicInfo(topic, consumerGroup, clientIdPrefix, clientIdSuffix);
+	public TopicInfo getTopicInfo(@PathVariable String topic) {
+		return service.getTopicInfo(topic);
 	}
 
 	@GetMapping(path = "/{topic}/{partition}")
@@ -39,20 +35,14 @@ public class Controller {
 	                                  @RequestParam(required = false) Long timeout,
 	                                  @RequestParam(required = false) Long limit,
 	                                  @RequestParam(required = false) String idHeader,
-	                                  @RequestHeader(required = false) String consumerGroup,
-	                                  @RequestHeader(required = false) String clientIdPrefix,
-	                                  @RequestHeader(required = false) String clientIdSuffix) {
-
-		return service.getData(topic, partition, offset,
-				timeout, limit, idHeader, consumerGroup,
-				clientIdPrefix, clientIdSuffix);
+	                                  @RequestHeader(required = false) String groupId,
+	                                  @RequestHeader(required = false) String clientId) {
+		return service.getData(topic, partition, offset, timeout, limit, idHeader, groupId, clientId);
 	}
 
 	@PostMapping(path = "/{topic}")
 	@ResponseStatus(HttpStatus.CREATED)
-	public void postData(@PathVariable String topic,
-	                     @RequestBody Message message) {
-
-		service.postData(topic, message.getKey(), message.getHeaders(), message.getValue());
+	public void postData(@PathVariable String topic, @RequestBody Message message) {
+		service.postData(topic, message);
 	}
 }
