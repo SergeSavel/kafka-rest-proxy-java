@@ -1,108 +1,184 @@
 package pro.savel.krp;
 
-import org.apache.kafka.clients.consumer.Consumer;
-import org.apache.kafka.clients.consumer.ConsumerRecord;
-import org.apache.kafka.clients.consumer.ConsumerRecords;
-import org.apache.kafka.clients.producer.ProducerRecord;
-import org.apache.kafka.common.PartitionInfo;
+import org.apache.kafka.clients.consumer.*;
+import org.apache.kafka.clients.producer.*;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.header.Header;
 import org.apache.kafka.common.header.Headers;
-import org.springframework.kafka.core.ConsumerFactory;
-import org.springframework.kafka.core.KafkaTemplate;
-import org.springframework.kafka.support.SendResult;
-import org.springframework.util.concurrent.ListenableFuture;
+import org.apache.kafka.common.serialization.Deserializer;
+import org.apache.kafka.common.serialization.StringDeserializer;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.env.Environment;
+import pro.savel.krp.objects.Message;
 import pro.savel.krp.objects.Record;
-import pro.savel.krp.objects.Topic;
+import pro.savel.krp.objects.TopicInfo;
 
+import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.*;
+import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 
 @org.springframework.stereotype.Service
 public class Service {
 
-	private final KafkaTemplate<String, String> kafkaTemplate;
-	private final ConsumerFactory<String, String> kafkaConsumerFactory;
+	@Autowired
+	private Environment env;
 
-	public Service(KafkaTemplate<String, String> kafkaTemplate, ConsumerFactory<String, String> kafkaConsumerFactory) {
-		this.kafkaTemplate = kafkaTemplate;
-		this.kafkaConsumerFactory = kafkaConsumerFactory;
+	private Properties producerProps;
+	private Properties consumerProps;
+	private Producer<String, String> producer = null;
+
+	private Deserializer<String> keyDeserializer, valueDeserializer;
+
+	@PostConstruct
+	public void init() {
+
+		this.producerProps = createProducerProps();
+		this.consumerProps = createConsumerProps();
+		this.producer = new KafkaProducer<>(this.producerProps);
+
+		keyDeserializer = new StringDeserializer();
+		valueDeserializer = new StringDeserializer();
 	}
 
-	public void postData(String topic, String recordKey, Map<String, String> recordHeaders, String recordValue) {
+	@PreDestroy
+	public void done() {
+		if (producer != null)
+			producer.close();
+	}
 
-		ProducerRecord<String, String> producerRecord = new ProducerRecord<>(topic, recordKey, recordValue);
+	public Properties createProducerProps() {
+		Properties props = new Properties();
+		props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG,
+				env.getRequiredProperty("spring.kafka.bootstrap-servers"));
+		props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG,
+				"org.apache.kafka.common.serialization.StringSerializer");
+		props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
+				"org.apache.kafka.common.serialization.StringSerializer");
+		setIfSet(props, ProducerConfig.CLIENT_ID_CONFIG,
+				"spring.kafka.consumer.client-id");
+		setIfSet(props, ProducerConfig.ACKS_CONFIG,
+				"spring.kafka.producer.acks");
+		setIfSet(props, ProducerConfig.COMPRESSION_TYPE_CONFIG,
+				"spring.kafka.producer.compression-type");
+		setIfSet(props, ProducerConfig.BUFFER_MEMORY_CONFIG,
+				"spring.kafka.producer.properties.buffer.memory");
+		setIfSet(props, ProducerConfig.MAX_REQUEST_SIZE_CONFIG,
+				"spring.kafka.producer.properties.max.request.size");
+		setIfSet(props, "security.protocol",
+				"spring.kafka.properties.security.protocol");
+		setIfSet(props, "sasl.mechanism",
+				"spring.kafka.properties.sasl.mechanism");
+		return props;
+	}
 
-		if (recordHeaders != null) {
-			Headers headers = producerRecord.headers();
-			recordHeaders.forEach((key, value) -> headers.add(key, value.getBytes(StandardCharsets.UTF_8)));
-		}
+	public Properties createConsumerProps() {
+		Properties props = new Properties();
+		props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG,
+				env.getRequiredProperty("spring.kafka.bootstrap-servers"));
+		props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG,
+				"org.apache.kafka.common.serialization.StringDeserializer");
+		props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG,
+				"org.apache.kafka.common.serialization.StringDeserializer");
+		props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG,
+				"earliest");
+		props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG,
+				"false");
+		setIfSet(props, ConsumerConfig.CLIENT_ID_CONFIG,
+				"spring.kafka.consumer.client-id");
+		setIfSet(props, "security.protocol",
+				"spring.kafka.properties.security.protocol");
+		setIfSet(props, "sasl.mechanism",
+				"spring.kafka.properties.sasl.mechanism");
+		return props;
+	}
 
-		ListenableFuture<SendResult<String, String>> future = kafkaTemplate.send(producerRecord);
-		SendResult<String, String> sendResult;
+	private void setIfSet(Properties props, String propName, String envPropName) {
+		if (env.containsProperty(envPropName))
+			props.put(propName, env.getProperty(envPropName));
+	}
+
+	public void postData(String topic, Message message) {
+
+		ProducerRecord<String, String> producerRecord = createProducerRecord(topic, message);
+
+		Future<RecordMetadata> future = producer.send(producerRecord);
+
+		RecordMetadata recordMetadata;
 		try {
-			sendResult = future.get();
+			recordMetadata = future.get();
 		} catch (Exception e) {
 			throw new RuntimeException("Unable to send message: " + e.getMessage(), e);
 		}
 	}
 
-	public Topic getTopicInfo(String topicName, String consumerGroup, String clientIdPrefix, String clientIdSuffix) {
+	private ProducerRecord<String, String> createProducerRecord(String topic, Message message) {
 
-		Map<TopicPartition, PartitionInfo> partitionInfos;
-		Map<TopicPartition, Long> beginningOffsets;
-		Map<TopicPartition, Long> endOffsets;
-		try (Consumer<String, String> consumer =
-				     kafkaConsumerFactory.createConsumer(consumerGroup, clientIdPrefix, clientIdSuffix)) {
-
-			partitionInfos = consumer.partitionsFor(topicName)
-					.stream().collect(Collectors.toMap(
-							info -> new TopicPartition(info.topic(), info.partition()),
-							info -> info));
-
-			beginningOffsets = consumer.beginningOffsets(partitionInfos.keySet());
-			endOffsets = consumer.endOffsets(partitionInfos.keySet());
+		ProducerRecord<String, String> producerRecord = new ProducerRecord<>(topic, message.getKey(), message.getValue());
+		Map<String, String> messageHeaders = message.getHeaders();
+		if (messageHeaders != null) {
+			Headers headers = producerRecord.headers();
+			messageHeaders.forEach((key, value) -> headers.add(key, value.getBytes(StandardCharsets.UTF_8)));
 		}
+		return producerRecord;
+	}
 
-		List<Topic.Partition> partitions = new ArrayList<>(partitionInfos.size());
-		for (Map.Entry<TopicPartition, PartitionInfo> entry : partitionInfos.entrySet()) {
+	public TopicInfo getTopicInfo(String topic) {
+		TopicInfo topicInfo;
+		try (Consumer<String, String> consumer = new KafkaConsumer<>(consumerProps, keyDeserializer, valueDeserializer)) {
+			topicInfo = createTopicInfo(topic, consumer);
+		}
+		return topicInfo;
+
+	}
+
+	private TopicInfo createTopicInfo(String topic, Consumer<String, String> consumer) {
+
+		Map<TopicPartition, org.apache.kafka.common.PartitionInfo> partitionInfos = consumer.partitionsFor(topic)
+				.stream().collect(Collectors.toMap(
+						info -> new TopicPartition(info.topic(), info.partition()),
+						info -> info));
+
+		Map<TopicPartition, Long> beginningOffsets = consumer.beginningOffsets(partitionInfos.keySet());
+		Map<TopicPartition, Long> endOffsets = consumer.endOffsets(partitionInfos.keySet());
+
+		List<TopicInfo.PartitionInfo> partitions = new ArrayList<>(partitionInfos.size());
+		for (Map.Entry<TopicPartition, org.apache.kafka.common.PartitionInfo> entry : partitionInfos.entrySet()) {
 			TopicPartition tp = entry.getKey();
-			PartitionInfo pi = entry.getValue();
-			topicName = pi.topic();
-			Topic.Partition partition = Topic.createPartiton(
+			org.apache.kafka.common.PartitionInfo pi = entry.getValue();
+			topic = pi.topic();
+			TopicInfo.PartitionInfo partiton = TopicInfo.createPartiton(
 					pi.partition(), beginningOffsets.get(tp), endOffsets.get(tp));
-			partitions.add(partition);
+			partitions.add(partiton);
 		}
 
 		partitions.sort(Comparator.comparingInt(partition -> partition.name));
 
-		return new Topic(topicName, partitions);
+		return new TopicInfo(topic, partitions);
 	}
 
-	public Collection<Record> getData(String topic, int partition, long offset,
-	                                  Long timeout, Long limit, String idHeader, String consumerGroup,
-	                                  String clientIdPrefix, String clientIdSuffix) {
+	public Collection<Record> getData(String topic, int partition, long offset, Long timeout, Long limit,
+	                                  String idHeader, String groupId, String clientId) {
 
 		if (timeout == null)
 			timeout = 1000L;
 
-		Properties extraProps = null;
-		if (limit != null) {
-			extraProps = new Properties();
-			extraProps.put("max.poll.records", limit.toString());
+		Properties consumerProps = this.consumerProps;
+		if (limit != null || groupId != null || clientId != null) {
+			consumerProps = new Properties(consumerProps);
+			if (limit != null) consumerProps.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, limit);
+			if (groupId != null) consumerProps.put(ConsumerConfig.GROUP_ID_CONFIG, groupId);
+			if (clientId != null) consumerProps.put(ConsumerConfig.CLIENT_ID_CONFIG, clientId);
 		}
 
 		TopicPartition topicPartition = new TopicPartition(topic, partition);
-
 		ConsumerRecords<String, String> consumerRecords;
-		try (Consumer<String, String> consumer =
-				     kafkaConsumerFactory.createConsumer(consumerGroup, clientIdPrefix, clientIdSuffix, extraProps)) {
-
+		try (Consumer<String, String> consumer = new KafkaConsumer<>(consumerProps, keyDeserializer, valueDeserializer)) {
 			consumer.assign(Collections.singletonList(topicPartition));
 			consumer.seek(topicPartition, offset);
-
 			consumerRecords = consumer.poll(Duration.ofMillis(timeout));
 		}
 
