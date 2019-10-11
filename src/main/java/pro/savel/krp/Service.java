@@ -121,7 +121,8 @@ public class Service {
 		Map<String, String> messageHeaders = message.getHeaders();
 		if (messageHeaders != null) {
 			Headers headers = producerRecord.headers();
-			messageHeaders.forEach((key, value) -> headers.add(key, value.getBytes(StandardCharsets.UTF_8)));
+			messageHeaders.forEach(
+					(key, value) -> headers.add(key, value == null ? null : value.getBytes(StandardCharsets.UTF_8)));
 		}
 		return producerRecord;
 	}
@@ -132,7 +133,6 @@ public class Service {
 			topicInfo = createTopicInfo(topic, consumer);
 		}
 		return topicInfo;
-
 	}
 
 	private TopicInfo createTopicInfo(String topic, Consumer<String, String> consumer) {

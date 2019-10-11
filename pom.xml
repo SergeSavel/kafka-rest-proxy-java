@@ -10,7 +10,7 @@
     </parent>
     <groupId>pro.savel</groupId>
     <artifactId>kafka-rest-proxy</artifactId>
-    <version>1.10.0-RELEASE</version>
+    <version>1.10.1-RELEASE</version>
     <name>Kafka REST Proxy</name>
 
     <properties>
