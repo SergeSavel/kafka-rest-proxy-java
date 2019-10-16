@@ -8,8 +8,9 @@ spring:
       compression-type: "snappy"
       acks: "all"
       properties:
-        buffer.memory: 134217728
-        max.request.size: 67108864
+        linger.ms: "1"
+        buffer.memory: 100663296
+        max.request.size: 33554432
     consumer:
       enable-auto-commit: false
       auto-offset-reset: earliest

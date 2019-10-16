@@ -64,6 +64,8 @@ public class Service {
 				"spring.kafka.producer.acks");
 		setIfSet(props, ProducerConfig.COMPRESSION_TYPE_CONFIG,
 				"spring.kafka.producer.compression-type");
+		setIfSet(props, ProducerConfig.LINGER_MS_CONFIG,
+				"spring.kafka.producer.properties.linger.ms");
 		setIfSet(props, ProducerConfig.BUFFER_MEMORY_CONFIG,
 				"spring.kafka.producer.properties.buffer.memory");
 		setIfSet(props, ProducerConfig.MAX_REQUEST_SIZE_CONFIG,
