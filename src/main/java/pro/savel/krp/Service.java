@@ -27,8 +27,8 @@ public class Service {
 	@Autowired
 	private Environment env;
 
-	private Properties producerProps;
-	private Properties consumerProps;
+	private Map<String, Object> producerProps;
+	private Map<String, Object> consumerProps;
 	private Producer<String, String> producer = null;
 
 	private Deserializer<String> keyDeserializer, valueDeserializer;
@@ -50,14 +50,14 @@ public class Service {
 			producer.close();
 	}
 
-	public Properties createProducerProps() {
-		Properties props = new Properties();
+	public Map<String, Object> createProducerProps() {
+		Map<String, Object> props = new HashMap<>();
 		props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG,
 				env.getRequiredProperty("spring.kafka.bootstrap-servers"));
 		props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG,
-				"org.apache.kafka.common.serialization.StringSerializer");
+				org.apache.kafka.common.serialization.StringSerializer.class);
 		props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
-				"org.apache.kafka.common.serialization.StringSerializer");
+				org.apache.kafka.common.serialization.StringSerializer.class);
 		setIfSet(props, ProducerConfig.CLIENT_ID_CONFIG,
 				"spring.kafka.consumer.client-id");
 		setIfSet(props, ProducerConfig.ACKS_CONFIG,
@@ -77,14 +77,14 @@ public class Service {
 		return props;
 	}
 
-	public Properties createConsumerProps() {
-		Properties props = new Properties();
+	public Map<String, Object> createConsumerProps() {
+		Map<String, Object> props = new HashMap<>();
 		props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG,
 				env.getRequiredProperty("spring.kafka.bootstrap-servers"));
 		props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG,
-				"org.apache.kafka.common.serialization.StringDeserializer");
+				org.apache.kafka.common.serialization.StringDeserializer.class);
 		props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG,
-				"org.apache.kafka.common.serialization.StringDeserializer");
+				org.apache.kafka.common.serialization.StringDeserializer.class);
 		props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG,
 				"earliest");
 		props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG,
@@ -98,7 +98,7 @@ public class Service {
 		return props;
 	}
 
-	private void setIfSet(Properties props, String propName, String envPropName) {
+	private void setIfSet(Map<String, Object> props, String propName, String envPropName) {
 		if (env.containsProperty(envPropName))
 			props.put(propName, env.getProperty(envPropName));
 	}
@@ -168,9 +168,9 @@ public class Service {
 		if (timeout == null)
 			timeout = 1000L;
 
-		Properties consumerProps = this.consumerProps;
+		Map<String, Object> consumerProps = this.consumerProps;
 		if (limit != null || groupId != null || clientId != null) {
-			consumerProps = new Properties(consumerProps);
+			consumerProps = new HashMap<>(consumerProps);
 			if (limit != null) consumerProps.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, limit);
 			if (groupId != null) consumerProps.put(ConsumerConfig.GROUP_ID_CONFIG, groupId);
 			if (clientId != null) consumerProps.put(ConsumerConfig.CLIENT_ID_CONFIG, clientId);
