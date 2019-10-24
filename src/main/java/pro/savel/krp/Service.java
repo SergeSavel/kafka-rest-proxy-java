@@ -1,120 +1,38 @@
 package pro.savel.krp;
 
 import org.apache.kafka.clients.consumer.*;
-import org.apache.kafka.clients.producer.*;
+import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.header.Header;
 import org.apache.kafka.common.header.Headers;
-import org.apache.kafka.common.serialization.Deserializer;
-import org.apache.kafka.common.serialization.StringDeserializer;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.env.Environment;
+import org.springframework.kafka.core.KafkaTemplate;
 import pro.savel.krp.objects.Message;
 import pro.savel.krp.objects.Record;
 import pro.savel.krp.objects.TopicInfo;
+import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
-import javax.annotation.PostConstruct;
-import javax.annotation.PreDestroy;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.*;
-import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 
 @org.springframework.stereotype.Service
 public class Service {
 
 	@Autowired
-	private Environment env;
+	private KafkaTemplate<String, String> kafkaTemplate
 
-	private Map<String, Object> producerProps;
-	private Map<String, Object> consumerProps;
-	private Producer<String, String> producer = null;
+	@Autowired
+	ConsumerCache<String, String> consumerCache;
 
-	private Deserializer<String> keyDeserializer, valueDeserializer;
+	public Mono<Void> postData(String topic, Mono<Message> monoMessage) {
 
-	@PostConstruct
-	public void init() {
-
-		this.producerProps = createProducerProps();
-		this.consumerProps = createConsumerProps();
-		this.producer = new KafkaProducer<>(this.producerProps);
-
-		keyDeserializer = new StringDeserializer();
-		valueDeserializer = new StringDeserializer();
-	}
-
-	@PreDestroy
-	public void done() {
-		if (producer != null)
-			producer.close();
-	}
-
-	public Map<String, Object> createProducerProps() {
-		Map<String, Object> props = new HashMap<>();
-		props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG,
-				env.getRequiredProperty("spring.kafka.bootstrap-servers"));
-		props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG,
-				org.apache.kafka.common.serialization.StringSerializer.class);
-		props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
-				org.apache.kafka.common.serialization.StringSerializer.class);
-		setIfSet(props, ProducerConfig.CLIENT_ID_CONFIG,
-				"spring.kafka.consumer.client-id");
-		setIfSet(props, ProducerConfig.ACKS_CONFIG,
-				"spring.kafka.producer.acks");
-		setIfSet(props, ProducerConfig.COMPRESSION_TYPE_CONFIG,
-				"spring.kafka.producer.compression-type");
-		setIfSet(props, ProducerConfig.LINGER_MS_CONFIG,
-				"spring.kafka.producer.properties.linger.ms");
-		setIfSet(props, ProducerConfig.BUFFER_MEMORY_CONFIG,
-				"spring.kafka.producer.properties.buffer.memory");
-		setIfSet(props, ProducerConfig.MAX_REQUEST_SIZE_CONFIG,
-				"spring.kafka.producer.properties.max.request.size");
-		setIfSet(props, "security.protocol",
-				"spring.kafka.properties.security.protocol");
-		setIfSet(props, "sasl.mechanism",
-				"spring.kafka.properties.sasl.mechanism");
-		return props;
-	}
-
-	public Map<String, Object> createConsumerProps() {
-		Map<String, Object> props = new HashMap<>();
-		props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG,
-				env.getRequiredProperty("spring.kafka.bootstrap-servers"));
-		props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG,
-				org.apache.kafka.common.serialization.StringDeserializer.class);
-		props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG,
-				org.apache.kafka.common.serialization.StringDeserializer.class);
-		props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG,
-				"earliest");
-		props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG,
-				"false");
-		setIfSet(props, ConsumerConfig.CLIENT_ID_CONFIG,
-				"spring.kafka.consumer.client-id");
-		setIfSet(props, "security.protocol",
-				"spring.kafka.properties.security.protocol");
-		setIfSet(props, "sasl.mechanism",
-				"spring.kafka.properties.sasl.mechanism");
-		return props;
-	}
-
-	private void setIfSet(Map<String, Object> props, String propName, String envPropName) {
-		if (env.containsProperty(envPropName))
-			props.put(propName, env.getProperty(envPropName));
-	}
-
-	public void postData(String topic, Message message) {
-
-		ProducerRecord<String, String> producerRecord = createProducerRecord(topic, message);
-
-		Future<RecordMetadata> future = producer.send(producerRecord);
-
-		RecordMetadata recordMetadata;
-		try {
-			recordMetadata = future.get();
-		} catch (Exception e) {
-			throw new RuntimeException("Unable to send message: " + e.getMessage(), e);
-		}
+		return monoMessage
+				.map(message -> createProducerRecord(topic, message))
+				.flatMap(record -> Mono.fromFuture(kafkaTemplate.send(record).completable()))
+				.then();
 	}
 
 	private ProducerRecord<String, String> createProducerRecord(String topic, Message message) {
@@ -129,12 +47,19 @@ public class Service {
 		return producerRecord;
 	}
 
-	public TopicInfo getTopicInfo(String topic) {
-		TopicInfo topicInfo;
-		try (Consumer<String, String> consumer = new KafkaConsumer<>(consumerProps, keyDeserializer, valueDeserializer)) {
-			topicInfo = createTopicInfo(topic, consumer);
-		}
-		return topicInfo;
+	public Mono<TopicInfo> getTopicInfo(String topic, String groupId, String clientId) {
+
+		return Mono.just(null)
+				.publishOn(Schedulers.elastic())
+				.map(empty -> {
+					Consumer<String, String> consumer = null;
+					try {
+						consumer = consumerCache.getConsumer(groupId, clientId);
+						return createTopicInfo(topic, consumer);
+					} finally {
+						if (consumer != null) consumerCache.freeConsumer(consumer);
+					}
+				});
 	}
 
 	private TopicInfo createTopicInfo(String topic, Consumer<String, String> consumer) {
