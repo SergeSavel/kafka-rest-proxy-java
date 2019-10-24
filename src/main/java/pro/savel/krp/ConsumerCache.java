@@ -7,6 +7,8 @@ import org.springframework.stereotype.Component;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 @Component
 public class ConsumerCache<K, V> {
@@ -14,25 +16,54 @@ public class ConsumerCache<K, V> {
 	@Autowired
 	private final ConsumerFactory<K, V> kafkaConsumerFactory;
 
-	private final ConcurrentMap<String, ConcurrentMap<String, Consumer<K, V>>> cache = new ConcurrentHashMap<>();
+	private final ConcurrentMap<String, ConcurrentMap<String, ConsumerWrapper<K, V>>> cache = new ConcurrentHashMap<>();
 
-	public Consumer<K, V> getConsumer(String groupId, String clientIdSuffix) {
+	private final ThreadLocal<ConsumerWrapper<K, V>> currentWrapper = new ThreadLocal<>();
 
-		if (groupId == null || clientIdSuffix == null)
-			return createConsumer(groupId, clientIdSuffix);
+	public Consumer<K, V> getConsumer(String groupId, String clientId) {
+
+		if (currentWrapper.get() != null)
+			throw new IllegalStateException("Current thread already holds a consumer.");
+
+		if (groupId == null || clientId == null)
+			return createConsumer(groupId, clientId);
+		!!!
 		else {
-			var groupConsumers = cache.computeIfAbsent(groupId, (key) -> new ConcurrentHashMap<>());
 
-			// dummy!
-			return createConsumer(groupId, clientIdSuffix);
+			var wrapper = cache
+					.computeIfAbsent(groupId, k -> new ConcurrentHashMap<>())
+					.computeIfAbsent(clientId, k -> new ConsumerWrapper<>(createConsumer(groupId, clientId)));
+
+			if (!wrapper.lock.tryLock())
+				throw new ConsumerLockedException();
+
+			currentWrapper.set(wrapper);
+
+			return wrapper.consumer;
 		}
 	}
 
-	public void freeConsumer(Consumer<K, V> consumer) {
-
+	public void releaseConsumer() {
+		var wrapper = currentWrapper.get();
+		if (wrapper != null) {
+			wrapper.lastUsed = System.currentTimeMillis();
+			currentWrapper.remove();
+			wrapper.lock.unlock();
+		}
 	}
 
 	private Consumer<K, V> createConsumer(String groupId, String clientIdSuffix) {
 		return kafkaConsumerFactory.createConsumer(groupId, clientIdSuffix);
 	}
+
+	private class ConsumerWrapper<K, V> {
+		private final Lock lock = new ReentrantLock();
+		private final Consumer<K, V> consumer;
+		private long lastUsed;
+
+		private ConsumerWrapper(Consumer<K, V> consumer) {
+			this.consumer = consumer;
+		}
+	}
+
 }

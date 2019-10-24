@@ -57,7 +57,7 @@ public class Service {
 						consumer = consumerCache.getConsumer(groupId, clientId);
 						return createTopicInfo(topic, consumer);
 					} finally {
-						if (consumer != null) consumerCache.freeConsumer(consumer);
+						if (consumer != null) consumerCache.releaseConsumer(consumer);
 					}
 				});
 	}
