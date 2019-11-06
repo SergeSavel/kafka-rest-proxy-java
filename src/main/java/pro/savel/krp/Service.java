@@ -1,6 +1,8 @@
 package pro.savel.krp;
 
-import org.apache.kafka.clients.consumer.*;
+import org.apache.kafka.clients.consumer.Consumer;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.header.Header;
@@ -25,7 +27,7 @@ public class Service {
 	private KafkaTemplate<String, String> kafkaTemplate
 
 	@Autowired
-	ConsumerCache<String, String> consumerCache;
+	private ConsumerCache<String, String> consumerCache;
 
 	public Mono<Void> postData(String topic, Mono<Message> monoMessage) {
 
@@ -37,8 +39,8 @@ public class Service {
 
 	private ProducerRecord<String, String> createProducerRecord(String topic, Message message) {
 
-		ProducerRecord<String, String> producerRecord = new ProducerRecord<>(topic, message.getKey(), message.getValue());
-		Map<String, String> messageHeaders = message.getHeaders();
+		var producerRecord = new ProducerRecord<>(topic, message.getKey(), message.getValue());
+		var messageHeaders = message.getHeaders();
 		if (messageHeaders != null) {
 			Headers headers = producerRecord.headers();
 			messageHeaders.forEach(
@@ -47,78 +49,74 @@ public class Service {
 		return producerRecord;
 	}
 
-	public Mono<TopicInfo> getTopicInfo(String topic, String groupId, String clientId) {
+	public Mono<TopicInfo> getTopicInfo(String topic, Integer partition, String groupId, String clientId) {
 
-		return Mono.just(null)
-				.publishOn(Schedulers.elastic())
-				.map(empty -> {
-					Consumer<String, String> consumer = null;
-					try {
-						consumer = consumerCache.getConsumer(groupId, clientId);
-						return createTopicInfo(topic, consumer);
-					} finally {
-						if (consumer != null) consumerCache.releaseConsumer(consumer);
-					}
-				});
+		return Mono.using(() -> consumerCache.getConsumer(groupId, clientId),
+				consumer -> Mono.just(createTopicInfo(topic, partition, consumer))
+						.subscribeOn(Schedulers.elastic()),
+				consumer -> consumerCache.releaseConsumer(consumer));
+
+		//return Mono.just(null)
+		//		.publishOn(Schedulers.elastic())
+		//		.map(empty -> {
+		//			Consumer<String, String> consumer = null;
+		//			try {
+		//				consumer = consumerCache.getConsumer(groupId, clientId);
+		//				return createTopicInfo(topic, partition, consumer);
+		//			} finally {
+		//				if (consumer != null) consumerCache.releaseConsumer(consumer);
+		//			}
+		//		});
 	}
 
-	private TopicInfo createTopicInfo(String topic, Consumer<String, String> consumer) {
+	private TopicInfo createTopicInfo(final String topic, final Integer partition, Consumer<String, String> consumer) {
 
-		Map<TopicPartition, org.apache.kafka.common.PartitionInfo> partitionInfos = consumer.partitionsFor(topic)
-				.stream().collect(Collectors.toMap(
-						info -> new TopicPartition(info.topic(), info.partition()),
-						info -> info));
+		Collection<TopicPartition> topicPartitions;
+		if (partition == null)
+			topicPartitions = consumer.partitionsFor(topic).stream()
+					.map(partitionInfo -> new TopicPartition(topic, partitionInfo.partition()))
+					.collect(Collectors.toUnmodifiableSet());
+		else
+			topicPartitions = Collections.singleton(new TopicPartition(topic, partition));
 
-		Map<TopicPartition, Long> beginningOffsets = consumer.beginningOffsets(partitionInfos.keySet());
-		Map<TopicPartition, Long> endOffsets = consumer.endOffsets(partitionInfos.keySet());
+		var beginningOffsets = consumer.beginningOffsets(topicPartitions);
+		var endOffsets = consumer.endOffsets(topicPartitions);
 
-		List<TopicInfo.PartitionInfo> partitions = new ArrayList<>(partitionInfos.size());
-		for (Map.Entry<TopicPartition, org.apache.kafka.common.PartitionInfo> entry : partitionInfos.entrySet()) {
-			TopicPartition tp = entry.getKey();
-			org.apache.kafka.common.PartitionInfo pi = entry.getValue();
-			topic = pi.topic();
-			TopicInfo.PartitionInfo partiton = TopicInfo.createPartiton(
-					pi.partition(), beginningOffsets.get(tp), endOffsets.get(tp));
-			partitions.add(partiton);
-		}
+		var partitions = new ArrayList<TopicInfo.PartitionInfo>(topicPartitions.size());
+		topicPartitions.forEach(tp ->
+				partitions.add(TopicInfo.createPartiton(tp.partition(), beginningOffsets.get(tp), endOffsets.get(tp))));
 
-		partitions.sort(Comparator.comparingInt(partition -> partition.name));
+		partitions.sort(Comparator.comparingInt(p -> p.name));
 
 		return new TopicInfo(topic, partitions);
 	}
 
-	public Collection<Record> getData(String topic, int partition, long offset, Long timeout, Long limit,
+	public Mono<List<Record>> getData(String topic, int partition, long offset, Long timeout,
 	                                  String idHeader, String groupId, String clientId) {
 
 		if (timeout == null)
 			timeout = 1000L;
+		final long _timeout = timeout;
 
-		Map<String, Object> consumerProps = this.consumerProps;
-		if (limit != null || groupId != null || clientId != null) {
-			consumerProps = new HashMap<>(consumerProps);
-			if (limit != null) consumerProps.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, limit);
-			if (groupId != null) consumerProps.put(ConsumerConfig.GROUP_ID_CONFIG, groupId);
-			if (clientId != null) consumerProps.put(ConsumerConfig.CLIENT_ID_CONFIG, clientId);
-		}
+		final TopicPartition topicPartition = new TopicPartition(topic, partition);
 
-		TopicPartition topicPartition = new TopicPartition(topic, partition);
-		ConsumerRecords<String, String> consumerRecords;
-		try (Consumer<String, String> consumer = new KafkaConsumer<>(consumerProps, keyDeserializer, valueDeserializer)) {
-			consumer.assign(Collections.singletonList(topicPartition));
-			consumer.seek(topicPartition, offset);
-			consumerRecords = consumer.poll(Duration.ofMillis(timeout));
-		}
-
-		List<ConsumerRecord<String, String>> records = consumerRecords.records(topicPartition);
-		List<Record> result = records.stream()
+		return Mono.using(
+				() -> consumerCache.getConsumer(groupId, clientId),
+				consumer -> Mono.just(getConsumerRecords(topicPartition, offset, _timeout, consumer))
+						.subscribeOn(Schedulers.elastic()),
+				consumer -> consumerCache.releaseConsumer(consumer))
+				.flatMapIterable(consumerRecords -> consumerRecords.records(topicPartition))
 				.map(this::createRecord)
-				.collect(Collectors.toList());
+				.doOnNext(record -> record.calcID(idHeader))
+				.collectList();
+	}
 
-		for (Record record : result) {
-			record.calcID(idHeader);
-		}
+	private ConsumerRecords<String, String> getConsumerRecords(TopicPartition topicPartition, long offset, Long timeout,
+	                                                           Consumer<String, String> consumer) {
 
-		return result;
+		consumer.assign(Collections.singletonList(topicPartition));
+		consumer.seek(topicPartition, offset);
+		return consumer.poll(Duration.ofMillis(timeout));
 	}
 
 	private Record createRecord(ConsumerRecord<String, String> consumerRecord) {
