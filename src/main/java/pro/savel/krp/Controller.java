@@ -44,6 +44,6 @@ public class Controller {
 	@PostMapping(path = "/{topic}")
 	@ResponseStatus(HttpStatus.CREATED)
 	public Mono<Void> postData(@PathVariable String topic, @RequestBody Mono<Message> message) {
-		service.postData(topic, message);
+		return service.postData(topic, message);
 	}
 }

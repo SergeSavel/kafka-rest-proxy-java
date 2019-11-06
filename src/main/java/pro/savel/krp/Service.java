@@ -55,18 +55,6 @@ public class Service {
 				consumer -> Mono.just(createTopicInfo(topic, partition, consumer))
 						.subscribeOn(Schedulers.elastic()),
 				consumer -> consumerCache.releaseConsumer(consumer));
-
-		//return Mono.just(null)
-		//		.publishOn(Schedulers.elastic())
-		//		.map(empty -> {
-		//			Consumer<String, String> consumer = null;
-		//			try {
-		//				consumer = consumerCache.getConsumer(groupId, clientId);
-		//				return createTopicInfo(topic, partition, consumer);
-		//			} finally {
-		//				if (consumer != null) consumerCache.releaseConsumer(consumer);
-		//			}
-		//		});
 	}
 
 	private TopicInfo createTopicInfo(final String topic, final Integer partition, Consumer<String, String> consumer) {
@@ -91,8 +79,8 @@ public class Service {
 		return new TopicInfo(topic, partitions);
 	}
 
-	public Mono<List<Record>> getData(String topic, int partition, long offset, Long timeout,
-	                                  String idHeader, String groupId, String clientId) {
+	public Mono<Collection<Record>> getData(String topic, int partition, long offset, Long timeout,
+	                                        String idHeader, String groupId, String clientId) {
 
 		if (timeout == null)
 			timeout = 1000L;
@@ -108,7 +96,8 @@ public class Service {
 				.flatMapIterable(consumerRecords -> consumerRecords.records(topicPartition))
 				.map(this::createRecord)
 				.doOnNext(record -> record.calcID(idHeader))
-				.collectList();
+				.collectList()
+				.map(list -> (Collection<Record>) list);
 	}
 
 	private ConsumerRecords<String, String> getConsumerRecords(TopicPartition topicPartition, long offset, Long timeout,
