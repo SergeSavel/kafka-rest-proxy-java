@@ -1,11 +1,11 @@
 package pro.savel.krp.objects;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlRootElement;
 
+import javax.xml.bind.annotation.XmlRootElement;
 import java.util.Map;
 
-@JacksonXmlRootElement(localName = "m")
+@XmlRootElement(name = "m")
 public class Message {
 
 	@JsonProperty("k")

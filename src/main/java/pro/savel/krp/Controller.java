@@ -1,6 +1,6 @@
 package pro.savel.krp;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.info.BuildProperties;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import pro.savel.krp.objects.Message;
@@ -14,12 +14,17 @@ import java.util.Collection;
 @RequestMapping("/")
 public class Controller {
 
-	@Autowired
-	private Service service;
+	private final Service service;
+	private final BuildProperties buildProperties;
+
+	public Controller(Service service, BuildProperties buildProperties) {
+		this.service = service;
+		this.buildProperties = buildProperties;
+	}
 
 	@GetMapping(path = "/")
-	public String getVersion() {
-		return "2.0.0";
+	public String getBuildInfo() {
+		return buildProperties.getArtifact() + "-" + buildProperties.getVersion();
 	}
 
 	@GetMapping(path = "/{topic}")

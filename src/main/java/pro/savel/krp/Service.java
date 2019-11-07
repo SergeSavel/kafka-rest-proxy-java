@@ -7,7 +7,6 @@ import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.header.Header;
 import org.apache.kafka.common.header.Headers;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.core.KafkaTemplate;
 import pro.savel.krp.objects.Message;
 import pro.savel.krp.objects.Record;
@@ -23,11 +22,13 @@ import java.util.stream.Collectors;
 @org.springframework.stereotype.Service
 public class Service {
 
-	@Autowired
-	private KafkaTemplate<String, String> kafkaTemplate
+	private final KafkaTemplate<String, String> kafkaTemplate;
+	private final ConsumerCache<String, String> consumerCache;
 
-	@Autowired
-	private ConsumerCache<String, String> consumerCache;
+	public Service(KafkaTemplate<String, String> kafkaTemplate, ConsumerCache<String, String> consumerCache) {
+		this.kafkaTemplate = kafkaTemplate;
+		this.consumerCache = consumerCache;
+	}
 
 	public Mono<Void> postData(String topic, Mono<Message> monoMessage) {
 
@@ -54,7 +55,7 @@ public class Service {
 		return Mono.using(() -> consumerCache.getConsumer(groupId, clientId),
 				consumer -> Mono.just(createTopicInfo(topic, partition, consumer))
 						.subscribeOn(Schedulers.elastic()),
-				consumer -> consumerCache.releaseConsumer(consumer));
+				consumerCache::releaseConsumer);
 	}
 
 	private TopicInfo createTopicInfo(final String topic, final Integer partition, Consumer<String, String> consumer) {
@@ -97,7 +98,7 @@ public class Service {
 				.map(this::createRecord)
 				.doOnNext(record -> record.calcID(idHeader))
 				.collectList()
-				.map(list -> (Collection<Record>) list);
+				.map(list -> list);
 	}
 
 	private ConsumerRecords<String, String> getConsumerRecords(TopicPartition topicPartition, long offset, Long timeout,

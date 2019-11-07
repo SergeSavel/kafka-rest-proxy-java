@@ -1,8 +1,8 @@
 package pro.savel.krp.objects;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlRootElement;
 
+import javax.xml.bind.annotation.XmlRootElement;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -10,7 +10,7 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.UUID;
 
-@JacksonXmlRootElement(localName = "r")
+@XmlRootElement(name = "r")
 public class Record {
 
 	private static ThreadLocal<MessageDigest> threadLocalMD = new ThreadLocal<>();
