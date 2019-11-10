@@ -75,7 +75,7 @@ public class Service {
 		topicPartitions.forEach(tp ->
 				partitions.add(TopicInfo.createPartiton(tp.partition(), beginningOffsets.get(tp), endOffsets.get(tp))));
 
-		partitions.sort(Comparator.comparingInt(p -> p.name));
+		partitions.sort(Comparator.comparingInt(TopicInfo.PartitionInfo::getName));
 
 		return new TopicInfo(topic, partitions);
 	}
