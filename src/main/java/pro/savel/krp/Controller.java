@@ -40,10 +40,9 @@ public class Controller {
 	                                        @PathVariable int partition,
 	                                        @RequestParam long offset,
 	                                        @RequestParam(required = false) Long timeout,
-	                                        @RequestParam(required = false) String idHeader,
 	                                        @RequestHeader(required = false) String groupId,
 	                                        @RequestHeader(required = false) String clientId) {
-		return service.getData(topic, partition, offset, timeout, idHeader, groupId, clientId);
+		return service.getData(topic, partition, offset, timeout, groupId, clientId);
 	}
 
 	@PostMapping(path = "/{topic}")

@@ -75,13 +75,13 @@ public class Service {
 		topicPartitions.forEach(tp ->
 				partitions.add(TopicInfo.createPartiton(tp.partition(), beginningOffsets.get(tp), endOffsets.get(tp))));
 
-		partitions.sort(Comparator.comparingInt(TopicInfo.PartitionInfo::getName));
+		partitions.sort(Comparator.comparingInt(partitionInfo -> partitionInfo.name));
 
 		return new TopicInfo(topic, partitions);
 	}
 
 	public Mono<Collection<Record>> getData(String topic, int partition, long offset, Long timeout,
-	                                        String idHeader, String groupId, String clientId) {
+	                                        String groupId, String clientId) {
 
 		if (timeout == null)
 			timeout = 1000L;
@@ -93,10 +93,9 @@ public class Service {
 				() -> consumerCache.getConsumer(groupId, clientId),
 				consumer -> Mono.just(getConsumerRecords(topicPartition, offset, _timeout, consumer))
 						.subscribeOn(Schedulers.elastic()),
-				consumer -> consumerCache.releaseConsumer(consumer))
+				consumerCache::releaseConsumer)
 				.flatMapIterable(consumerRecords -> consumerRecords.records(topicPartition))
 				.map(this::createRecord)
-				.doOnNext(record -> record.calcID(idHeader))
 				.collectList()
 				.map(list -> list);
 	}
