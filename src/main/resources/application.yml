@@ -8,7 +8,7 @@ spring:
       compression-type: "zstd"
       acks: "all"
       properties:
-        linger.ms: "1"
+        linger.ms: 1
         buffer.memory: 100663296
         max.request.size: 33554432
     consumer:
