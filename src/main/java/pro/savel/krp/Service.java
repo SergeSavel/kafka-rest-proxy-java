@@ -55,7 +55,7 @@ public class Service {
 		return Mono.using(() -> consumerCache.getConsumer(groupId, clientId),
 				consumer -> Mono.just(createTopicInfo(topic, partition, consumer))
 						.subscribeOn(Schedulers.elastic()),
-				consumerCache::releaseConsumer);
+				consumer -> consumerCache.releaseConsumer(consumer, groupId, clientId));
 	}
 
 	private TopicInfo createTopicInfo(final String topic, final Integer partition, Consumer<String, String> consumer) {
@@ -93,7 +93,7 @@ public class Service {
 				() -> consumerCache.getConsumer(groupId, clientId),
 				consumer -> Mono.just(getConsumerRecords(topicPartition, offset, _timeout, consumer))
 						.subscribeOn(Schedulers.elastic()),
-				consumerCache::releaseConsumer)
+				consumer -> consumerCache.releaseConsumer(consumer, groupId, clientId))
 				.flatMapIterable(consumerRecords -> consumerRecords.records(topicPartition))
 				.map(this::createRecord)
 				.collectList()
