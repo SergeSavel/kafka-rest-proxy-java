@@ -33,12 +33,15 @@ public class ConsumerCache<K, V> implements DisposableBean {
 		if (groupId == null || clientId == null)
 			return consumerFactory.createConsumer(groupId, clientId);
 
-		final var wrapper = wrappers
-				.computeIfAbsent(groupId, k -> new ConcurrentHashMap<>())
-				.computeIfAbsent(clientId, k -> new ConsumerWrapper(groupId, clientId));
+		ConsumerWrapper wrapper;
+		do {
+			wrapper = wrappers
+					.computeIfAbsent(groupId, k -> new ConcurrentHashMap<>())
+					.computeIfAbsent(clientId, k -> new ConsumerWrapper(groupId, clientId));
 
-		if (!wrapper.locked.compareAndSet(false, true))
-			throw new ConsumerLockedException();
+			if (!wrapper.locked.compareAndSet(false, true))
+				throw new ConsumerLockedException();
+		} while (wrappers.get(groupId).containsKey(clientId));
 
 		return wrapper.consumer;
 	}
