@@ -33,15 +33,14 @@ public class ConsumerCache<K, V> implements DisposableBean {
 		if (groupId == null || clientId == null)
 			return consumerFactory.createConsumer(groupId, clientId);
 
+		var currentGroup = wrappers.computeIfAbsent(groupId, k -> new ConcurrentHashMap<>());
+
 		ConsumerWrapper wrapper;
 		do {
-			wrapper = wrappers
-					.computeIfAbsent(groupId, k -> new ConcurrentHashMap<>())
-					.computeIfAbsent(clientId, k -> new ConsumerWrapper(groupId, clientId));
-
+			wrapper = currentGroup.computeIfAbsent(clientId, k -> new ConsumerWrapper(groupId, clientId));
 			if (!wrapper.locked.compareAndSet(false, true))
 				throw new ConsumerLockedException();
-		} while (wrappers.get(groupId).containsKey(clientId));
+		} while (currentGroup.containsKey(clientId));
 
 		return wrapper.consumer;
 	}
@@ -53,14 +52,15 @@ public class ConsumerCache<K, V> implements DisposableBean {
 			return;
 		}
 
-		var wrapper = wrappers.get(groupId).get(clientId);
+		var currentGroup = wrappers.get(groupId);
+		var wrapper = currentGroup.get(clientId);
 		if (wrapper == null) {
 			consumer.close();
 			return;
 		}
 
 		if (System.currentTimeMillis() - wrapper.created >= CONSUMER_TTL_MILLIS) {
-			wrappers.get(wrapper.groupId).remove(wrapper.clientId);
+			currentGroup.remove(wrapper.clientId);
 			wrapper.consumer.close();
 		}
 
@@ -70,11 +70,11 @@ public class ConsumerCache<K, V> implements DisposableBean {
 
 	@Scheduled(fixedRate = CONSUMER_TTL_MILLIS)
 	private void cleanup() {
-		for (var clientIds : wrappers.values()) {
-			var wrappers = new ArrayList<>(clientIds.values());
+		for (var group : wrappers.values()) {
+			var wrappers = new ArrayList<>(group.values());
 			for (var wrapper : wrappers) {
 				if (System.currentTimeMillis() - wrapper.created >= CONSUMER_TTL_MILLIS) {
-					this.wrappers.get(wrapper.groupId).remove(wrapper.clientId);
+					group.remove(wrapper.clientId);
 					if (!wrapper.locked.get()) {
 						wrapper.consumer.close();
 					}
