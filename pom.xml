@@ -27,7 +27,7 @@ limitations under the License.
     </parent>
     <groupId>pro.savel</groupId>
     <artifactId>kafka-rest-proxy</artifactId>
-    <version>1.10.4-RELEASE</version>
+    <version>1.10.5-RELEASE</version>
     <name>Kafka REST Proxy</name>
 
     <properties>
