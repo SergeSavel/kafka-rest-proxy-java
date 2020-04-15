@@ -1,2 +1,2 @@
-# kafka-rest-proxy
+# Kafka REST Proxy
 Build requirements: Java 8.
