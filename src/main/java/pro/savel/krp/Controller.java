@@ -34,7 +34,7 @@ public class Controller {
 
     @GetMapping(path = "/")
     public String getVersion() {
-        return "1.10.6";
+        return "1.10.7";
     }
 
     @GetMapping(path = "/{topic}")
