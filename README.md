@@ -1,3 +1,3 @@
 # kafka-rest-proxy
 
-Build requirements: Java 11.
+Build requirements: Java 17.
