@@ -20,9 +20,9 @@ repositories {
 }
 
 dependencies {
-    implementation("org.springframework:spring-context:6.2.4")
     implementation("io.netty:netty-all:4.1.119.Final")
     implementation("org.apache.kafka:kafka-clients:3.9.0")
+    implementation("org.apache.logging.log4j:log4j:2.24.3")
     testImplementation(platform("org.junit:junit-bom:5.10.0"))
     testImplementation("org.junit.jupiter:junit-jupiter")
 }
