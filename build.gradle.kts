@@ -2,7 +2,7 @@ plugins {
     id("application")
 }
 
-group = "pro.savel.krp"
+group = "pro.savel.kafka"
 version = "2.0-SNAPSHOT"
 
 java {
@@ -12,7 +12,7 @@ java {
 }
 
 application {
-    mainClass = "pro.savel.krp.Application"
+    mainClass = "pro.savel.kafka.Application"
 }
 
 repositories {
