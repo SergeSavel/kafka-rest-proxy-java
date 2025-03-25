@@ -1,6 +1,5 @@
 package pro.savel.kafka.common;
 
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.*;
@@ -12,28 +11,9 @@ public abstract class HttpUtils {
     public static final String APPLICATION_JSON = "application/json";
     public static final String APPLICATION_JSON_CHARSET_UTF8 = "application/json; charset=utf-8";
     public static final String APPLICATION_OCTET_STREAM = "application/octet-stream";
-    public static final String WILDCARD = "*/*" ;
-
-
-    public static String getAccept(HttpHeaders requestHeaders) {
-        var accept = requestHeaders.get(HttpHeaderNames.ACCEPT);
-        if (accept == null)
-            accept = requestHeaders.get(HttpHeaderNames.CONTENT_TYPE);
-        if (WILDCARD.equals(accept))
-            accept = requestHeaders.get(HttpHeaderNames.CONTENT_TYPE);
-        return accept;
-    }
 
     public static boolean isJson(String contentType) {
         return APPLICATION_JSON.equals(contentType) || APPLICATION_JSON_CHARSET_UTF8.equals(contentType);
-    }
-
-    public static boolean isOctetStream(String contentType) {
-        return APPLICATION_OCTET_STREAM.equals(contentType);
-    }
-
-    public static boolean isWildcard(String contentType) {
-        return WILDCARD.equals(contentType);
     }
 
     public static void writeBadRequest(ChannelHandlerContext ctx, HttpVersion version, String message) {
