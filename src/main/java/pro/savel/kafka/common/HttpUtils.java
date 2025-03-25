@@ -30,6 +30,10 @@ public abstract class HttpUtils {
         return APPLICATION_JSON.equals(contentType) || APPLICATION_JSON_CHARSET_UTF8.equals(contentType);
     }
 
+    public static boolean isOctetStream(String contentType) {
+        return APPLICATION_OCTET_STREAM.equals(contentType);
+    }
+
     public static void writeBadRequest(ChannelHandlerContext ctx, HttpVersion version, String message) {
         writeHttpResponseAndClose(ctx, version, HttpResponseStatus.BAD_REQUEST, message);
     }
