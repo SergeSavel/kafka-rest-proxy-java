@@ -16,7 +16,10 @@ package pro.savel.kafka.common;
 
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.http.*;
+import io.netty.handler.codec.http.DefaultFullHttpResponse;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpVersion;
+import io.netty.util.AsciiString;
 
 import java.nio.charset.StandardCharsets;
 
@@ -24,7 +27,15 @@ public abstract class HttpUtils {
 
     public static final String APPLICATION_JSON = "application/json";
     public static final String APPLICATION_JSON_CHARSET_UTF8 = "application/json; charset=utf-8";
+    public static final String TEXT_PLAIN = "text/plain";
+    public static final String TEXT_PLAIN_CHARSET_UTF8 = "text/plain; charset=utf-8";
     public static final String APPLICATION_OCTET_STREAM = "application/octet-stream";
+
+    public static final AsciiString ASCII_CONTENT_TYPE = AsciiString.cached("Content-Type");
+    public static final AsciiString ASCII_CONTENT_LENGTH = AsciiString.cached("Content-Length");
+    public static final AsciiString ASCII_CONNECTION = AsciiString.cached("Connection");
+    public static final AsciiString ASCII_APPLICATION_JSON_CHARSET_UTF8 = AsciiString.cached(APPLICATION_JSON_CHARSET_UTF8);
+    public static final AsciiString ASCII_TEXT_PLAIN_CHARSET_UTF8 = AsciiString.cached(TEXT_PLAIN_CHARSET_UTF8);
 
     public static boolean isJson(String contentType) {
         return APPLICATION_JSON.equals(contentType) || APPLICATION_JSON_CHARSET_UTF8.equals(contentType);
@@ -34,40 +45,49 @@ public abstract class HttpUtils {
         return APPLICATION_OCTET_STREAM.equals(contentType);
     }
 
-    public static void writeBadRequest(ChannelHandlerContext ctx, HttpVersion version, String message) {
+    public static void writeBadRequestAndClose(ChannelHandlerContext ctx, HttpVersion version, String message) {
         writeHttpResponseAndClose(ctx, version, HttpResponseStatus.BAD_REQUEST, message);
     }
 
-    public static void writeNotFound(ChannelHandlerContext ctx, HttpVersion version) {
-        writeNotFound(ctx, version, null);
+    public static void writeNotFoundAndClose(ChannelHandlerContext ctx, HttpVersion version) {
+        writeNotFoundAndClose(ctx, version, null);
     }
 
-    public static void writeNotFound(ChannelHandlerContext ctx, HttpVersion version, String message) {
+    public static void writeNotFoundAndClose(ChannelHandlerContext ctx, HttpVersion version, String message) {
         writeHttpResponseAndClose(ctx, version, HttpResponseStatus.NOT_FOUND, message);
     }
 
-    public static void writeMethodNotAllowed(ChannelHandlerContext ctx, HttpVersion version) {
-        writeMethodNotAllowed(ctx, version, null);
+    public static void writeMethodNotAllowedAndClose(ChannelHandlerContext ctx, HttpVersion version) {
+        writeMethodNotAllowedAndClose(ctx, version, null);
     }
 
-    public static void writeMethodNotAllowed(ChannelHandlerContext ctx, HttpVersion version, String message) {
+    public static void writeMethodNotAllowedAndClose(ChannelHandlerContext ctx, HttpVersion version, String message) {
         writeHttpResponseAndClose(ctx, version, HttpResponseStatus.METHOD_NOT_ALLOWED, message);
     }
 
-    public static void writeInternalServerError(ChannelHandlerContext ctx, HttpVersion version) {
-        writeInternalServerError(ctx, version, null);
+    public static void writeForbiddenAndClose(ChannelHandlerContext ctx, HttpVersion version) {
+        writeForbiddenAndClose(ctx, version, null);
     }
 
-    public static void writeInternalServerError(ChannelHandlerContext ctx, HttpVersion version, String message) {
+    public static void writeForbiddenAndClose(ChannelHandlerContext ctx, HttpVersion version, String message) {
+        writeHttpResponseAndClose(ctx, version, HttpResponseStatus.FORBIDDEN, message);
+    }
+
+    public static void writeInternalServerErrorAndClose(ChannelHandlerContext ctx, HttpVersion version) {
+        writeInternalServerErrorAndClose(ctx, version, null);
+    }
+
+    public static void writeInternalServerErrorAndClose(ChannelHandlerContext ctx, HttpVersion version, String message) {
         writeHttpResponseAndClose(ctx, version, HttpResponseStatus.INTERNAL_SERVER_ERROR, message);
     }
 
     public static void writeHttpResponseAndClose(ChannelHandlerContext ctx, HttpVersion version, HttpResponseStatus status, String message) {
         var httpResponse = new DefaultFullHttpResponse(version, status);
         if (message != null) {
-            httpResponse.headers().set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.TEXT_PLAIN + "; charset=utf-8");
+            httpResponse.headers().set(ASCII_CONTENT_TYPE, ASCII_TEXT_PLAIN_CHARSET_UTF8);
             httpResponse.content().writeCharSequence(message, StandardCharsets.UTF_8);
         }
+        httpResponse.headers().setInt(ASCII_CONTENT_LENGTH, httpResponse.content().readableBytes());
         var future = ctx.writeAndFlush(httpResponse);
         future.addListener(ChannelFutureListener.CLOSE);
     }
