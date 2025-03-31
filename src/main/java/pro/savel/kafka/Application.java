@@ -18,8 +18,6 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
-import io.netty.handler.logging.LogLevel;
-import io.netty.handler.logging.LoggingHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,14 +30,13 @@ public class Application
         final var port = Integer.parseInt(System.getProperty("port", "8086"));
         var bossGroup = new NioEventLoopGroup();
         var workerGroup = new NioEventLoopGroup();
-        try
+        try (var initializer = new ServerInitializer())
         {
             var bootstrap = new ServerBootstrap();
             bootstrap.option(ChannelOption.SO_BACKLOG, 1024);
             bootstrap.group(bossGroup, workerGroup)
                     .channel(NioServerSocketChannel.class)
-                    .handler(new LoggingHandler(LogLevel.INFO))
-                    .childHandler(new HttpServerInitializer());
+                    .childHandler(initializer);
 
             var channel = bootstrap.bind(port).sync().channel();
 
