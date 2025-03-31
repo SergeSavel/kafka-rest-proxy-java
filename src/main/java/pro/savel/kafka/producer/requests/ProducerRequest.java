@@ -12,10 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package pro.savel.kafka.producer.contract;
+package pro.savel.kafka.producer.requests;
 
-import java.util.Map;
+import pro.savel.kafka.common.contract.Request;
 
-public record CreateProducerRequest(String name, Map<String, String> config,
-                                    int expirationTimeout) implements ProducerRequest {
+public interface ProducerRequest extends Request {
 }

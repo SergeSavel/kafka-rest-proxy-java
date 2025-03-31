@@ -12,12 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package pro.savel.kafka.producer;
+package pro.savel.kafka.producer.responses;
 
-class ProducerService implements AutoCloseable
-{
-    @Override
-    public void close() {
+import pro.savel.kafka.common.contract.Response;
 
-    }
+public interface ProducerResponse extends Response {
 }

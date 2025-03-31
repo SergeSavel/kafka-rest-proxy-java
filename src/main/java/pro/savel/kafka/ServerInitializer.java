@@ -14,24 +14,33 @@
 
 package pro.savel.kafka;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
-import io.netty.handler.codec.http.*;
+import io.netty.handler.codec.http.HttpObjectAggregator;
+import io.netty.handler.codec.http.HttpServerCodec;
 
-class HttpServerInitializer extends ChannelInitializer<SocketChannel> {
+class ServerInitializer extends ChannelInitializer<SocketChannel> implements AutoCloseable {
+
+    private static final ObjectMapper objectMapper = new ObjectMapper();
+    private final RequestDecoder requestdecoder = new RequestDecoder(objectMapper);
+    private final RequestProcessor requestProcessor = new RequestProcessor();
+    private final ResponseEncoder responseEncoder = new ResponseEncoder(objectMapper);
 
     @Override
     protected void initChannel(SocketChannel channel) {
 
         ChannelPipeline pipeline = channel.pipeline();
-
         pipeline.addLast(new HttpServerCodec());
         pipeline.addLast(new HttpObjectAggregator(32 * 1024 * 1024));
-        pipeline.addLast(new RequestDecoder());
-        pipeline.addLast(new RequestProcessor());
-        //pipeline.addLast(new HttpResponseEncoder());
+        pipeline.addLast(requestdecoder);
+        pipeline.addLast(requestProcessor);
+        pipeline.addLast(responseEncoder);
+    }
 
-        //pipeline.addLast(new HttpServerHandler(mainController));
+    @Override
+    public void close() {
+        requestProcessor.close();
     }
 }
