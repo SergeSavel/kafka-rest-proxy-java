@@ -19,7 +19,10 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import pro.savel.kafka.common.HttpUtils;
 import pro.savel.kafka.common.contract.RequestBearer;
+import pro.savel.kafka.common.exceptions.InstanceNotFoundException;
+import pro.savel.kafka.common.exceptions.InvalidTokenException;
 import pro.savel.kafka.producer.ProducerRequestProcessor;
 import pro.savel.kafka.producer.requests.ProducerRequest;
 
@@ -31,12 +34,20 @@ public class RequestProcessor extends SimpleChannelInboundHandler<RequestBearer>
     private final ProducerRequestProcessor producerProcessor = new ProducerRequestProcessor();
 
     @Override
-    protected void channelRead0(ChannelHandlerContext ctx, RequestBearer bearer) {
-        if (bearer.request() instanceof ProducerRequest) {
-            producerProcessor.processRequest(ctx, bearer);
-        } else {
-            throw new RuntimeException("Unexpected request type: " + bearer.request().getClass().getName());
+    protected void channelRead0(ChannelHandlerContext ctx, RequestBearer requestBearer) {
+        try {
+            if (requestBearer.request() instanceof ProducerRequest) {
+                producerProcessor.processRequest(ctx, requestBearer);
+                return;
+            }
+        } catch (InstanceNotFoundException e) {
+            HttpUtils.writeNotFoundAndClose(ctx, requestBearer.protocolVersion());
+            return;
+        } catch (InvalidTokenException e) {
+            HttpUtils.writeForbiddenAndClose(ctx, requestBearer.protocolVersion(), e.getMessage());
+            return;
         }
+        throw new RuntimeException("Unexpected request type: " + requestBearer.request().getClass().getName());
     }
 
     @Override
