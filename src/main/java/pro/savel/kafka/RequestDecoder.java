@@ -24,8 +24,6 @@ import org.slf4j.LoggerFactory;
 import pro.savel.kafka.common.HttpUtils;
 import pro.savel.kafka.producer.ProducerRequestDecoder;
 
-import java.io.IOException;
-
 @ChannelHandler.Sharable
 public class RequestDecoder extends SimpleChannelInboundHandler<FullHttpRequest> {
 
@@ -38,7 +36,7 @@ public class RequestDecoder extends SimpleChannelInboundHandler<FullHttpRequest>
     }
 
     @Override
-    protected void channelRead0(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws IOException {
+    protected void channelRead0(ChannelHandlerContext ctx, FullHttpRequest httpRequest) {
         var uri = httpRequest.uri();
         if (uri.startsWith(ProducerRequestDecoder.URI_PREFIX)) {
             producerDecoder.decode(ctx, httpRequest);
@@ -48,7 +46,7 @@ public class RequestDecoder extends SimpleChannelInboundHandler<FullHttpRequest>
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         logger.error("An error occurred while decoding the request.", cause);
         ctx.close();
     }
