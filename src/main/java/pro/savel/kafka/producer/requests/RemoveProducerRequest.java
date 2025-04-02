@@ -14,6 +14,7 @@
 
 package pro.savel.kafka.producer.requests;
 
+import java.util.Objects;
 import java.util.UUID;
 
 public class RemoveProducerRequest implements ProducerRequest {
@@ -21,7 +22,7 @@ public class RemoveProducerRequest implements ProducerRequest {
     private UUID id;
     private String token;
 
-    public UUID id() {
+    public UUID getId() {
         return id;
     }
 
@@ -29,11 +30,23 @@ public class RemoveProducerRequest implements ProducerRequest {
         this.id = id;
     }
 
-    public String token() {
+    public String getToken() {
         return token;
     }
 
     public void setToken(String token) {
         this.token = token;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (o == null || getClass() != o.getClass()) return false;
+        RemoveProducerRequest that = (RemoveProducerRequest) o;
+        return Objects.equals(id, that.id) && Objects.equals(token, that.token);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id, token);
     }
 }

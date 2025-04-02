@@ -91,7 +91,7 @@ public class ProducerRequestProcessor implements AutoCloseable {
     private void processRemoveProducer(ChannelHandlerContext ctx, RequestBearer requestBearer) throws InstanceNotFoundException, InvalidTokenException {
         var request = (RemoveProducerRequest) requestBearer.request();
         ProducerWrapper wrapper;
-        wrapper = provider.getItem(request.id(), request.token());
+        wrapper = provider.getItem(request.getId(), request.getToken());
         provider.removeItem(wrapper.id());
         var responseBearer = new ResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT);
         ctx.fireChannelRead(responseBearer);
@@ -100,7 +100,7 @@ public class ProducerRequestProcessor implements AutoCloseable {
     private void processTouchProducer(ChannelHandlerContext ctx, RequestBearer requestBearer) throws InstanceNotFoundException, InvalidTokenException {
         var request = (TouchProducerRequest) requestBearer.request();
         ProducerWrapper wrapper;
-        wrapper = provider.getItem(request.id(), request.token());
+        wrapper = provider.getItem(request.getId(), request.getToken());
         wrapper.touch();
         var responseBearer = new ResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT);
         ctx.fireChannelRead(responseBearer);

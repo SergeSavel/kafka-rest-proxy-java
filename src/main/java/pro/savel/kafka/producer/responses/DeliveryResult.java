@@ -14,6 +14,8 @@
 
 package pro.savel.kafka.producer.responses;
 
+import java.util.Objects;
+
 public class DeliveryResult implements ProducerResponse {
     private String topic;
     private int partition;
@@ -50,5 +52,17 @@ public class DeliveryResult implements ProducerResponse {
 
     public void setTimestamp(long timestamp) {
         this.timestamp = timestamp;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (o == null || getClass() != o.getClass()) return false;
+        DeliveryResult that = (DeliveryResult) o;
+        return partition == that.partition && offset == that.offset && timestamp == that.timestamp && Objects.equals(topic, that.topic);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(topic, partition, offset, timestamp);
     }
 }
