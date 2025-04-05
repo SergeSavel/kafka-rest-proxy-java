@@ -14,12 +14,17 @@
 
 package pro.savel.kafka.producer;
 
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.util.ReferenceCountUtil;
 import org.apache.kafka.clients.producer.Callback;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.errors.InvalidTopicException;
 import org.apache.kafka.common.errors.UnknownTopicOrPartitionException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import pro.savel.kafka.common.HttpUtils;
 import pro.savel.kafka.common.contract.RequestBearer;
 import pro.savel.kafka.common.contract.ResponseBearer;
@@ -29,35 +34,62 @@ import pro.savel.kafka.producer.requests.*;
 import pro.savel.kafka.producer.responses.DeliveryResult;
 import pro.savel.kafka.producer.responses.ProducerList;
 
-public class ProducerRequestProcessor implements AutoCloseable {
+@ChannelHandler.Sharable
+public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter implements AutoCloseable {
+
+    private static final Logger logger = LoggerFactory.getLogger(ProducerRequestProcessor.class);
 
     private final ProducerProvider provider = new ProducerProvider();
 
-    public void processRequest(ChannelHandlerContext ctx, RequestBearer requestBearer) throws InstanceNotFoundException, InvalidTokenException {
-        var bearerRequest = requestBearer.request();
+    @Override
+    public void channelRead(ChannelHandlerContext ctx, Object msg) {
+        if (msg instanceof RequestBearer bearer && bearer.request() instanceof ProducerRequest) {
+            try {
+                processRequest(ctx, bearer);
+            } catch (InstanceNotFoundException e) {
+                HttpUtils.writeNotFoundAndClose(ctx, bearer.protocolVersion(), "Producer not found.");
+            } catch (InvalidTokenException e) {
+                HttpUtils.writeForbiddenAndClose(ctx, bearer.protocolVersion(), e.getMessage());
+            } catch (Exception e) {
+                String message = "An unexpected error occurred while processing producer request.";
+                logger.error(message, e);
+                HttpUtils.writeBadRequestAndClose(ctx, bearer.protocolVersion(), message);
+            } finally {
+                ReferenceCountUtil.release(msg);
+            }
+        }
+    }
+
+    @Override
+    public void close() {
+        provider.close();
+    }
+
+    public void processRequest(ChannelHandlerContext ctx, RequestBearer bearer) throws InstanceNotFoundException, InvalidTokenException {
+        var bearerRequest = bearer.request();
 
         if (bearerRequest instanceof ProduceRequest) {
-            processProduce(ctx, requestBearer);
+            processProduce(ctx, bearer);
             return;
         }
         if (bearerRequest instanceof CreateProducerRequest) {
-            processCreateProducer(ctx, requestBearer);
+            processCreateProducer(ctx, bearer);
             return;
         }
         if (bearerRequest instanceof RemoveProducerRequest) {
-            processRemoveProducer(ctx, requestBearer);
+            processRemoveProducer(ctx, bearer);
             return;
         }
         if (bearerRequest instanceof GetProducerRequest) {
-            processGetProducer(ctx, requestBearer);
+            processGetProducer(ctx, bearer);
             return;
         }
         if (bearerRequest instanceof TouchProducerRequest) {
-            processTouchProducer(ctx, requestBearer);
+            processTouchProducer(ctx, bearer);
             return;
         }
         if (bearerRequest instanceof ListProducersRequest) {
-            processListProducers(ctx, requestBearer);
+            processListProducers(ctx, bearer);
             return;
         }
         throw new RuntimeException("Unexpected producer request type: " + bearerRequest.getClass().getName());
@@ -132,10 +164,5 @@ public class ProducerRequestProcessor implements AutoCloseable {
             }
         };
         wrapper.produce(request, callback);
-    }
-
-    @Override
-    public void close() {
-        provider.close();
     }
 }

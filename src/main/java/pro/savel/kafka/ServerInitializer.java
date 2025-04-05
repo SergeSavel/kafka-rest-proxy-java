@@ -21,6 +21,7 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
 import pro.savel.kafka.producer.ProducerRequestDecoder;
+import pro.savel.kafka.producer.ProducerRequestProcessor;
 
 class ServerInitializer extends ChannelInitializer<SocketChannel> implements AutoCloseable {
 
@@ -29,7 +30,8 @@ class ServerInitializer extends ChannelInitializer<SocketChannel> implements Aut
     private final ProducerRequestDecoder producerRequestDecoder = new ProducerRequestDecoder(objectMapper);
     private final DefaultRequestDecoder defaultRequestDecoder = new DefaultRequestDecoder();
 
-    private final RequestProcessor requestProcessor = new RequestProcessor();
+    private final ProducerRequestProcessor producerRequestProcessor = new ProducerRequestProcessor();
+
     private final ResponseEncoder responseEncoder = new ResponseEncoder(objectMapper);
 
     @Override
@@ -40,12 +42,12 @@ class ServerInitializer extends ChannelInitializer<SocketChannel> implements Aut
         pipeline.addLast(new HttpObjectAggregator(32 * 1024 * 1024));
         pipeline.addLast(producerRequestDecoder);
         pipeline.addLast(defaultRequestDecoder);
-        pipeline.addLast(requestProcessor);
+        pipeline.addLast(producerRequestProcessor);
         pipeline.addLast(responseEncoder);
     }
 
     @Override
     public void close() {
-        requestProcessor.close();
+        producerRequestProcessor.close();
     }
 }
