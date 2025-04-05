@@ -27,8 +27,6 @@ import pro.savel.kafka.producer.requests.*;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
@@ -45,20 +43,6 @@ public class ProducerRequestDecoder {
 
     public ProducerRequestDecoder(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
-    }
-
-    private static ProduceRequest mapProduceRequest(ProduceStringRequest stringRequest, UUID producerId) {
-        var headers = new HashMap<String, byte[]>(stringRequest.headers().size());
-        stringRequest.headers().forEach((key, value) -> headers.put(key, value.getBytes(StandardCharsets.UTF_8)));
-        var request = new ProduceRequest();
-        request.setId(producerId);
-        request.setToken(stringRequest.token());
-        request.setTopic(stringRequest.topic());
-        request.setPartition(stringRequest.partition());
-        request.setHeaders(headers);
-        request.setKey(stringRequest.key().getBytes(StandardCharsets.UTF_8));
-        request.setValue(stringRequest.value().getBytes(StandardCharsets.UTF_8));
-        return request;
     }
 
     private void decodeRoot(ChannelHandlerContext ctx, FullHttpRequest httpRequest) {
@@ -228,7 +212,7 @@ public class ProducerRequestDecoder {
         try {
             if (HttpUtils.isJson(contentType)) {
                 var stringRequest = parseJson(httpRequest.content(), ProduceStringRequest.class);
-                request = mapProduceRequest(stringRequest, producerId);
+                request = ProducerMapper.mapProduceRequest(stringRequest, producerId);
             } else {
                 HttpUtils.writeBadRequestAndClose(ctx, httpRequest.protocolVersion(), "Invalid 'Content-Type' header");
                 return;
