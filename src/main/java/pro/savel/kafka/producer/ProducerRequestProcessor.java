@@ -110,6 +110,7 @@ public class ProducerRequestProcessor implements AutoCloseable {
         var request = (ProduceRequest) requestBearer.request();
         ProducerWrapper wrapper;
         wrapper = provider.getItem(request.getId(), request.getToken());
+        wrapper.touch();
         var callback = new Callback() {
             @Override
             public void onCompletion(RecordMetadata metadata, Exception exception) {
