@@ -53,11 +53,9 @@ public class ProducerRequestDecoder extends ChannelInboundHandlerAdapter {
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) {
-        if (msg instanceof FullHttpRequest httpRequest) {
+        if (msg instanceof FullHttpRequest httpRequest && httpRequest.uri().startsWith(URI_PREFIX)) {
             try {
-                if (httpRequest.uri().startsWith(URI_PREFIX)) {
-                    decode(ctx, httpRequest);
-                }
+                decode(ctx, httpRequest);
             } catch (DeserializeJsonException e) {
                 HttpUtils.writeBadRequestAndClose(ctx, httpRequest.protocolVersion(), "Invalid request content.");
             } catch (Exception e) {
@@ -155,26 +153,22 @@ public class ProducerRequestDecoder extends ChannelInboundHandlerAdapter {
             return;
         }
         CreateProducerRequest request;
-
         if (HttpUtils.isJson(contentType)) {
             request = JsonUtils.parseJson(objectMapper, httpRequest.content(), CreateProducerRequest.class);
         } else {
             HttpUtils.writeBadRequestAndClose(ctx, httpRequest.protocolVersion(), "Invalid 'Content-Type' header");
             return;
         }
-
         var bearer = new RequestBearer(httpRequest, request);
         ctx.fireChannelRead(bearer);
     }
 
     private void decodeTouchProducerRequest(ChannelHandlerContext ctx, FullHttpRequest httpRequest, UUID producerId) throws DeserializeJsonException {
-
         var contentType = httpRequest.headers().get(HttpHeaderNames.CONTENT_TYPE);
         if (contentType == null) {
             HttpUtils.writeBadRequestAndClose(ctx, httpRequest.protocolVersion(), "Missing 'Content-Type' header");
             return;
         }
-
         TouchProducerRequest request;
         if (HttpUtils.isJson(contentType)) {
             request = JsonUtils.parseJson(objectMapper, httpRequest.content(), TouchProducerRequest.class);
@@ -183,7 +177,6 @@ public class ProducerRequestDecoder extends ChannelInboundHandlerAdapter {
             return;
         }
         request.setId(producerId);
-
         var bearer = new RequestBearer(httpRequest, request);
         ctx.fireChannelRead(bearer);
     }

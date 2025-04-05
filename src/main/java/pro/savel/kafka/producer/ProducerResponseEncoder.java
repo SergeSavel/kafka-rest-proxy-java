@@ -30,7 +30,6 @@ import org.slf4j.LoggerFactory;
 import pro.savel.kafka.common.HttpUtils;
 import pro.savel.kafka.common.contract.ResponseBearer;
 import pro.savel.kafka.common.contract.Serde;
-import pro.savel.kafka.producer.responses.ProducerResponse;
 
 @ChannelHandler.Sharable
 public class ProducerResponseEncoder extends ChannelInboundHandlerAdapter {
@@ -45,7 +44,7 @@ public class ProducerResponseEncoder extends ChannelInboundHandlerAdapter {
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) {
-        if (msg instanceof ResponseBearer bearer && bearer.response() instanceof ProducerResponse response) {
+        if (msg instanceof ResponseBearer bearer && bearer.response() instanceof pro.savel.kafka.producer.contract.ProducerResponse response) {
             try {
                 encodeResponse(ctx, bearer);
             } catch (JsonProcessingException e) {

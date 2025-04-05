@@ -16,7 +16,7 @@ package pro.savel.kafka.producer.responses;
 
 import java.util.Objects;
 
-public class DeliveryResult implements ProducerResponse {
+public class ProducerProduceResponse implements pro.savel.kafka.producer.contract.ProducerResponse {
     private String topic;
     private int partition;
     private long offset;
@@ -57,7 +57,7 @@ public class DeliveryResult implements ProducerResponse {
     @Override
     public boolean equals(Object o) {
         if (o == null || getClass() != o.getClass()) return false;
-        DeliveryResult that = (DeliveryResult) o;
+        ProducerProduceResponse that = (ProducerProduceResponse) o;
         return partition == that.partition && offset == that.offset && timestamp == that.timestamp && Objects.equals(topic, that.topic);
     }
 

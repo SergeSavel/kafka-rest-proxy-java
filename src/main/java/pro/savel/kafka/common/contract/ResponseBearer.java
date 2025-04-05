@@ -21,10 +21,6 @@ public record ResponseBearer(Response response, HttpResponseStatus status, Serde
                              HttpVersion protocolVersion,
                              boolean connectionKeepAlive) {
 
-    public ResponseBearer(RequestBearer requestBearer, HttpResponseStatus status) {
-        this(null, status, requestBearer.serializeTo(), requestBearer.protocolVersion(), requestBearer.connectionKeepAlive());
-    }
-
     public ResponseBearer(RequestBearer requestBearer, HttpResponseStatus status, Response response) {
         this(response, status, requestBearer.serializeTo(), requestBearer.protocolVersion(), requestBearer.connectionKeepAlive());
     }

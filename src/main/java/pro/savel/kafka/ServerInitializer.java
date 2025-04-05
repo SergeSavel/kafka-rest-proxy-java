@@ -15,6 +15,7 @@
 package pro.savel.kafka;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
@@ -36,6 +37,10 @@ class ServerInitializer extends ChannelInitializer<SocketChannel> implements Aut
     private final ProducerResponseEncoder producerResponseEncoder = new ProducerResponseEncoder(objectMapper);
 
     private final DefaultInboundHandler defaultInboundHandler = new DefaultInboundHandler();
+
+    static {
+        objectMapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
+    }
 
     @Override
     protected void initChannel(SocketChannel channel) {

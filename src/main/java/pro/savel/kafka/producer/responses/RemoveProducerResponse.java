@@ -14,29 +14,5 @@
 
 package pro.savel.kafka.producer.responses;
 
-import java.util.Objects;
-
-public class ProducerItemWithToken extends ProducerItem {
-    private String token;
-
-    public String getToken() {
-        return token;
-    }
-
-    public void setToken(String token) {
-        this.token = token;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (o == null || getClass() != o.getClass()) return false;
-        if (!super.equals(o)) return false;
-        ProducerItemWithToken that = (ProducerItemWithToken) o;
-        return Objects.equals(token, that.token);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(super.hashCode(), token);
-    }
+public class RemoveProducerResponse implements pro.savel.kafka.producer.contract.ProducerResponse {
 }

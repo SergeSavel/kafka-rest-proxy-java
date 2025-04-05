@@ -31,8 +31,10 @@ import pro.savel.kafka.common.contract.ResponseBearer;
 import pro.savel.kafka.common.exceptions.InstanceNotFoundException;
 import pro.savel.kafka.common.exceptions.InvalidTokenException;
 import pro.savel.kafka.producer.requests.*;
-import pro.savel.kafka.producer.responses.DeliveryResult;
-import pro.savel.kafka.producer.responses.ProducerList;
+import pro.savel.kafka.producer.responses.ProducerListResponse;
+import pro.savel.kafka.producer.responses.ProducerProduceResponse;
+import pro.savel.kafka.producer.responses.ProducerTouchResponse;
+import pro.savel.kafka.producer.responses.RemoveProducerResponse;
 
 @ChannelHandler.Sharable
 public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter implements AutoCloseable {
@@ -98,7 +100,7 @@ public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter imple
     }
 
     private void processListProducers(ChannelHandlerContext ctx, RequestBearer requestBearer) {
-        var response = new ProducerList();
+        var response = new ProducerListResponse();
         var wrappers = provider.getItems();
         wrappers.forEach(wrapper -> response.add(wrapper.id()));
         var responseBearer = new ResponseBearer(requestBearer, HttpResponseStatus.OK, response);
@@ -127,7 +129,8 @@ public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter imple
         ProducerWrapper wrapper;
         wrapper = provider.getItem(request.getId(), request.getToken());
         provider.removeItem(wrapper.id());
-        var responseBearer = new ResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT);
+        var response = new RemoveProducerResponse();
+        var responseBearer = new ResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, response);
         ctx.fireChannelRead(responseBearer);
     }
 
@@ -136,7 +139,8 @@ public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter imple
         ProducerWrapper wrapper;
         wrapper = provider.getItem(request.getId(), request.getToken());
         wrapper.touch();
-        var responseBearer = new ResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT);
+        var response = new ProducerTouchResponse();
+        var responseBearer = new ResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, response);
         ctx.fireChannelRead(responseBearer);
     }
 
@@ -149,7 +153,7 @@ public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter imple
             @Override
             public void onCompletion(RecordMetadata metadata, Exception exception) {
                 if (exception == null) {
-                    var response = new DeliveryResult();
+                    var response = new ProducerProduceResponse();
                     response.setTopic(metadata.topic());
                     response.setPartition(metadata.partition());
                     response.setOffset(metadata.offset());
