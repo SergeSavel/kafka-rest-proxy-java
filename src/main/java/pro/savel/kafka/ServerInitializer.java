@@ -47,6 +47,5 @@ class ServerInitializer extends ChannelInitializer<SocketChannel> implements Aut
     @Override
     public void close() {
         requestProcessor.close();
-        executorGroup.shutdownGracefully();
     }
 }
