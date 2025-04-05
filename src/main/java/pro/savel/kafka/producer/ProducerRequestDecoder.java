@@ -28,6 +28,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import pro.savel.kafka.common.HttpUtils;
 import pro.savel.kafka.common.contract.RequestBearer;
+import pro.savel.kafka.common.exceptions.DeserializeJsonException;
 import pro.savel.kafka.producer.requests.*;
 
 import java.io.IOException;
@@ -60,8 +61,12 @@ public class ProducerRequestDecoder extends ChannelInboundHandlerAdapter {
                 if (httpRequest.uri().startsWith(URI_PREFIX)) {
                     decode(ctx, httpRequest);
                 }
-            } catch (IOException e) {
+            } catch (DeserializeJsonException e) {
                 HttpUtils.writeBadRequestAndClose(ctx, httpRequest.protocolVersion(), "Invalid request content.");
+            } catch (Exception e) {
+                String message = "An unexpected error occurred while decoding producer request.";
+                logger.error(message, e);
+                HttpUtils.writeBadRequestAndClose(ctx, httpRequest.protocolVersion(), message);
             } finally {
                 ReferenceCountUtil.release(msg);
             }
@@ -70,13 +75,7 @@ public class ProducerRequestDecoder extends ChannelInboundHandlerAdapter {
         }
     }
 
-    @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-        logger.error("An unexpected error occurred while decoding producer request.", cause);
-        ctx.close();
-    }
-
-    private void decode(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws IOException {
+    private void decode(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws DeserializeJsonException {
 
         var producerMatcher = PATTERN_PRODUCER.matcher(httpRequest.uri());
         if (producerMatcher.matches()) {
@@ -102,7 +101,7 @@ public class ProducerRequestDecoder extends ChannelInboundHandlerAdapter {
         HttpUtils.writeNotFoundAndClose(ctx, httpRequest.protocolVersion());
     }
 
-    private void decodeRoot(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws IOException {
+    private void decodeRoot(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws DeserializeJsonException {
         if (httpRequest.method() == HttpMethod.GET) {
             decodeListProducersRequest(ctx, httpRequest);
         } else if (httpRequest.method() == HttpMethod.POST) {
@@ -112,7 +111,7 @@ public class ProducerRequestDecoder extends ChannelInboundHandlerAdapter {
         }
     }
 
-    private void decodeProducerRoot(ChannelHandlerContext ctx, FullHttpRequest httpRequest, UUID producerId) throws IOException {
+    private void decodeProducerRoot(ChannelHandlerContext ctx, FullHttpRequest httpRequest, UUID producerId) throws DeserializeJsonException {
         if (httpRequest.method() == HttpMethod.GET) {
             decodeGetProducerRequest(ctx, httpRequest, producerId);
         } else if (httpRequest.method() == HttpMethod.POST) {
@@ -124,7 +123,7 @@ public class ProducerRequestDecoder extends ChannelInboundHandlerAdapter {
         }
     }
 
-    private void decodeProducerTouch(ChannelHandlerContext ctx, FullHttpRequest httpRequest, UUID producerId) throws IOException {
+    private void decodeProducerTouch(ChannelHandlerContext ctx, FullHttpRequest httpRequest, UUID producerId) throws DeserializeJsonException {
         if (httpRequest.method() == HttpMethod.POST || httpRequest.method() == HttpMethod.PUT) {
             decodeTouchProducerRequest(ctx, httpRequest, producerId);
         } else {
@@ -132,7 +131,7 @@ public class ProducerRequestDecoder extends ChannelInboundHandlerAdapter {
         }
     }
 
-    private void decodeProducerProduce(ChannelHandlerContext ctx, FullHttpRequest httpRequest, UUID producerId) throws IOException {
+    private void decodeProducerProduce(ChannelHandlerContext ctx, FullHttpRequest httpRequest, UUID producerId) throws DeserializeJsonException {
         if (httpRequest.method() == HttpMethod.POST) {
             decodeProduceRequest(ctx, httpRequest, producerId);
         } else {
@@ -152,7 +151,7 @@ public class ProducerRequestDecoder extends ChannelInboundHandlerAdapter {
         ctx.fireChannelRead(bearer);
     }
 
-    private void decodeCreateProducerRequest(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws IOException {
+    private void decodeCreateProducerRequest(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws DeserializeJsonException {
         var contentType = httpRequest.headers().get(HttpHeaderNames.CONTENT_TYPE);
         if (contentType == null) {
             HttpUtils.writeBadRequestAndClose(ctx, httpRequest.protocolVersion(), "Missing 'Content-Type' header");
@@ -171,7 +170,7 @@ public class ProducerRequestDecoder extends ChannelInboundHandlerAdapter {
         ctx.fireChannelRead(bearer);
     }
 
-    private void decodeTouchProducerRequest(ChannelHandlerContext ctx, FullHttpRequest httpRequest, UUID producerId) throws IOException {
+    private void decodeTouchProducerRequest(ChannelHandlerContext ctx, FullHttpRequest httpRequest, UUID producerId) throws DeserializeJsonException {
 
         var contentType = httpRequest.headers().get(HttpHeaderNames.CONTENT_TYPE);
         if (contentType == null) {
@@ -192,7 +191,7 @@ public class ProducerRequestDecoder extends ChannelInboundHandlerAdapter {
         ctx.fireChannelRead(bearer);
     }
 
-    private void decodeRemoveProducerRequest(ChannelHandlerContext ctx, FullHttpRequest httpRequest, UUID producerId) throws IOException {
+    private void decodeRemoveProducerRequest(ChannelHandlerContext ctx, FullHttpRequest httpRequest, UUID producerId) throws DeserializeJsonException {
 
         var contentType = httpRequest.headers().get(HttpHeaderNames.CONTENT_TYPE);
         if (contentType == null) {
@@ -211,15 +210,17 @@ public class ProducerRequestDecoder extends ChannelInboundHandlerAdapter {
         ctx.fireChannelRead(bearer);
     }
 
-    private <T> T parseJson(ByteBuf byteBuf, Class<T> clazz) throws IOException {
+    private <T> T parseJson(ByteBuf byteBuf, Class<T> clazz) throws DeserializeJsonException {
         T result;
         try (var inputStream = new ByteBufInputStream(byteBuf)) {
             result = objectMapper.readValue((InputStream) inputStream, clazz);
+        } catch (IOException e) {
+            throw new DeserializeJsonException(e);
         }
         return result;
     }
 
-    private void decodeProduceRequest(ChannelHandlerContext ctx, FullHttpRequest httpRequest, UUID producerId) throws IOException {
+    private void decodeProduceRequest(ChannelHandlerContext ctx, FullHttpRequest httpRequest, UUID producerId) throws DeserializeJsonException {
         var contentType = httpRequest.headers().get(HttpHeaderNames.CONTENT_TYPE);
         if (contentType == null) {
             HttpUtils.writeBadRequestAndClose(ctx, httpRequest.protocolVersion(), "Missing 'Content-Type' header");
