@@ -63,7 +63,7 @@ public class ProducerRequestDecoder extends ChannelInboundHandlerAdapter {
             } catch (Exception e) {
                 String message = "An unexpected error occurred while decoding producer request.";
                 logger.error(message, e);
-                HttpUtils.writeBadRequestAndClose(ctx, httpRequest.protocolVersion(), message);
+                HttpUtils.writeInternalServerErrorAndClose(ctx, httpRequest.protocolVersion(), message);
             } finally {
                 ReferenceCountUtil.release(msg);
             }
