@@ -104,7 +104,7 @@ public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter imple
         var wrappers = provider.getItems();
         wrappers.forEach(wrapper -> response.add(wrapper.id()));
         var responseBearer = new ResponseBearer(requestBearer, HttpResponseStatus.OK, response);
-        ctx.fireChannelRead(responseBearer);
+        ctx.writeAndFlush(responseBearer);
     }
 
     private void processGetProducer(ChannelHandlerContext ctx, RequestBearer requestBearer) throws InstanceNotFoundException {
@@ -113,7 +113,7 @@ public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter imple
         wrapper = provider.getItem(request.id());
         var response = ProducerResponseMapper.mapProducer(wrapper);
         var responseBearer = new ResponseBearer(requestBearer, HttpResponseStatus.OK, response);
-        ctx.fireChannelRead(responseBearer);
+        ctx.writeAndFlush(responseBearer);
     }
 
     private void processCreateProducer(ChannelHandlerContext ctx, RequestBearer requestBearer) {
@@ -121,7 +121,7 @@ public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter imple
         var wrapper = provider.createProducer(request.name(), request.config(), request.expirationTimeout());
         var response = ProducerResponseMapper.mapProducerWithToken(wrapper);
         var responseBearer = new ResponseBearer(requestBearer, HttpResponseStatus.CREATED, response);
-        ctx.fireChannelRead(responseBearer);
+        ctx.writeAndFlush(responseBearer);
     }
 
     private void processRemoveProducer(ChannelHandlerContext ctx, RequestBearer requestBearer) throws InstanceNotFoundException, InvalidTokenException {
@@ -131,7 +131,7 @@ public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter imple
         provider.removeItem(wrapper.id());
         var response = new RemoveProducerResponse();
         var responseBearer = new ResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, response);
-        ctx.fireChannelRead(responseBearer);
+        ctx.writeAndFlush(responseBearer);
     }
 
     private void processTouchProducer(ChannelHandlerContext ctx, RequestBearer requestBearer) throws InstanceNotFoundException, InvalidTokenException {
@@ -141,7 +141,7 @@ public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter imple
         wrapper.touch();
         var response = new ProducerTouchResponse();
         var responseBearer = new ResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, response);
-        ctx.fireChannelRead(responseBearer);
+        ctx.writeAndFlush(responseBearer);
     }
 
     private void processProduce(ChannelHandlerContext ctx, RequestBearer requestBearer) throws InstanceNotFoundException, InvalidTokenException {
@@ -159,7 +159,7 @@ public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter imple
                     response.setOffset(metadata.offset());
                     response.setTimestamp(metadata.timestamp());
                     var responseBearer = new ResponseBearer(requestBearer, HttpResponseStatus.CREATED, response);
-                    ctx.fireChannelRead(responseBearer);
+                    ctx.writeAndFlush(responseBearer);
                 } else {
                     if (exception instanceof InvalidTopicException || exception instanceof UnknownTopicOrPartitionException) {
                         HttpUtils.writeBadRequestAndClose(ctx, requestBearer.protocolVersion(), exception.getMessage());

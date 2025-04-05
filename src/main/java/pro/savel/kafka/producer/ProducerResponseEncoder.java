@@ -17,10 +17,7 @@ package pro.savel.kafka.producer;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.*;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaderValues;
@@ -32,7 +29,7 @@ import pro.savel.kafka.common.contract.ResponseBearer;
 import pro.savel.kafka.common.contract.Serde;
 
 @ChannelHandler.Sharable
-public class ProducerResponseEncoder extends ChannelInboundHandlerAdapter {
+public class ProducerResponseEncoder extends ChannelOutboundHandlerAdapter {
 
     private static final Logger logger = LoggerFactory.getLogger(ProducerResponseEncoder.class);
 
@@ -43,10 +40,14 @@ public class ProducerResponseEncoder extends ChannelInboundHandlerAdapter {
     }
 
     @Override
-    public void channelRead(ChannelHandlerContext ctx, Object msg) {
-        if (msg instanceof ResponseBearer bearer && bearer.response() instanceof pro.savel.kafka.producer.contract.ProducerResponse response) {
+    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+        if (msg instanceof ResponseBearer bearer && bearer.response() instanceof pro.savel.kafka.producer.contract.ProducerResponse) {
             try {
-                encodeResponse(ctx, bearer);
+                var httpResponse = createHttpResponse(bearer);
+                var future = ctx.writeAndFlush(httpResponse, promise);
+                if (!bearer.connectionKeepAlive()) {
+                    future.addListener(ChannelFutureListener.CLOSE);
+                }
             } catch (JsonProcessingException e) {
                 var message = "An error occurred during producer response serialization.";
                 logger.error(message, e);
@@ -55,11 +56,11 @@ public class ProducerResponseEncoder extends ChannelInboundHandlerAdapter {
                 ReferenceCountUtil.release(msg);
             }
         } else {
-            ctx.fireChannelRead(msg);
+            ctx.write(msg, promise);
         }
     }
 
-    private void encodeResponse(ChannelHandlerContext ctx, ResponseBearer bearer) throws JsonProcessingException {
+    private FullHttpResponse createHttpResponse(ResponseBearer bearer) throws JsonProcessingException {
         FullHttpResponse httpResponse;
         if (bearer.response() == null) {
             httpResponse = new DefaultFullHttpResponse(bearer.protocolVersion(), bearer.status());
@@ -83,9 +84,7 @@ public class ProducerResponseEncoder extends ChannelInboundHandlerAdapter {
                 httpResponse.headers().set(HttpUtils.ASCII_CONNECTION, HttpHeaderValues.CLOSE);
             }
         }
-        var future = ctx.writeAndFlush(httpResponse);
-        if (!bearer.connectionKeepAlive()) {
-            future.addListener(ChannelFutureListener.CLOSE);
-        }
+        return httpResponse;
     }
+
 }

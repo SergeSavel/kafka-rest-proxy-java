@@ -50,8 +50,8 @@ class ServerInitializer extends ChannelInitializer<SocketChannel> implements Aut
         pipeline.addLast(new HttpObjectAggregator(32 * 1024 * 1024));
         pipeline.addLast(producerRequestDecoder);
         pipeline.addLast(defaultRequestDecoder);
-        pipeline.addLast(producerRequestProcessor);
         pipeline.addLast(producerResponseEncoder);
+        pipeline.addLast(producerRequestProcessor);
         pipeline.addLast(defaultInboundHandler);
     }
 
