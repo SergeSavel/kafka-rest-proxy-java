@@ -15,8 +15,6 @@
 package pro.savel.kafka.producer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufInputStream;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -27,12 +25,11 @@ import io.netty.util.ReferenceCountUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import pro.savel.kafka.common.HttpUtils;
+import pro.savel.kafka.common.JsonUtils;
 import pro.savel.kafka.common.contract.RequestBearer;
 import pro.savel.kafka.common.exceptions.DeserializeJsonException;
 import pro.savel.kafka.producer.requests.*;
 
-import java.io.IOException;
-import java.io.InputStream;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
@@ -160,7 +157,7 @@ public class ProducerRequestDecoder extends ChannelInboundHandlerAdapter {
         CreateProducerRequest request;
 
         if (HttpUtils.isJson(contentType)) {
-            request = parseJson(httpRequest.content(), CreateProducerRequest.class);
+            request = JsonUtils.parseJson(objectMapper, httpRequest.content(), CreateProducerRequest.class);
         } else {
             HttpUtils.writeBadRequestAndClose(ctx, httpRequest.protocolVersion(), "Invalid 'Content-Type' header");
             return;
@@ -180,7 +177,7 @@ public class ProducerRequestDecoder extends ChannelInboundHandlerAdapter {
 
         TouchProducerRequest request;
         if (HttpUtils.isJson(contentType)) {
-            request = parseJson(httpRequest.content(), TouchProducerRequest.class);
+            request = JsonUtils.parseJson(objectMapper, httpRequest.content(), TouchProducerRequest.class);
         } else {
             HttpUtils.writeBadRequestAndClose(ctx, httpRequest.protocolVersion(), "Invalid 'Content-Type' header");
             return;
@@ -200,7 +197,7 @@ public class ProducerRequestDecoder extends ChannelInboundHandlerAdapter {
         }
         RemoveProducerRequest request;
         if (HttpUtils.isJson(contentType)) {
-            request = parseJson(httpRequest.content(), RemoveProducerRequest.class);
+            request = JsonUtils.parseJson(objectMapper, httpRequest.content(), RemoveProducerRequest.class);
         } else {
             HttpUtils.writeBadRequestAndClose(ctx, httpRequest.protocolVersion(), "Invalid 'Content-Type' header");
             return;
@@ -208,16 +205,6 @@ public class ProducerRequestDecoder extends ChannelInboundHandlerAdapter {
         request.setId(producerId);
         var bearer = new RequestBearer(httpRequest, request);
         ctx.fireChannelRead(bearer);
-    }
-
-    private <T> T parseJson(ByteBuf byteBuf, Class<T> clazz) throws DeserializeJsonException {
-        T result;
-        try (var inputStream = new ByteBufInputStream(byteBuf)) {
-            result = objectMapper.readValue((InputStream) inputStream, clazz);
-        } catch (IOException e) {
-            throw new DeserializeJsonException(e);
-        }
-        return result;
     }
 
     private void decodeProduceRequest(ChannelHandlerContext ctx, FullHttpRequest httpRequest, UUID producerId) throws DeserializeJsonException {
@@ -228,7 +215,7 @@ public class ProducerRequestDecoder extends ChannelInboundHandlerAdapter {
         }
         ProduceRequest request;
         if (HttpUtils.isJson(contentType)) {
-            var stringRequest = parseJson(httpRequest.content(), ProduceStringRequest.class);
+            var stringRequest = JsonUtils.parseJson(objectMapper, httpRequest.content(), ProduceStringRequest.class);
             request = ProducerMapper.mapProduceRequest(stringRequest, producerId);
         } else {
             HttpUtils.writeBadRequestAndClose(ctx, httpRequest.protocolVersion(), "Invalid 'Content-Type' header");
