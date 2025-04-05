@@ -57,6 +57,8 @@ public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter imple
             } finally {
                 ReferenceCountUtil.release(msg);
             }
+        } else {
+            ctx.fireChannelRead(msg);
         }
     }
 

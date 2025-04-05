@@ -22,6 +22,7 @@ import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
 import pro.savel.kafka.producer.ProducerRequestDecoder;
 import pro.savel.kafka.producer.ProducerRequestProcessor;
+import pro.savel.kafka.producer.ProducerResponseEncoder;
 
 class ServerInitializer extends ChannelInitializer<SocketChannel> implements AutoCloseable {
 
@@ -32,7 +33,9 @@ class ServerInitializer extends ChannelInitializer<SocketChannel> implements Aut
 
     private final ProducerRequestProcessor producerRequestProcessor = new ProducerRequestProcessor();
 
-    private final ResponseEncoder responseEncoder = new ResponseEncoder(objectMapper);
+    private final ProducerResponseEncoder producerResponseEncoder = new ProducerResponseEncoder(objectMapper);
+
+    private final DefaultInboundHandler defaultInboundHandler = new DefaultInboundHandler();
 
     @Override
     protected void initChannel(SocketChannel channel) {
@@ -43,7 +46,8 @@ class ServerInitializer extends ChannelInitializer<SocketChannel> implements Aut
         pipeline.addLast(producerRequestDecoder);
         pipeline.addLast(defaultRequestDecoder);
         pipeline.addLast(producerRequestProcessor);
-        pipeline.addLast(responseEncoder);
+        pipeline.addLast(producerResponseEncoder);
+        pipeline.addLast(defaultInboundHandler);
     }
 
     @Override
