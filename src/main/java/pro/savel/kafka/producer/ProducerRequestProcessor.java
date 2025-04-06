@@ -152,6 +152,9 @@ public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter imple
         var callback = new Callback() {
             @Override
             public void onCompletion(RecordMetadata metadata, Exception exception) {
+                if (logger.isDebugEnabled()) {
+                    logger.debug("Produce request completed.");
+                }
                 if (exception == null) {
                     var response = new ProducerProduceResponse();
                     response.setTopic(metadata.topic());
@@ -169,6 +172,9 @@ public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter imple
                 }
             }
         };
+        if (logger.isDebugEnabled()) {
+            logger.debug("Starting produce request processing.");
+        }
         wrapper.produce(request, callback);
     }
 }

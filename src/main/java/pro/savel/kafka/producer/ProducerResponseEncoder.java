@@ -43,6 +43,9 @@ public class ProducerResponseEncoder extends ChannelOutboundHandlerAdapter {
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
         if (msg instanceof ResponseBearer bearer && bearer.response() instanceof pro.savel.kafka.producer.contract.ProducerResponse) {
             try {
+                if (logger.isDebugEnabled()) {
+                    logger.debug("Decoding producer response.");
+                }
                 var httpResponse = createHttpResponse(bearer);
                 var future = ctx.writeAndFlush(httpResponse, promise);
                 if (!bearer.connectionKeepAlive()) {
