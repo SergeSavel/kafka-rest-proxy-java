@@ -142,8 +142,8 @@ public class ProducerRequestDecoder extends ChannelInboundHandlerAdapter {
         ctx.fireChannelRead(bearer);
     }
 
-    private void decodeGetProducerRequest(ChannelHandlerContext ctx, FullHttpRequest httpRequest, UUID producerUuid) {
-        var request = new GetProducerRequest(producerUuid);
+    private void decodeGetProducerRequest(ChannelHandlerContext ctx, FullHttpRequest httpRequest, UUID producerId) {
+        var request = new GetProducerRequest(producerId);
         var bearer = new RequestBearer(httpRequest, request);
         ctx.fireChannelRead(bearer);
     }
