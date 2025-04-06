@@ -101,6 +101,8 @@ public class ProducerRequestDecoder extends ChannelInboundHandlerAdapter {
             decodeListProducersRequest(ctx, httpRequest);
         } else if (httpRequest.method() == HttpMethod.POST) {
             decodeCreateProducerRequest(ctx, httpRequest);
+        } else if (httpRequest.method() == HttpMethod.DELETE) {
+            decodeRemoveProducerRequest(ctx, httpRequest, null);
         } else {
             HttpUtils.writeMethodNotAllowedAndClose(ctx, httpRequest.protocolVersion());
         }
@@ -194,7 +196,10 @@ public class ProducerRequestDecoder extends ChannelInboundHandlerAdapter {
             HttpUtils.writeBadRequestAndClose(ctx, httpRequest.protocolVersion(), "Invalid 'Content-Type' header");
             return;
         }
-        request.setId(producerId);
+        if (producerId != null && !producerId.equals(request.id())) {
+            HttpUtils.writeBadRequestAndClose(ctx, httpRequest.protocolVersion(), "Invalid Producer Id.");
+            return;
+        }
         var bearer = new RequestBearer(httpRequest, request);
         ctx.fireChannelRead(bearer);
     }
