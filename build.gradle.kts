@@ -29,9 +29,13 @@ dependencies {
     runtimeOnly("org.apache.logging.log4j:log4j-core")
     runtimeOnly("org.apache.logging.log4j:log4j-layout-template-json")
     runtimeOnly("org.apache.logging.log4j:log4j-slf4j2-impl")
+    compileOnly("org.projectlombok:lombok:1.18.38")
+    annotationProcessor("org.projectlombok:lombok:1.18.38")
     implementation("com.fasterxml.jackson.core:jackson-databind:2.18.1")
     testImplementation(platform("org.junit:junit-bom:5.10.0"))
     testImplementation("org.junit.jupiter:junit-jupiter")
+    testCompileOnly("org.projectlombok:lombok:1.18.38")
+    testAnnotationProcessor("org.projectlombok:lombok:1.18.38")
 }
 
 tasks.test {
