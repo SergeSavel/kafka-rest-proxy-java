@@ -39,10 +39,10 @@ public class Application
                     .childHandler(initializer);
 
             var channel = bootstrap.bind(port).sync().channel();
-
             logger.info("Server started on port {}", port);
 
             channel.closeFuture().sync();
+            logger.info("Server is shutting down...");
         }
         finally
         {
