@@ -24,6 +24,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public abstract class ClientProvider<Wrapper extends ClientWrapper> implements AutoCloseable {
 
     private final ConcurrentHashMap<UUID, Wrapper> wrappers = new ConcurrentHashMap<>();
+    private final ClientKiller<Wrapper> killer = new ClientKiller<>(this);
 
     @Override
     public void close() {
