@@ -182,7 +182,6 @@ public class ProducerRequestDecoder extends ChannelInboundHandlerAdapter {
     }
 
     private void decodeRemoveProducerRequest(ChannelHandlerContext ctx, FullHttpRequest httpRequest, UUID producerId) throws DeserializeJsonException {
-
         var contentType = httpRequest.headers().get(HttpHeaderNames.CONTENT_TYPE);
         if (contentType == null) {
             HttpUtils.writeBadRequestAndClose(ctx, httpRequest.protocolVersion(), "Missing 'Content-Type' header");
