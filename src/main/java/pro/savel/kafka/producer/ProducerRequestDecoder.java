@@ -26,6 +26,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import pro.savel.kafka.common.HttpUtils;
 import pro.savel.kafka.common.JsonUtils;
+import pro.savel.kafka.common.Utils;
 import pro.savel.kafka.common.contract.RequestBearer;
 import pro.savel.kafka.common.exceptions.BadRequestException;
 import pro.savel.kafka.producer.requests.*;
@@ -57,11 +58,10 @@ public class ProducerRequestDecoder extends ChannelInboundHandlerAdapter {
             try {
                 decode(ctx, httpRequest);
             } catch (BadRequestException e) {
-                HttpUtils.writeBadRequestAndClose(ctx, httpRequest.protocolVersion(), "Invalid request content.");
+                HttpUtils.writeBadRequestAndClose(ctx, httpRequest.protocolVersion(), Utils.combineErrorMessage(e));
             } catch (Exception e) {
-                String message = "An unexpected error occurred while decoding producer request.";
-                logger.error(message, e);
-                HttpUtils.writeInternalServerErrorAndClose(ctx, httpRequest.protocolVersion(), message);
+                logger.error("An unexpected error occurred while decoding producer request.", e);
+                HttpUtils.writeInternalServerErrorAndClose(ctx, httpRequest.protocolVersion(), Utils.combineErrorMessage(e));
             } finally {
                 ReferenceCountUtil.release(msg);
             }

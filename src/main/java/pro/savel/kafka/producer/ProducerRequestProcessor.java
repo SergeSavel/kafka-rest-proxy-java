@@ -26,6 +26,7 @@ import org.apache.kafka.common.errors.UnknownTopicOrPartitionException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import pro.savel.kafka.common.HttpUtils;
+import pro.savel.kafka.common.Utils;
 import pro.savel.kafka.common.contract.RequestBearer;
 import pro.savel.kafka.common.contract.ResponseBearer;
 import pro.savel.kafka.common.exceptions.BadRequestException;
@@ -51,16 +52,16 @@ public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter imple
             try {
                 processRequest(ctx, bearer);
             } catch (NotFoundException e) {
-                HttpUtils.writeNotFoundAndClose(ctx, bearer.protocolVersion(), e.getMessage());
+                HttpUtils.writeNotFoundAndClose(ctx, bearer.protocolVersion(), Utils.combineErrorMessage(e));
             } catch (BadRequestException e) {
-                HttpUtils.writeBadRequestAndClose(ctx, bearer.protocolVersion(), e.getMessage());
+                HttpUtils.writeBadRequestAndClose(ctx, bearer.protocolVersion(), Utils.combineErrorMessage(e));
             } catch (UnauthenticatedException e) {
-                HttpUtils.writeUnauthorizedAndClose(ctx, bearer.protocolVersion(), e.getMessage());
+                HttpUtils.writeUnauthorizedAndClose(ctx, bearer.protocolVersion(), Utils.combineErrorMessage(e));
             } catch (UnauthorizedException e) {
-                HttpUtils.writeForbiddenAndClose(ctx, bearer.protocolVersion(), e.getMessage());
+                HttpUtils.writeForbiddenAndClose(ctx, bearer.protocolVersion(), Utils.combineErrorMessage(e));
             } catch (Exception e) {
                 logger.error("An unexpected error occurred while processing producer request.", e);
-                HttpUtils.writeInternalServerErrorAndClose(ctx, bearer.protocolVersion(), e.getMessage());
+                HttpUtils.writeInternalServerErrorAndClose(ctx, bearer.protocolVersion(), Utils.combineErrorMessage(e));
             } finally {
                 ReferenceCountUtil.release(msg);
             }
