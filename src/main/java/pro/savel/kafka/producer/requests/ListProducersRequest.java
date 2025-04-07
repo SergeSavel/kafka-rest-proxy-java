@@ -14,5 +14,8 @@
 
 package pro.savel.kafka.producer.requests;
 
-public record ListProducersRequest() implements ProducerRequest {
+import lombok.Data;
+
+@Data
+public class ListProducersRequest implements ProducerRequest {
 }

@@ -14,39 +14,12 @@
 
 package pro.savel.kafka.producer.requests;
 
-import java.util.Objects;
+import lombok.Data;
+
 import java.util.UUID;
 
+@Data
 public class TouchProducerRequest implements ProducerRequest {
-
     private UUID id;
     private String token;
-
-    public UUID getId() {
-        return id;
-    }
-
-    public void setId(UUID id) {
-        this.id = id;
-    }
-
-    public String getToken() {
-        return token;
-    }
-
-    public void setToken(String token) {
-        this.token = token;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (o == null || getClass() != o.getClass()) return false;
-        TouchProducerRequest that = (TouchProducerRequest) o;
-        return Objects.equals(id, that.id) && Objects.equals(token, that.token);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(id, token);
-    }
 }

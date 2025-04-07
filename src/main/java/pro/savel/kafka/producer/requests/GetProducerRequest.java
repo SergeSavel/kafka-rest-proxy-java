@@ -14,7 +14,11 @@
 
 package pro.savel.kafka.producer.requests;
 
+import lombok.Data;
+
 import java.util.UUID;
 
-public record GetProducerRequest(UUID id) implements ProducerRequest {
+@Data
+public class GetProducerRequest implements ProducerRequest {
+    private UUID id;
 }

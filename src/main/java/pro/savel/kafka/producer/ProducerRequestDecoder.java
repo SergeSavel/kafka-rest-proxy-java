@@ -143,7 +143,8 @@ public class ProducerRequestDecoder extends ChannelInboundHandlerAdapter {
     }
 
     private void decodeGetProducerRequest(ChannelHandlerContext ctx, FullHttpRequest httpRequest, UUID producerId) {
-        var request = new GetProducerRequest(producerId);
+        var request = new GetProducerRequest();
+        request.setId(producerId);
         var bearer = new RequestBearer(httpRequest, request);
         ctx.fireChannelRead(bearer);
     }
@@ -196,7 +197,7 @@ public class ProducerRequestDecoder extends ChannelInboundHandlerAdapter {
             HttpUtils.writeBadRequestAndClose(ctx, httpRequest.protocolVersion(), "Invalid 'Content-Type' header");
             return;
         }
-        if (producerId != null && !producerId.equals(request.id())) {
+        if (producerId != null && !producerId.equals(request.getId())) {
             HttpUtils.writeBadRequestAndClose(ctx, httpRequest.protocolVersion(), "Invalid Producer Id.");
             return;
         }

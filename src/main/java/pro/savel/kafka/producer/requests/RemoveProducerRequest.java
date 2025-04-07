@@ -14,7 +14,12 @@
 
 package pro.savel.kafka.producer.requests;
 
+import lombok.Data;
+
 import java.util.UUID;
 
-public record RemoveProducerRequest(UUID id, String token) implements ProducerRequest {
+@Data
+public class RemoveProducerRequest implements ProducerRequest {
+    private UUID id;
+    private String token;
 }

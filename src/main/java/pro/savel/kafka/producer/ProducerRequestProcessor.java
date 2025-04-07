@@ -110,7 +110,7 @@ public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter imple
     private void processGetProducer(ChannelHandlerContext ctx, RequestBearer requestBearer) throws InstanceNotFoundException {
         var request = (GetProducerRequest) requestBearer.request();
         ProducerWrapper wrapper;
-        wrapper = provider.getItem(request.id());
+        wrapper = provider.getItem(request.getId());
         var response = ProducerResponseMapper.mapProducer(wrapper);
         var responseBearer = new ResponseBearer(requestBearer, HttpResponseStatus.OK, response);
         ctx.writeAndFlush(responseBearer);
@@ -118,7 +118,7 @@ public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter imple
 
     private void processCreateProducer(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (CreateProducerRequest) requestBearer.request();
-        var wrapper = provider.createProducer(request.name(), request.config(), request.expirationTimeout());
+        var wrapper = provider.createProducer(request.getName(), request.getConfig(), request.getExpirationTimeout());
         var response = ProducerResponseMapper.mapProducerWithToken(wrapper);
         var responseBearer = new ResponseBearer(requestBearer, HttpResponseStatus.CREATED, response);
         ctx.writeAndFlush(responseBearer);

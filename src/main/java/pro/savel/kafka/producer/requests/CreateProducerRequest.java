@@ -14,8 +14,13 @@
 
 package pro.savel.kafka.producer.requests;
 
+import lombok.Data;
+
 import java.util.Map;
 
-public record CreateProducerRequest(String name, Map<String, String> config,
-                                    int expirationTimeout) implements ProducerRequest {
+@Data
+public class CreateProducerRequest implements ProducerRequest {
+    private String name;
+    private Map<String, String> config;
+    private int expirationTimeout;
 }

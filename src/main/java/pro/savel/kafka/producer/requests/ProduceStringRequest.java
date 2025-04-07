@@ -14,8 +14,16 @@
 
 package pro.savel.kafka.producer.requests;
 
+import lombok.Data;
+
 import java.util.Map;
 
-public record ProduceStringRequest(String token, String topic, Integer partition, Map<String, String> headers,
-                                   String key, String value) {
+@Data
+public class ProduceStringRequest {
+    private String token;
+    private String topic;
+    private Integer partition;
+    private Map<String, String> headers;
+    private String key;
+    private String value;
 }
