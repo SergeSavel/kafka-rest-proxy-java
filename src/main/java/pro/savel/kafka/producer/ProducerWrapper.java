@@ -31,14 +31,12 @@ public class ProducerWrapper extends ClientWrapper {
 
     protected ProducerWrapper(String name, Map<String, String> config, int expirationTimeout) {
         super(name, config, expirationTimeout);
-
         var properties = new Properties(config.size());
         for (Map.Entry<String, String> entry : config.entrySet()) {
             properties.setProperty(entry.getKey(), entry.getValue());
         }
         properties.setProperty(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, ByteArraySerializer.class.getName());
         properties.setProperty(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, ByteArraySerializer.class.getName());
-
         producer = new KafkaProducer<>(properties);
     }
 
