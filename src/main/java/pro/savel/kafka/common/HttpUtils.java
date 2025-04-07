@@ -64,6 +64,14 @@ public abstract class HttpUtils {
         writeHttpResponseAndClose(ctx, version, HttpResponseStatus.METHOD_NOT_ALLOWED, message);
     }
 
+    public static void writeUnauthorizedAndClose(ChannelHandlerContext ctx, HttpVersion version) {
+        writeUnauthorizedAndClose(ctx, version, null);
+    }
+
+    public static void writeUnauthorizedAndClose(ChannelHandlerContext ctx, HttpVersion version, String message) {
+        writeHttpResponseAndClose(ctx, version, HttpResponseStatus.UNAUTHORIZED, message);
+    }
+
     public static void writeForbiddenAndClose(ChannelHandlerContext ctx, HttpVersion version) {
         writeForbiddenAndClose(ctx, version, null);
     }
