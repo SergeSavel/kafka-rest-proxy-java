@@ -14,9 +14,12 @@
 
 package pro.savel.kafka.common;
 
+import lombok.Data;
+
 import java.util.Map;
 import java.util.UUID;
 
+@Data
 public abstract class ClientWrapper implements AutoCloseable {
 
     private final UUID id = UUID.randomUUID();
@@ -43,30 +46,5 @@ public abstract class ClientWrapper implements AutoCloseable {
     }
 
     @Override
-    public void close() {
-    }
-
-    public UUID id() {
-        return id;
-    }
-
-    public String name() {
-        return name;
-    }
-
-    public String username() {
-        return username;
-    }
-
-    public int expirationTimeout() {
-        return expirationTimeout;
-    }
-
-    public String token() {
-        return token;
-    }
-
-    public long expiresAt() {
-        return expiresAt;
-    }
+    public abstract void close();
 }

@@ -37,7 +37,7 @@ public abstract class ClientProvider<Wrapper extends ClientWrapper> implements A
     }
 
     protected void addItem(Wrapper wrapper) {
-        wrappers.put(wrapper.id(), wrapper);
+        wrappers.put(wrapper.getId(), wrapper);
     }
 
     public Wrapper getItem(UUID id) throws InstanceNotFoundException {
@@ -53,7 +53,7 @@ public abstract class ClientProvider<Wrapper extends ClientWrapper> implements A
     public Wrapper getItem(UUID id, String token) throws InstanceNotFoundException, InvalidTokenException {
         var wrapper = wrappers.get(id);
         if (wrapper == null) throw new InstanceNotFoundException();
-        if (token != null && !token.equals(wrapper.token())) throw new InvalidTokenException();
+        if (token != null && !token.equals(wrapper.getToken())) throw new InvalidTokenException();
         return wrapper;
     }
 
@@ -66,7 +66,7 @@ public abstract class ClientProvider<Wrapper extends ClientWrapper> implements A
     public void removeItem(UUID id, String token) throws InstanceNotFoundException, InvalidTokenException {
         var wrapper = wrappers.get(id);
         if (wrapper == null) throw new InstanceNotFoundException();
-        if (!token.equals(wrapper.token())) throw new InvalidTokenException();
+        if (!token.equals(wrapper.getToken())) throw new InvalidTokenException();
         wrapper = wrappers.remove(id);
         if (wrapper != null)
             wrapper.close();
