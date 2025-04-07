@@ -21,6 +21,7 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
+import pro.savel.kafka.consumer.ConsumerRequestDecoder;
 import pro.savel.kafka.producer.ProducerRequestDecoder;
 import pro.savel.kafka.producer.ProducerRequestProcessor;
 import pro.savel.kafka.producer.ProducerResponseEncoder;
@@ -30,6 +31,7 @@ class ServerInitializer extends ChannelInitializer<SocketChannel> implements Aut
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
     private final ProducerRequestDecoder producerRequestDecoder = new ProducerRequestDecoder(objectMapper);
+    private final ConsumerRequestDecoder consumerRequestDecoder = new ConsumerRequestDecoder(objectMapper);
     private final DefaultRequestDecoder defaultRequestDecoder = new DefaultRequestDecoder();
 
     private final ProducerRequestProcessor producerRequestProcessor = new ProducerRequestProcessor();
@@ -49,6 +51,7 @@ class ServerInitializer extends ChannelInitializer<SocketChannel> implements Aut
         pipeline.addLast(new HttpServerCodec());
         pipeline.addLast(new HttpObjectAggregator(32 * 1024 * 1024));
         pipeline.addLast(producerRequestDecoder);
+        pipeline.addLast(consumerRequestDecoder);
         pipeline.addLast(defaultRequestDecoder);
         pipeline.addLast(producerResponseEncoder);
         pipeline.addLast(producerRequestProcessor);
