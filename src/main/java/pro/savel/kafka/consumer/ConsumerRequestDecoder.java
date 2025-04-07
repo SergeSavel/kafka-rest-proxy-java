@@ -131,7 +131,8 @@ public class ConsumerRequestDecoder extends ChannelInboundHandlerAdapter {
     }
 
     private void decodeGetConsumerRequest(ChannelHandlerContext ctx, FullHttpRequest httpRequest, UUID consumerId) {
-        var request = new GetConsumerRequest(consumerId);
+        var request = new GetConsumerRequest();
+        request.setId(consumerId);
         var bearer = new RequestBearer(httpRequest, request);
         ctx.fireChannelRead(bearer);
     }
