@@ -27,7 +27,7 @@ import org.slf4j.LoggerFactory;
 import pro.savel.kafka.common.HttpUtils;
 import pro.savel.kafka.common.JsonUtils;
 import pro.savel.kafka.common.contract.RequestBearer;
-import pro.savel.kafka.common.exceptions.DeserializeJsonException;
+import pro.savel.kafka.common.exceptions.BadRequestException;
 import pro.savel.kafka.producer.requests.*;
 
 import java.util.UUID;
@@ -56,7 +56,7 @@ public class ProducerRequestDecoder extends ChannelInboundHandlerAdapter {
         if (msg instanceof FullHttpRequest httpRequest && httpRequest.uri().startsWith(URI_PREFIX)) {
             try {
                 decode(ctx, httpRequest);
-            } catch (DeserializeJsonException e) {
+            } catch (BadRequestException e) {
                 HttpUtils.writeBadRequestAndClose(ctx, httpRequest.protocolVersion(), "Invalid request content.");
             } catch (Exception e) {
                 String message = "An unexpected error occurred while decoding producer request.";
@@ -70,7 +70,7 @@ public class ProducerRequestDecoder extends ChannelInboundHandlerAdapter {
         }
     }
 
-    private void decode(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws DeserializeJsonException {
+    private void decode(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
 
         var producerMatcher = PATTERN_PRODUCER.matcher(httpRequest.uri());
         if (producerMatcher.matches()) {
@@ -96,7 +96,7 @@ public class ProducerRequestDecoder extends ChannelInboundHandlerAdapter {
         HttpUtils.writeNotFoundAndClose(ctx, httpRequest.protocolVersion());
     }
 
-    private void decodeRoot(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws DeserializeJsonException {
+    private void decodeRoot(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
         if (httpRequest.method() == HttpMethod.GET) {
             decodeListProducersRequest(ctx, httpRequest);
         } else if (httpRequest.method() == HttpMethod.POST) {
@@ -108,7 +108,7 @@ public class ProducerRequestDecoder extends ChannelInboundHandlerAdapter {
         }
     }
 
-    private void decodeProducerRoot(ChannelHandlerContext ctx, FullHttpRequest httpRequest, UUID producerId) throws DeserializeJsonException {
+    private void decodeProducerRoot(ChannelHandlerContext ctx, FullHttpRequest httpRequest, UUID producerId) throws BadRequestException {
         if (httpRequest.method() == HttpMethod.GET) {
             decodeGetProducerRequest(ctx, httpRequest, producerId);
         } else if (httpRequest.method() == HttpMethod.POST) {
@@ -120,7 +120,7 @@ public class ProducerRequestDecoder extends ChannelInboundHandlerAdapter {
         }
     }
 
-    private void decodeProducerTouch(ChannelHandlerContext ctx, FullHttpRequest httpRequest, UUID producerId) throws DeserializeJsonException {
+    private void decodeProducerTouch(ChannelHandlerContext ctx, FullHttpRequest httpRequest, UUID producerId) throws BadRequestException {
         if (httpRequest.method() == HttpMethod.POST || httpRequest.method() == HttpMethod.PUT) {
             decodeTouchProducerRequest(ctx, httpRequest, producerId);
         } else {
@@ -128,7 +128,7 @@ public class ProducerRequestDecoder extends ChannelInboundHandlerAdapter {
         }
     }
 
-    private void decodeProducerProduce(ChannelHandlerContext ctx, FullHttpRequest httpRequest, UUID producerId) throws DeserializeJsonException {
+    private void decodeProducerProduce(ChannelHandlerContext ctx, FullHttpRequest httpRequest, UUID producerId) throws BadRequestException {
         if (httpRequest.method() == HttpMethod.POST) {
             decodeProduceRequest(ctx, httpRequest, producerId);
         } else {
@@ -149,7 +149,7 @@ public class ProducerRequestDecoder extends ChannelInboundHandlerAdapter {
         ctx.fireChannelRead(bearer);
     }
 
-    private void decodeCreateProducerRequest(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws DeserializeJsonException {
+    private void decodeCreateProducerRequest(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
         var contentType = httpRequest.headers().get(HttpHeaderNames.CONTENT_TYPE);
         if (contentType == null) {
             HttpUtils.writeBadRequestAndClose(ctx, httpRequest.protocolVersion(), "Missing 'Content-Type' header");
@@ -166,7 +166,7 @@ public class ProducerRequestDecoder extends ChannelInboundHandlerAdapter {
         ctx.fireChannelRead(bearer);
     }
 
-    private void decodeTouchProducerRequest(ChannelHandlerContext ctx, FullHttpRequest httpRequest, UUID producerId) throws DeserializeJsonException {
+    private void decodeTouchProducerRequest(ChannelHandlerContext ctx, FullHttpRequest httpRequest, UUID producerId) throws BadRequestException {
         var contentType = httpRequest.headers().get(HttpHeaderNames.CONTENT_TYPE);
         if (contentType == null) {
             HttpUtils.writeBadRequestAndClose(ctx, httpRequest.protocolVersion(), "Missing 'Content-Type' header");
@@ -184,7 +184,7 @@ public class ProducerRequestDecoder extends ChannelInboundHandlerAdapter {
         ctx.fireChannelRead(bearer);
     }
 
-    private void decodeRemoveProducerRequest(ChannelHandlerContext ctx, FullHttpRequest httpRequest, UUID producerId) throws DeserializeJsonException {
+    private void decodeRemoveProducerRequest(ChannelHandlerContext ctx, FullHttpRequest httpRequest, UUID producerId) throws BadRequestException {
         var contentType = httpRequest.headers().get(HttpHeaderNames.CONTENT_TYPE);
         if (contentType == null) {
             HttpUtils.writeBadRequestAndClose(ctx, httpRequest.protocolVersion(), "Missing 'Content-Type' header");
@@ -205,7 +205,7 @@ public class ProducerRequestDecoder extends ChannelInboundHandlerAdapter {
         ctx.fireChannelRead(bearer);
     }
 
-    private void decodeProduceRequest(ChannelHandlerContext ctx, FullHttpRequest httpRequest, UUID producerId) throws DeserializeJsonException {
+    private void decodeProduceRequest(ChannelHandlerContext ctx, FullHttpRequest httpRequest, UUID producerId) throws BadRequestException {
         var contentType = httpRequest.headers().get(HttpHeaderNames.CONTENT_TYPE);
         if (contentType == null) {
             HttpUtils.writeBadRequestAndClose(ctx, httpRequest.protocolVersion(), "Missing 'Content-Type' header");

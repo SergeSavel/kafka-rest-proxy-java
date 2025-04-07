@@ -14,10 +14,9 @@
 
 package pro.savel.kafka.common.exceptions;
 
-import java.io.IOException;
+public class BadRequestException extends Exception {
 
-public class DeserializeJsonException extends IOException {
-    public DeserializeJsonException(Throwable cause) {
-        super(cause);
+    public BadRequestException(String message, Throwable cause) {
+        super(message, cause);
     }
 }

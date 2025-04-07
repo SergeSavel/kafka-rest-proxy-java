@@ -14,9 +14,9 @@
 
 package pro.savel.kafka.common.exceptions;
 
-public class InvalidTokenException extends Throwable {
+public class UnauthorizedException extends Exception {
 
-    public InvalidTokenException() {
-        super("Invalid token.");
+    public UnauthorizedException(String message, Throwable cause) {
+        super(message, cause);
     }
 }

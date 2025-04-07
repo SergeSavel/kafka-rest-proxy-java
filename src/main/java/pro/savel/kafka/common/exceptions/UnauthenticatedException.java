@@ -14,9 +14,9 @@
 
 package pro.savel.kafka.common.exceptions;
 
-public class InstanceNotFoundException extends Throwable {
+public class UnauthenticatedException extends Exception {
 
-    public InstanceNotFoundException() {
-        super("Instance not found.");
+    public UnauthenticatedException(String message, Throwable cause) {
+        super(message, cause);
     }
 }

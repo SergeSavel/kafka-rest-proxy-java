@@ -28,8 +28,10 @@ import org.slf4j.LoggerFactory;
 import pro.savel.kafka.common.HttpUtils;
 import pro.savel.kafka.common.contract.RequestBearer;
 import pro.savel.kafka.common.contract.ResponseBearer;
-import pro.savel.kafka.common.exceptions.InstanceNotFoundException;
-import pro.savel.kafka.common.exceptions.InvalidTokenException;
+import pro.savel.kafka.common.exceptions.BadRequestException;
+import pro.savel.kafka.common.exceptions.NotFoundException;
+import pro.savel.kafka.common.exceptions.UnauthenticatedException;
+import pro.savel.kafka.common.exceptions.UnauthorizedException;
 import pro.savel.kafka.producer.requests.*;
 import pro.savel.kafka.producer.responses.ProducerListResponse;
 import pro.savel.kafka.producer.responses.ProducerProduceResponse;
@@ -48,14 +50,17 @@ public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter imple
         if (msg instanceof RequestBearer bearer && bearer.request() instanceof ProducerRequest) {
             try {
                 processRequest(ctx, bearer);
-            } catch (InstanceNotFoundException e) {
-                HttpUtils.writeNotFoundAndClose(ctx, bearer.protocolVersion(), "Producer not found.");
-            } catch (InvalidTokenException e) {
+            } catch (NotFoundException e) {
+                HttpUtils.writeNotFoundAndClose(ctx, bearer.protocolVersion(), e.getMessage());
+            } catch (BadRequestException e) {
+                HttpUtils.writeBadRequestAndClose(ctx, bearer.protocolVersion(), e.getMessage());
+            } catch (UnauthenticatedException e) {
+                HttpUtils.writeUnauthorizedAndClose(ctx, bearer.protocolVersion(), e.getMessage());
+            } catch (UnauthorizedException e) {
                 HttpUtils.writeForbiddenAndClose(ctx, bearer.protocolVersion(), e.getMessage());
             } catch (Exception e) {
-                String message = "An unexpected error occurred while processing producer request.";
-                logger.error(message, e);
-                HttpUtils.writeBadRequestAndClose(ctx, bearer.protocolVersion(), message);
+                logger.error("An unexpected error occurred while processing producer request.", e);
+                HttpUtils.writeInternalServerErrorAndClose(ctx, bearer.protocolVersion(), e.getMessage());
             } finally {
                 ReferenceCountUtil.release(msg);
             }
@@ -69,7 +74,7 @@ public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter imple
         provider.close();
     }
 
-    public void processRequest(ChannelHandlerContext ctx, RequestBearer bearer) throws InstanceNotFoundException, InvalidTokenException {
+    public void processRequest(ChannelHandlerContext ctx, RequestBearer bearer) throws NotFoundException, BadRequestException, UnauthenticatedException, UnauthorizedException {
         var bearerRequest = bearer.request();
 
         if (bearerRequest instanceof ProduceRequest) {
@@ -107,7 +112,7 @@ public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter imple
         ctx.writeAndFlush(responseBearer);
     }
 
-    private void processGetProducer(ChannelHandlerContext ctx, RequestBearer requestBearer) throws InstanceNotFoundException {
+    private void processGetProducer(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException {
         var request = (GetProducerRequest) requestBearer.request();
         ProducerWrapper wrapper;
         wrapper = provider.getItem(request.getId());
@@ -124,7 +129,7 @@ public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter imple
         ctx.writeAndFlush(responseBearer);
     }
 
-    private void processRemoveProducer(ChannelHandlerContext ctx, RequestBearer requestBearer) throws InstanceNotFoundException, InvalidTokenException {
+    private void processRemoveProducer(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException {
         var request = (RemoveProducerRequest) requestBearer.request();
         ProducerWrapper wrapper;
         wrapper = provider.getItem(request.getId(), request.getToken());
@@ -134,7 +139,7 @@ public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter imple
         ctx.writeAndFlush(responseBearer);
     }
 
-    private void processTouchProducer(ChannelHandlerContext ctx, RequestBearer requestBearer) throws InstanceNotFoundException, InvalidTokenException {
+    private void processTouchProducer(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException {
         var request = (TouchProducerRequest) requestBearer.request();
         ProducerWrapper wrapper;
         wrapper = provider.getItem(request.getId(), request.getToken());
@@ -144,7 +149,7 @@ public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter imple
         ctx.writeAndFlush(responseBearer);
     }
 
-    private void processProduce(ChannelHandlerContext ctx, RequestBearer requestBearer) throws InstanceNotFoundException, InvalidTokenException {
+    private void processProduce(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException, UnauthenticatedException, UnauthorizedException {
         var request = (ProduceRequest) requestBearer.request();
         ProducerWrapper wrapper;
         wrapper = provider.getItem(request.getId(), request.getToken());

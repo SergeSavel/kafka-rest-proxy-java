@@ -18,8 +18,12 @@ import org.apache.kafka.clients.producer.Callback;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.common.errors.AuthenticationException;
+import org.apache.kafka.common.errors.AuthorizationException;
 import org.apache.kafka.common.serialization.ByteArraySerializer;
 import pro.savel.kafka.common.ClientWrapper;
+import pro.savel.kafka.common.exceptions.UnauthenticatedException;
+import pro.savel.kafka.common.exceptions.UnauthorizedException;
 import pro.savel.kafka.producer.requests.ProduceRequest;
 
 import java.util.Map;
@@ -43,10 +47,16 @@ public class ProducerWrapper extends ClientWrapper {
         return properties;
     }
 
-    public void produce(ProduceRequest request, Callback callback) {
+    public void produce(ProduceRequest request, Callback callback) throws UnauthenticatedException, UnauthorizedException {
         var record = new ProducerRecord<>(request.getTopic(), request.getPartition(), request.getKey(), request.getValue());
         request.getHeaders().forEach((key, value) -> record.headers().add(key, value));
-        producer.send(record, callback);
+        try {
+            producer.send(record, callback);
+        } catch (AuthenticationException e) {
+            throw new UnauthenticatedException("Unable to produce message.", e);
+        } catch (AuthorizationException e) {
+            throw new UnauthorizedException("Unable to produce message.", e);
+        }
     }
 
     @Override

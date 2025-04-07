@@ -14,8 +14,8 @@
 
 package pro.savel.kafka.common;
 
-import pro.savel.kafka.common.exceptions.InstanceNotFoundException;
-import pro.savel.kafka.common.exceptions.InvalidTokenException;
+import pro.savel.kafka.common.exceptions.BadRequestException;
+import pro.savel.kafka.common.exceptions.NotFoundException;
 
 import java.util.Collection;
 import java.util.UUID;
@@ -40,20 +40,17 @@ public abstract class ClientProvider<Wrapper extends ClientWrapper> implements A
         wrappers.put(wrapper.getId(), wrapper);
     }
 
-    public Wrapper getItem(UUID id) throws InstanceNotFoundException {
-        Wrapper result = null;
-        try {
-            result = getItem(id, null);
-        } catch (InvalidTokenException ignore) {
-            // never thrown
-        }
-        return result;
+    public Wrapper getItem(UUID id) throws NotFoundException {
+        var wrapper = wrappers.get(id);
+        if (wrapper == null)
+            throw new NotFoundException("Client not found.", null);
+        return wrapper;
     }
 
-    public Wrapper getItem(UUID id, String token) throws InstanceNotFoundException, InvalidTokenException {
+    public Wrapper getItem(UUID id, String token) throws NotFoundException, BadRequestException {
         var wrapper = wrappers.get(id);
-        if (wrapper == null) throw new InstanceNotFoundException();
-        if (token != null && !token.equals(wrapper.getToken())) throw new InvalidTokenException();
+        if (wrapper == null) throw new NotFoundException("Client not found.", null);
+        if (!wrapper.getToken().equals(token)) throw new BadRequestException("Invalid token.", null);
         return wrapper;
     }
 
@@ -63,10 +60,10 @@ public abstract class ClientProvider<Wrapper extends ClientWrapper> implements A
             wrapper.close();
     }
 
-    public void removeItem(UUID id, String token) throws InstanceNotFoundException, InvalidTokenException {
+    public void removeItem(UUID id, String token) throws NotFoundException, BadRequestException {
         var wrapper = wrappers.get(id);
-        if (wrapper == null) throw new InstanceNotFoundException();
-        if (!token.equals(wrapper.getToken())) throw new InvalidTokenException();
+        if (wrapper == null) throw new NotFoundException("Client not found.", null);
+        if (!token.equals(wrapper.getToken())) throw new BadRequestException("Invalid token.", null);
         wrapper = wrappers.remove(id);
         if (wrapper != null)
             wrapper.close();

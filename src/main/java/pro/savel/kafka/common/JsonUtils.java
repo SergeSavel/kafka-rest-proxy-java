@@ -17,18 +17,19 @@ package pro.savel.kafka.common;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
-import pro.savel.kafka.common.exceptions.DeserializeJsonException;
+import pro.savel.kafka.common.exceptions.BadRequestException;
 
 import java.io.IOException;
 import java.io.InputStream;
 
 public abstract class JsonUtils {
-    public static <T> T parseJson(ObjectMapper objectMapper, ByteBuf byteBuf, Class<T> clazz) throws DeserializeJsonException {
+
+    public static <T> T parseJson(ObjectMapper objectMapper, ByteBuf byteBuf, Class<T> clazz) throws BadRequestException {
         T result;
         try (var inputStream = new ByteBufInputStream(byteBuf)) {
             result = objectMapper.readValue((InputStream) inputStream, clazz);
         } catch (IOException e) {
-            throw new DeserializeJsonException(e);
+            throw new BadRequestException("Unable to parse json message.", e);
         }
         return result;
     }

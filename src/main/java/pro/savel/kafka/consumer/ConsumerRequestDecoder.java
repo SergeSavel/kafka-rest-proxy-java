@@ -27,7 +27,7 @@ import org.slf4j.LoggerFactory;
 import pro.savel.kafka.common.HttpUtils;
 import pro.savel.kafka.common.JsonUtils;
 import pro.savel.kafka.common.contract.RequestBearer;
-import pro.savel.kafka.common.exceptions.DeserializeJsonException;
+import pro.savel.kafka.common.exceptions.BadRequestException;
 import pro.savel.kafka.consumer.requests.*;
 
 import java.util.UUID;
@@ -54,8 +54,8 @@ public class ConsumerRequestDecoder extends ChannelInboundHandlerAdapter {
         if (msg instanceof FullHttpRequest httpRequest && httpRequest.uri().startsWith(URI_PREFIX)) {
             try {
                 decode(ctx, httpRequest);
-            } catch (DeserializeJsonException e) {
-                HttpUtils.writeBadRequestAndClose(ctx, httpRequest.protocolVersion(), "Invalid request content.");
+            } catch (BadRequestException e) {
+                HttpUtils.writeBadRequestAndClose(ctx, httpRequest.protocolVersion(), e.getMessage());
             } catch (Exception e) {
                 String message = "An unexpected error occurred while decoding consumer request.";
                 logger.error(message, e);
@@ -68,7 +68,7 @@ public class ConsumerRequestDecoder extends ChannelInboundHandlerAdapter {
         }
     }
 
-    private void decode(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws DeserializeJsonException {
+    private void decode(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
 
         var producerMatcher = PATTERN_CONSUMER.matcher(httpRequest.uri());
         if (producerMatcher.matches()) {
@@ -94,7 +94,7 @@ public class ConsumerRequestDecoder extends ChannelInboundHandlerAdapter {
         HttpUtils.writeNotFoundAndClose(ctx, httpRequest.protocolVersion());
     }
 
-    private void decodeRoot(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws DeserializeJsonException {
+    private void decodeRoot(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
         if (httpRequest.method() == HttpMethod.GET) {
             decodeListConsumersRequest(ctx, httpRequest);
         } else if (httpRequest.method() == HttpMethod.POST) {
@@ -106,7 +106,7 @@ public class ConsumerRequestDecoder extends ChannelInboundHandlerAdapter {
         }
     }
 
-    private void decodeConsumerRoot(ChannelHandlerContext ctx, FullHttpRequest httpRequest, UUID consumerId) throws DeserializeJsonException {
+    private void decodeConsumerRoot(ChannelHandlerContext ctx, FullHttpRequest httpRequest, UUID consumerId) throws BadRequestException {
         if (httpRequest.method() == HttpMethod.GET) {
             decodeGetConsumerRequest(ctx, httpRequest, consumerId);
         } else if (httpRequest.method() == HttpMethod.DELETE) {
@@ -116,7 +116,7 @@ public class ConsumerRequestDecoder extends ChannelInboundHandlerAdapter {
         }
     }
 
-    private void decodeConsumerTouch(ChannelHandlerContext ctx, FullHttpRequest httpRequest, UUID consumerId) throws DeserializeJsonException {
+    private void decodeConsumerTouch(ChannelHandlerContext ctx, FullHttpRequest httpRequest, UUID consumerId) throws BadRequestException {
         if (httpRequest.method() == HttpMethod.POST || httpRequest.method() == HttpMethod.PUT) {
             decodeTouchConsumerRequest(ctx, httpRequest, consumerId);
         } else {
@@ -137,7 +137,7 @@ public class ConsumerRequestDecoder extends ChannelInboundHandlerAdapter {
         ctx.fireChannelRead(bearer);
     }
 
-    private void decodeCreateConsumerRequest(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws DeserializeJsonException {
+    private void decodeCreateConsumerRequest(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
         var contentType = httpRequest.headers().get(HttpHeaderNames.CONTENT_TYPE);
         if (contentType == null) {
             HttpUtils.writeBadRequestAndClose(ctx, httpRequest.protocolVersion(), "Missing 'Content-Type' header");
@@ -154,7 +154,7 @@ public class ConsumerRequestDecoder extends ChannelInboundHandlerAdapter {
         ctx.fireChannelRead(bearer);
     }
 
-    private void decodeRemoveConsumerRequest(ChannelHandlerContext ctx, FullHttpRequest httpRequest, UUID consumerId) throws DeserializeJsonException {
+    private void decodeRemoveConsumerRequest(ChannelHandlerContext ctx, FullHttpRequest httpRequest, UUID consumerId) throws BadRequestException {
         var contentType = httpRequest.headers().get(HttpHeaderNames.CONTENT_TYPE);
         if (contentType == null) {
             HttpUtils.writeBadRequestAndClose(ctx, httpRequest.protocolVersion(), "Missing 'Content-Type' header");
@@ -180,7 +180,7 @@ public class ConsumerRequestDecoder extends ChannelInboundHandlerAdapter {
         ctx.fireChannelRead(bearer);
     }
 
-    private void decodeTouchConsumerRequest(ChannelHandlerContext ctx, FullHttpRequest httpRequest, UUID consumerId) throws DeserializeJsonException {
+    private void decodeTouchConsumerRequest(ChannelHandlerContext ctx, FullHttpRequest httpRequest, UUID consumerId) throws BadRequestException {
         var contentType = httpRequest.headers().get(HttpHeaderNames.CONTENT_TYPE);
         if (contentType == null) {
             HttpUtils.writeBadRequestAndClose(ctx, httpRequest.protocolVersion(), "Missing 'Content-Type' header");
