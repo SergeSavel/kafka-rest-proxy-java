@@ -56,9 +56,9 @@ public class ClientKiller<Wrapper extends ClientWrapper> implements AutoCloseabl
         var currentTimestamp = System.currentTimeMillis();
         var clients = provider.getItems();
         for (var client : clients) {
-            if (client.expiresAt() <= currentTimestamp) {
-                provider.removeItem(client.id());
-                logger.info("Removed expired {} with name '{}' and id '{}'.", client.getClass().getSimpleName(), client.name(), client.id());
+            if (client.getExpiresAt() <= currentTimestamp) {
+                provider.removeItem(client.getId());
+                logger.info("Removed expired {} with name '{}' and id '{}'.", client.getClass().getSimpleName(), client.getName(), client.getId());
             }
         }
     }

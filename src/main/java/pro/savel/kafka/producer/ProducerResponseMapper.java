@@ -23,10 +23,10 @@ public abstract class ProducerResponseMapper {
         if (source == null)
             return null;
         var result = new ProducerResponse();
-        result.setId(source.id());
-        result.setName(source.name());
-        result.setUsername(source.username());
-        result.setExpiresAt(source.expiresAt());
+        result.setId(source.getId());
+        result.setName(source.getName());
+        result.setUsername(source.getUsername());
+        result.setExpiresAt(source.getExpiresAt());
         return result;
     }
 
@@ -34,11 +34,11 @@ public abstract class ProducerResponseMapper {
         if (source == null)
             return null;
         var result = new ProducerWithTokenResponse();
-        result.setId(source.id());
-        result.setName(source.name());
-        result.setUsername(source.username());
-        result.setExpiresAt(source.expiresAt());
-        result.setToken(source.token());
+        result.setId(source.getId());
+        result.setName(source.getName());
+        result.setUsername(source.getUsername());
+        result.setExpiresAt(source.getExpiresAt());
+        result.setToken(source.getToken());
         return result;
     }
 }

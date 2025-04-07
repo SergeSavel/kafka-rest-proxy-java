@@ -102,7 +102,7 @@ public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter imple
     private void processListProducers(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var response = new ProducerListResponse();
         var wrappers = provider.getItems();
-        wrappers.forEach(wrapper -> response.add(wrapper.id()));
+        wrappers.forEach(wrapper -> response.add(wrapper.getId()));
         var responseBearer = new ResponseBearer(requestBearer, HttpResponseStatus.OK, response);
         ctx.writeAndFlush(responseBearer);
     }
@@ -128,7 +128,7 @@ public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter imple
         var request = (RemoveProducerRequest) requestBearer.request();
         ProducerWrapper wrapper;
         wrapper = provider.getItem(request.getId(), request.getToken());
-        provider.removeItem(wrapper.id());
+        provider.removeItem(wrapper.getId());
         var response = new RemoveProducerResponse();
         var responseBearer = new ResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, response);
         ctx.writeAndFlush(responseBearer);
