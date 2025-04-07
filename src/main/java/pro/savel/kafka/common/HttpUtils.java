@@ -27,7 +27,6 @@ public abstract class HttpUtils {
 
     public static final String APPLICATION_JSON = "application/json";
     public static final String APPLICATION_JSON_CHARSET_UTF8 = "application/json; charset=utf-8";
-    public static final String TEXT_PLAIN = "text/plain";
     public static final String TEXT_PLAIN_CHARSET_UTF8 = "text/plain; charset=utf-8";
     public static final String APPLICATION_OCTET_STREAM = "application/octet-stream";
 
