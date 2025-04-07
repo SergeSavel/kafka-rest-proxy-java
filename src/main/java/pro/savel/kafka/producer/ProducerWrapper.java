@@ -27,17 +27,20 @@ import java.util.Properties;
 
 public class ProducerWrapper extends ClientWrapper {
 
-    KafkaProducer<byte[], byte[]> producer;
+    private final KafkaProducer<byte[], byte[]> producer;
 
     protected ProducerWrapper(String name, Map<String, String> config, int expirationTimeout) {
         super(name, config, expirationTimeout);
+        var properties = getProperties(config);
+        producer = new KafkaProducer<>(properties);
+    }
+
+    private static Properties getProperties(Map<String, String> config) {
         var properties = new Properties(config.size());
-        for (Map.Entry<String, String> entry : config.entrySet()) {
-            properties.setProperty(entry.getKey(), entry.getValue());
-        }
+        config.forEach(properties::setProperty);
         properties.setProperty(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, ByteArraySerializer.class.getName());
         properties.setProperty(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, ByteArraySerializer.class.getName());
-        producer = new KafkaProducer<>(properties);
+        return properties;
     }
 
     public void produce(ProduceRequest request, Callback callback) {
