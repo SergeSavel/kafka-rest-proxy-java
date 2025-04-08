@@ -3,6 +3,8 @@ package pro.savel.kafka.common;
 public abstract class Utils {
 
     public static String combineErrorMessage(Throwable exception) {
+        if (exception == null)
+            return null;
         var builder = new StringBuilder(exception.getMessage().length());
         builder.append(exception.getMessage());
         while (true) {
