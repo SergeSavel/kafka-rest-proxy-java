@@ -14,13 +14,13 @@
 
 package pro.savel.kafka.common.exceptions;
 
-public class UnauthenticatedException extends Exception {
+public class MethodNotAllowedException extends Exception {
 
-    public UnauthenticatedException(String message, Throwable cause) {
+    public MethodNotAllowedException(String message, Throwable cause) {
         super(message, cause);
     }
 
-    public UnauthenticatedException(String message) {
+    public MethodNotAllowedException(String message) {
         super(message);
     }
 }
