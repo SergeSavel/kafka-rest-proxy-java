@@ -21,5 +21,4 @@ import java.util.UUID;
 @Data
 public class GetConsumerRequest implements ConsumerRequest {
     private UUID id;
-
 }
