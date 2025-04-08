@@ -25,5 +25,4 @@ public class ProducerProvider extends ClientProvider<ProducerWrapper> {
         addItem(wrapper);
         return wrapper;
     }
-
 }
