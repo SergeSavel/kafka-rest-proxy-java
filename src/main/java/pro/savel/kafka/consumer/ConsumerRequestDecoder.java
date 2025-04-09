@@ -19,7 +19,6 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.http.FullHttpRequest;
-import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.util.ReferenceCountUtil;
 import org.slf4j.Logger;
@@ -31,18 +30,14 @@ import pro.savel.kafka.common.contract.RequestBearer;
 import pro.savel.kafka.common.exceptions.BadRequestException;
 import pro.savel.kafka.consumer.requests.*;
 
-import java.util.UUID;
-import java.util.regex.Pattern;
-
 @ChannelHandler.Sharable
 public class ConsumerRequestDecoder extends ChannelInboundHandlerAdapter {
 
     public static final String URI_PREFIX = "/consumer";
     private static final Logger logger = LoggerFactory.getLogger(ConsumerRequestDecoder.class);
-    private static final String REGEX_CONSUMER =
-            "^/consumer(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(/[a-z]+)?)?$";
-
-    private static final Pattern PATTERN_CONSUMER = Pattern.compile(REGEX_CONSUMER);
+//    private static final String REGEX_CONSUMER =
+//            "^/consumer(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(/[a-z]+)?)?$";
+//    private static final Pattern PATTERN_CONSUMER = Pattern.compile(REGEX_CONSUMER);
 
     private final ObjectMapper objectMapper;
 
@@ -68,134 +63,111 @@ public class ConsumerRequestDecoder extends ChannelInboundHandlerAdapter {
         }
     }
 
-    private void decode(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
+    private static void passBearer(ChannelHandlerContext ctx, FullHttpRequest httpRequest, ConsumerRequest request) {
+        var bearer = new RequestBearer(httpRequest, request);
+        ctx.fireChannelRead(bearer);
+    }
 
-        var producerMatcher = PATTERN_CONSUMER.matcher(httpRequest.uri());
-        if (producerMatcher.matches()) {
-            if (producerMatcher.group(1) == null) {
-                decodeRoot(ctx, httpRequest);
-                return;
-            }
-            var consumerId = UUID.fromString(producerMatcher.group(2));
-            var pathMethod = producerMatcher.group(3);
-            if (pathMethod == null) {
-                decodeConsumerRoot(ctx, httpRequest, consumerId);
-                return;
-            }
-//            if ("/produce".equals(pathMethod)) {
-//                decodeProducerProduce(ctx, httpRequest, producerId);
-//                return;
-//            }
-            if ("/touch".equals(pathMethod)) {
-                decodeConsumerTouch(ctx, httpRequest, consumerId);
-                return;
-            }
+    private void decode(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
+        var pathMethod = httpRequest.uri().substring(URI_PREFIX.length());
+        switch (pathMethod) {
+            case "" -> decodeRoot(ctx, httpRequest);
+            case "/poll" -> decodePoll(ctx, httpRequest);
+            case "/seek" -> decodeSeek(ctx, httpRequest);
+            case "/assign" -> decodeAssign(ctx, httpRequest);
+            case "/subscribe" -> decodeSubscribe(ctx, httpRequest);
+            case "/touch" -> decodeTouch(ctx, httpRequest);
+            case "/partition" -> decodePartition(ctx, httpRequest);
+            case "/beginning" -> decodeBeginning(ctx, httpRequest);
+            case "/end" -> decodeEnd(ctx, httpRequest);
         }
-        HttpUtils.writeNotFoundAndClose(ctx, httpRequest.protocolVersion());
     }
 
     private void decodeRoot(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
-        if (httpRequest.method() == HttpMethod.GET) {
-            decodeListConsumersRequest(ctx, httpRequest);
-        } else if (httpRequest.method() == HttpMethod.POST) {
-            decodeCreateConsumerRequest(ctx, httpRequest);
-        } else if (httpRequest.method() == HttpMethod.DELETE) {
-            decodeRemoveConsumerRequest(ctx, httpRequest, null);
-        } else {
-            HttpUtils.writeMethodNotAllowedAndClose(ctx, httpRequest.protocolVersion());
-        }
+        if (httpRequest.method() == HttpMethod.GET)
+            decodeListRequest(ctx, httpRequest);
+        else if (httpRequest.method() == HttpMethod.POST)
+            decodeJsonRequest(ctx, httpRequest, ConsumerCreateRequest.class);
+        else if (httpRequest.method() == HttpMethod.DELETE)
+            decodeJsonRequest(ctx, httpRequest, ConsumerRemoveRequest.class);
+        else
+            throw new BadRequestException("Unsupported HTTP method.");
     }
 
-    private void decodeConsumerRoot(ChannelHandlerContext ctx, FullHttpRequest httpRequest, UUID consumerId) throws BadRequestException {
-        if (httpRequest.method() == HttpMethod.GET) {
-            decodeGetConsumerRequest(ctx, httpRequest, consumerId);
-        } else if (httpRequest.method() == HttpMethod.DELETE) {
-            decodeRemoveConsumerRequest(ctx, httpRequest, consumerId);
-        } else {
-            HttpUtils.writeMethodNotAllowedAndClose(ctx, httpRequest.protocolVersion());
-        }
+    private void decodeTouch(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
+        if (httpRequest.method() == HttpMethod.POST)
+            decodeJsonRequest(ctx, httpRequest, ConsumerTouchRequest.class);
+        else
+            throw new BadRequestException("Unsupported HTTP method.");
     }
 
-    private void decodeConsumerTouch(ChannelHandlerContext ctx, FullHttpRequest httpRequest, UUID consumerId) throws BadRequestException {
-        if (httpRequest.method() == HttpMethod.POST || httpRequest.method() == HttpMethod.PUT) {
-            decodeTouchConsumerRequest(ctx, httpRequest, consumerId);
-        } else {
-            HttpUtils.writeMethodNotAllowedAndClose(ctx, httpRequest.protocolVersion());
-        }
+    private void decodeAssign(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
+        if (httpRequest.method() == HttpMethod.GET)
+            decodeJsonRequest(ctx, httpRequest, ConsumerGetAssignmentRequest.class);
+        else if (httpRequest.method() == HttpMethod.POST)
+            decodeJsonRequest(ctx, httpRequest, ConsumerAssignRequest.class);
+        else
+            throw new BadRequestException("Unsupported HTTP method.");
     }
 
-    private void decodeListConsumersRequest(ChannelHandlerContext ctx, FullHttpRequest httpRequest) {
-        var request = new ListConsumersRequest();
-        var bearer = new RequestBearer(httpRequest, request);
-        ctx.fireChannelRead(bearer);
+    private void decodeSeek(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
+        if (httpRequest.method() == HttpMethod.GET)
+            decodeJsonRequest(ctx, httpRequest, ConsumerGetPositionRequest.class);
+        else if (httpRequest.method() == HttpMethod.POST)
+            decodeJsonRequest(ctx, httpRequest, ConsumerSeekRequest.class);
+        else
+            throw new BadRequestException("Unsupported HTTP method.");
     }
 
-    private void decodeGetConsumerRequest(ChannelHandlerContext ctx, FullHttpRequest httpRequest, UUID consumerId) {
-        var request = new GetConsumerRequest();
-        request.setId(consumerId);
-        var bearer = new RequestBearer(httpRequest, request);
-        ctx.fireChannelRead(bearer);
+    private void decodeSubscribe(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
+        if (httpRequest.method() == HttpMethod.GET)
+            decodeJsonRequest(ctx, httpRequest, ConsumerGetSubscriptionRequest.class);
+        else if (httpRequest.method() == HttpMethod.POST)
+            decodeJsonRequest(ctx, httpRequest, ConsumerSubscribeRequest.class);
+        else
+            throw new BadRequestException("Unsupported HTTP method.");
     }
 
-    private void decodeCreateConsumerRequest(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
-        var contentType = httpRequest.headers().get(HttpHeaderNames.CONTENT_TYPE);
-        if (contentType == null) {
-            HttpUtils.writeBadRequestAndClose(ctx, httpRequest.protocolVersion(), "Missing 'Content-Type' header");
-            return;
-        }
-        CreateConsumerRequest request;
-        if (HttpUtils.isJson(contentType)) {
-            request = JsonUtils.parseJson(objectMapper, httpRequest.content(), CreateConsumerRequest.class);
-        } else {
-            HttpUtils.writeBadRequestAndClose(ctx, httpRequest.protocolVersion(), "Invalid 'Content-Type' header");
-            return;
-        }
-        var bearer = new RequestBearer(httpRequest, request);
-        ctx.fireChannelRead(bearer);
+    private void decodePartition(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
+        if (httpRequest.method() == HttpMethod.GET)
+            decodeJsonRequest(ctx, httpRequest, ConsumerGetPartitionsRequest.class);
+        else
+            throw new BadRequestException("Unsupported HTTP method.");
     }
 
-    private void decodeRemoveConsumerRequest(ChannelHandlerContext ctx, FullHttpRequest httpRequest, UUID consumerId) throws BadRequestException {
-        var contentType = httpRequest.headers().get(HttpHeaderNames.CONTENT_TYPE);
-        if (contentType == null) {
-            HttpUtils.writeBadRequestAndClose(ctx, httpRequest.protocolVersion(), "Missing 'Content-Type' header");
-            return;
-        }
-        RemoveConsumerRequest request;
-        if (HttpUtils.isJson(contentType)) {
-            request = JsonUtils.parseJson(objectMapper, httpRequest.content(), RemoveConsumerRequest.class);
-        } else {
-            HttpUtils.writeBadRequestAndClose(ctx, httpRequest.protocolVersion(), "Invalid 'Content-Type' header");
-            return;
-        }
-        if (consumerId != null) {
-            if (request.getId() == null) {
-                request.setId(consumerId);
-            }
-            if (!consumerId.equals(request.getId())) {
-                HttpUtils.writeBadRequestAndClose(ctx, httpRequest.protocolVersion(), "Invalid Consumer Id.");
-                return;
-            }
-        }
-        var bearer = new RequestBearer(httpRequest, request);
-        ctx.fireChannelRead(bearer);
+    private void decodeBeginning(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
+        if (httpRequest.method() == HttpMethod.GET)
+            decodeJsonRequest(ctx, httpRequest, ConsumerGetBeginningOffsetsRequest.class);
+        else
+            throw new BadRequestException("Unsupported HTTP method.");
     }
 
-    private void decodeTouchConsumerRequest(ChannelHandlerContext ctx, FullHttpRequest httpRequest, UUID consumerId) throws BadRequestException {
-        var contentType = httpRequest.headers().get(HttpHeaderNames.CONTENT_TYPE);
-        if (contentType == null) {
-            HttpUtils.writeBadRequestAndClose(ctx, httpRequest.protocolVersion(), "Missing 'Content-Type' header");
-            return;
-        }
-        TouchConsumerRequest request;
-        if (HttpUtils.isJson(contentType)) {
-            request = JsonUtils.parseJson(objectMapper, httpRequest.content(), TouchConsumerRequest.class);
-        } else {
-            HttpUtils.writeBadRequestAndClose(ctx, httpRequest.protocolVersion(), "Invalid 'Content-Type' header");
-            return;
-        }
-        request.setId(consumerId);
-        var bearer = new RequestBearer(httpRequest, request);
-        ctx.fireChannelRead(bearer);
+    private void decodeEnd(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
+        if (httpRequest.method() == HttpMethod.GET)
+            decodeJsonRequest(ctx, httpRequest, ConsumerGetEndOffsetsRequest.class);
+        else
+            throw new BadRequestException("Unsupported HTTP method.");
     }
 
+    private void decodePoll(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
+        if (httpRequest.method() == HttpMethod.POST)
+            decodeJsonRequest(ctx, httpRequest, ConsumerPollRequest.class);
+        else
+            throw new BadRequestException("Unsupported HTTP method.");
+    }
+
+    private void decodeListRequest(ChannelHandlerContext ctx, FullHttpRequest httpRequest) {
+        var request = new ConsumerListRequest();
+        passBearer(ctx, httpRequest, request);
+    }
+
+    private <T extends ConsumerRequest> void decodeJsonRequest(ChannelHandlerContext ctx, FullHttpRequest httpRequest, Class<T> clazz) throws BadRequestException {
+        var contentType = HttpUtils.getContentType(httpRequest);
+        T request;
+        if (HttpUtils.isJson(contentType))
+            request = JsonUtils.parseJson(objectMapper, httpRequest.content(), clazz);
+        else
+            throw new BadRequestException("Invalid Content-Type header in request.");
+        passBearer(ctx, httpRequest, request);
+    }
 }

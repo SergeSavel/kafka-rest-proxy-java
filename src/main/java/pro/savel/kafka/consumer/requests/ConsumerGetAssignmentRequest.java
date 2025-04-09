@@ -19,7 +19,7 @@ import lombok.Data;
 import java.util.UUID;
 
 @Data
-public class TouchConsumerRequest implements ConsumerRequest {
-    private UUID id;
+public class ConsumerGetAssignmentRequest implements ConsumerRequest {
+    private UUID consumerId;
     private String token;
 }

@@ -16,10 +16,13 @@ package pro.savel.kafka.consumer.requests;
 
 import lombok.Data;
 
+import java.util.Collection;
 import java.util.UUID;
 
 @Data
-public class RemoveConsumerRequest implements ConsumerRequest {
-    private UUID id;
+public class ConsumerSubscribeRequest implements ConsumerRequest {
+    private UUID consumerId;
     private String token;
+    private Collection<String> topics;
+    private String pattern;
 }

@@ -12,10 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package pro.savel.kafka.consumer.requests;
+package pro.savel.kafka.consumer;
 
-import lombok.Data;
+import pro.savel.kafka.common.ClientProvider;
 
-@Data
-public class ListConsumersRequest implements ConsumerRequest {
+import java.util.Map;
+
+public class ConsumerProvider extends ClientProvider<ConsumerWrapper> {
+
+    public ConsumerWrapper createConsumer(String name, Map<String, String> config, int expirationTimeout) {
+        var wrapper = new ConsumerWrapper(name, config, expirationTimeout);
+        addItem(wrapper);
+        return wrapper;
+    }
 }

@@ -17,9 +17,11 @@ package pro.savel.kafka.common;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
+import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.util.AsciiString;
+import pro.savel.kafka.common.exceptions.BadRequestException;
 
 import java.nio.charset.StandardCharsets;
 
@@ -35,6 +37,13 @@ public abstract class HttpUtils {
     public static final AsciiString ASCII_CONNECTION = AsciiString.cached("Connection");
     public static final AsciiString ASCII_APPLICATION_JSON_CHARSET_UTF8 = AsciiString.cached(APPLICATION_JSON_CHARSET_UTF8);
     public static final AsciiString ASCII_TEXT_PLAIN_CHARSET_UTF8 = AsciiString.cached(TEXT_PLAIN_CHARSET_UTF8);
+
+    public static String getContentType(FullHttpRequest httpRequest) throws BadRequestException {
+        var contentType = httpRequest.headers().get(ASCII_CONTENT_TYPE);
+        if (contentType == null)
+            throw new BadRequestException("Missing Content-Type header in request.");
+        return contentType;
+    }
 
     public static boolean isJson(String contentType) {
         return APPLICATION_JSON.equals(contentType) || APPLICATION_JSON_CHARSET_UTF8.equals(contentType);

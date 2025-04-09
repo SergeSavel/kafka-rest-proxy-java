@@ -19,6 +19,10 @@ import lombok.Data;
 import java.util.UUID;
 
 @Data
-public class GetConsumerRequest implements ConsumerRequest {
-    private UUID id;
+public class ConsumerSeekRequest implements ConsumerRequest {
+    private UUID consumerId;
+    private String token;
+    private String topic;
+    private int partition;
+    private long offset;
 }
