@@ -35,9 +35,6 @@ public class ConsumerRequestDecoder extends ChannelInboundHandlerAdapter {
 
     public static final String URI_PREFIX = "/consumer";
     private static final Logger logger = LoggerFactory.getLogger(ConsumerRequestDecoder.class);
-//    private static final String REGEX_CONSUMER =
-//            "^/consumer(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(/[a-z]+)?)?$";
-//    private static final Pattern PATTERN_CONSUMER = Pattern.compile(REGEX_CONSUMER);
 
     private final ObjectMapper objectMapper;
 
@@ -80,6 +77,7 @@ public class ConsumerRequestDecoder extends ChannelInboundHandlerAdapter {
             case "/partition" -> decodePartition(ctx, httpRequest);
             case "/beginning" -> decodeBeginning(ctx, httpRequest);
             case "/end" -> decodeEnd(ctx, httpRequest);
+            default -> HttpUtils.writeNotFoundAndClose(ctx, httpRequest.protocolVersion());
         }
     }
 
