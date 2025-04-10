@@ -1,18 +1,17 @@
 package pro.savel.kafka.producer;
 
-import pro.savel.kafka.producer.requests.ProduceRequest;
-import pro.savel.kafka.producer.requests.ProduceStringRequest;
+import pro.savel.kafka.producer.requests.ProducerSendRequest;
+import pro.savel.kafka.producer.requests.ProducerSendStringRequest;
 
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
-import java.util.UUID;
 
 public class ProducerMapper {
-    public static ProduceRequest mapProduceRequest(ProduceStringRequest stringRequest, UUID producerId) {
+    public static ProducerSendRequest mapProduceRequest(ProducerSendStringRequest stringRequest) {
         var headers = new HashMap<String, byte[]>(stringRequest.getHeaders().size());
         stringRequest.getHeaders().forEach((key, value) -> headers.put(key, value.getBytes(StandardCharsets.UTF_8)));
-        var request = new ProduceRequest();
-        request.setId(producerId);
+        var request = new ProducerSendRequest();
+        request.setProducerId(stringRequest.getProducerId());
         request.setToken(stringRequest.getToken());
         request.setTopic(stringRequest.getTopic());
         request.setPartition(stringRequest.getPartition());

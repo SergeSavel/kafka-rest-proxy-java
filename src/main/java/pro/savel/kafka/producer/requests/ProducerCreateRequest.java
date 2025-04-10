@@ -19,7 +19,7 @@ import lombok.Data;
 import java.util.Map;
 
 @Data
-public class CreateProducerRequest implements ProducerRequest {
+public class ProducerCreateRequest implements ProducerRequest {
     private String name;
     private Map<String, String> config;
     private int expirationTimeout;

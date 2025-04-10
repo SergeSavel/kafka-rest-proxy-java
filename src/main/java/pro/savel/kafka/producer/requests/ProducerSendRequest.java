@@ -12,7 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package pro.savel.kafka.producer.responses;
+package pro.savel.kafka.producer.requests;
 
-public class RemoveProducerResponse implements pro.savel.kafka.producer.contract.ProducerResponse {
+import lombok.Data;
+
+import java.util.Map;
+import java.util.UUID;
+
+@Data
+public class ProducerSendRequest implements ProducerRequest {
+    private UUID producerId;
+    private String token;
+    private String topic;
+    private Integer partition;
+    private Map<String, byte[]> headers;
+    private byte[] key;
+    private byte[] value;
 }

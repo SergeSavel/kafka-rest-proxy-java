@@ -14,15 +14,15 @@
 
 package pro.savel.kafka.producer;
 
-import pro.savel.kafka.producer.responses.ProducerResponse;
+import pro.savel.kafka.producer.responses.Producer;
 import pro.savel.kafka.producer.responses.ProducerWithTokenResponse;
 
 public abstract class ProducerResponseMapper {
 
-    public static ProducerResponse mapProducer(ProducerWrapper source) {
+    public static Producer mapProducer(ProducerWrapper source) {
         if (source == null)
             return null;
-        var result = new ProducerResponse();
+        var result = new Producer();
         result.setId(source.getId());
         result.setName(source.getName());
         result.setUsername(source.getUsername());

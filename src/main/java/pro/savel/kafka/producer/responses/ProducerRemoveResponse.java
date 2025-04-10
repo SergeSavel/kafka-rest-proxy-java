@@ -12,18 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package pro.savel.kafka.producer.requests;
+package pro.savel.kafka.producer.responses;
 
-import lombok.Data;
-
-import java.util.Map;
-
-@Data
-public class ProduceStringRequest {
-    private String token;
-    private String topic;
-    private Integer partition;
-    private Map<String, String> headers;
-    private String key;
-    private String value;
+public class ProducerRemoveResponse implements ProducerResponse {
 }

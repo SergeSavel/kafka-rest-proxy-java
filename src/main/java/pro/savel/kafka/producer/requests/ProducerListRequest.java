@@ -16,16 +16,6 @@ package pro.savel.kafka.producer.requests;
 
 import lombok.Data;
 
-import java.util.Map;
-import java.util.UUID;
-
 @Data
-public class ProduceRequest implements ProducerRequest {
-    private UUID id;
-    private String token;
-    private String topic;
-    private Integer partition;
-    private Map<String, byte[]> headers;
-    private byte[] key;
-    private byte[] value;
+public class ProducerListRequest implements ProducerRequest {
 }

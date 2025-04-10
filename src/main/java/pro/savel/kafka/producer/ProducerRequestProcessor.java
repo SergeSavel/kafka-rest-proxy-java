@@ -35,9 +35,9 @@ import pro.savel.kafka.common.exceptions.UnauthenticatedException;
 import pro.savel.kafka.common.exceptions.UnauthorizedException;
 import pro.savel.kafka.producer.requests.*;
 import pro.savel.kafka.producer.responses.ProducerListResponse;
-import pro.savel.kafka.producer.responses.ProducerProduceResponse;
+import pro.savel.kafka.producer.responses.ProducerRemoveResponse;
+import pro.savel.kafka.producer.responses.ProducerSendResponse;
 import pro.savel.kafka.producer.responses.ProducerTouchResponse;
-import pro.savel.kafka.producer.responses.RemoveProducerResponse;
 
 @ChannelHandler.Sharable
 public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter implements AutoCloseable {
@@ -77,28 +77,23 @@ public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter imple
 
     public void processRequest(ChannelHandlerContext ctx, RequestBearer bearer) throws NotFoundException, BadRequestException, UnauthenticatedException, UnauthorizedException {
         var bearerRequest = bearer.request();
-
-        if (bearerRequest instanceof ProduceRequest) {
+        if (bearerRequest instanceof ProducerSendRequest) {
             processProduce(ctx, bearer);
             return;
         }
-        if (bearerRequest instanceof CreateProducerRequest) {
+        if (bearerRequest instanceof ProducerCreateRequest) {
             processCreateProducer(ctx, bearer);
             return;
         }
-        if (bearerRequest instanceof RemoveProducerRequest) {
+        if (bearerRequest instanceof ProducerRemoveRequest) {
             processRemoveProducer(ctx, bearer);
             return;
         }
-        if (bearerRequest instanceof GetProducerRequest) {
-            processGetProducer(ctx, bearer);
-            return;
-        }
-        if (bearerRequest instanceof TouchProducerRequest) {
+        if (bearerRequest instanceof ProducerTouchRequest) {
             processTouchProducer(ctx, bearer);
             return;
         }
-        if (bearerRequest instanceof ListProducersRequest) {
+        if (bearerRequest instanceof ProducerListRequest) {
             processListProducers(ctx, bearer);
             return;
         }
@@ -108,22 +103,13 @@ public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter imple
     private void processListProducers(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var response = new ProducerListResponse();
         var wrappers = provider.getItems();
-        wrappers.forEach(wrapper -> response.add(wrapper.getId()));
-        var responseBearer = new ResponseBearer(requestBearer, HttpResponseStatus.OK, response);
-        ctx.writeAndFlush(responseBearer);
-    }
-
-    private void processGetProducer(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException {
-        var request = (GetProducerRequest) requestBearer.request();
-        ProducerWrapper wrapper;
-        wrapper = provider.getItem(request.getId());
-        var response = ProducerResponseMapper.mapProducer(wrapper);
+        wrappers.forEach(wrapper -> response.add(ProducerResponseMapper.mapProducer(wrapper)));
         var responseBearer = new ResponseBearer(requestBearer, HttpResponseStatus.OK, response);
         ctx.writeAndFlush(responseBearer);
     }
 
     private void processCreateProducer(ChannelHandlerContext ctx, RequestBearer requestBearer) {
-        var request = (CreateProducerRequest) requestBearer.request();
+        var request = (ProducerCreateRequest) requestBearer.request();
         var wrapper = provider.createProducer(request.getName(), request.getConfig(), request.getExpirationTimeout());
         var response = ProducerResponseMapper.mapProducerWithToken(wrapper);
         var responseBearer = new ResponseBearer(requestBearer, HttpResponseStatus.CREATED, response);
@@ -131,19 +117,19 @@ public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter imple
     }
 
     private void processRemoveProducer(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException {
-        var request = (RemoveProducerRequest) requestBearer.request();
+        var request = (ProducerRemoveRequest) requestBearer.request();
         ProducerWrapper wrapper;
-        wrapper = provider.getItem(request.getId(), request.getToken());
+        wrapper = provider.getItem(request.getProducerId(), request.getToken());
         provider.removeItem(wrapper.getId());
-        var response = new RemoveProducerResponse();
+        var response = new ProducerRemoveResponse();
         var responseBearer = new ResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, response);
         ctx.writeAndFlush(responseBearer);
     }
 
     private void processTouchProducer(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException {
-        var request = (TouchProducerRequest) requestBearer.request();
+        var request = (ProducerTouchRequest) requestBearer.request();
         ProducerWrapper wrapper;
-        wrapper = provider.getItem(request.getId(), request.getToken());
+        wrapper = provider.getItem(request.getProducerId(), request.getToken());
         wrapper.touch();
         var response = new ProducerTouchResponse();
         var responseBearer = new ResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, response);
@@ -151,9 +137,9 @@ public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter imple
     }
 
     private void processProduce(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException, UnauthenticatedException, UnauthorizedException {
-        var request = (ProduceRequest) requestBearer.request();
+        var request = (ProducerSendRequest) requestBearer.request();
         ProducerWrapper wrapper;
-        wrapper = provider.getItem(request.getId(), request.getToken());
+        wrapper = provider.getItem(request.getProducerId(), request.getToken());
         wrapper.touch();
         var callback = new Callback() {
             @Override
@@ -162,7 +148,7 @@ public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter imple
                     logger.debug("Produce request completed.");
                 }
                 if (exception == null) {
-                    var response = new ProducerProduceResponse();
+                    var response = new ProducerSendResponse();
                     response.setTopic(metadata.topic());
                     response.setPartition(metadata.partition());
                     response.setOffset(metadata.offset());
@@ -181,6 +167,6 @@ public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter imple
         if (logger.isDebugEnabled()) {
             logger.debug("Starting produce request processing.");
         }
-        wrapper.produce(request, callback);
+        wrapper.send(request, callback);
     }
 }

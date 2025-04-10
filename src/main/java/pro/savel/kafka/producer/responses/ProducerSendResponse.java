@@ -12,10 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package pro.savel.kafka.producer.requests;
+package pro.savel.kafka.producer.responses;
 
 import lombok.Data;
 
 @Data
-public class ListProducersRequest implements ProducerRequest {
+public class ProducerSendResponse implements ProducerResponse {
+    private String topic;
+    private int partition;
+    private long offset;
+    private long timestamp;
 }

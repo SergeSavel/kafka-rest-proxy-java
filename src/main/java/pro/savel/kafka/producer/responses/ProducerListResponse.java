@@ -15,7 +15,6 @@
 package pro.savel.kafka.producer.responses;
 
 import java.util.ArrayList;
-import java.util.UUID;
 
-public class ProducerListResponse extends ArrayList<UUID> implements pro.savel.kafka.producer.contract.ProducerResponse {
+public class ProducerListResponse extends ArrayList<Producer> implements ProducerResponse {
 }

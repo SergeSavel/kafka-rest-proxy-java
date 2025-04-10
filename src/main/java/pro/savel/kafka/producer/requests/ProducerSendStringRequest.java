@@ -12,9 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package pro.savel.kafka.producer.contract;
+package pro.savel.kafka.producer.requests;
 
-import pro.savel.kafka.common.contract.Response;
+import lombok.Data;
 
-public interface ProducerResponse extends Response {
+import java.util.Map;
+import java.util.UUID;
+
+@Data
+public class ProducerSendStringRequest {
+    private UUID producerId;
+    private String token;
+    private String topic;
+    private Integer partition;
+    private Map<String, String> headers;
+    private String key;
+    private String value;
 }

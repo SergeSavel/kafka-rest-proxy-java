@@ -27,6 +27,7 @@ import org.slf4j.LoggerFactory;
 import pro.savel.kafka.common.HttpUtils;
 import pro.savel.kafka.common.contract.ResponseBearer;
 import pro.savel.kafka.common.contract.Serde;
+import pro.savel.kafka.producer.responses.ProducerResponse;
 
 @ChannelHandler.Sharable
 public class ProducerResponseEncoder extends ChannelOutboundHandlerAdapter {
@@ -41,7 +42,7 @@ public class ProducerResponseEncoder extends ChannelOutboundHandlerAdapter {
 
     @Override
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
-        if (msg instanceof ResponseBearer bearer && bearer.response() instanceof pro.savel.kafka.producer.contract.ProducerResponse) {
+        if (msg instanceof ResponseBearer bearer && bearer.response() instanceof ProducerResponse) {
             try {
                 if (logger.isDebugEnabled()) {
                     logger.debug("Decoding producer response.");

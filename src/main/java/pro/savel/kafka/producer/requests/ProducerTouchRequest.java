@@ -19,7 +19,7 @@ import lombok.Data;
 import java.util.UUID;
 
 @Data
-public class RemoveProducerRequest implements ProducerRequest {
-    private UUID id;
+public class ProducerTouchRequest implements ProducerRequest {
+    private UUID producerId;
     private String token;
 }

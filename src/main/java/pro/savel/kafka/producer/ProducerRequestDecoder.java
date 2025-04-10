@@ -19,7 +19,6 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.http.FullHttpRequest;
-import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.util.ReferenceCountUtil;
 import org.slf4j.Logger;
@@ -31,20 +30,12 @@ import pro.savel.kafka.common.contract.RequestBearer;
 import pro.savel.kafka.common.exceptions.BadRequestException;
 import pro.savel.kafka.producer.requests.*;
 
-import java.util.UUID;
-import java.util.regex.Pattern;
-
 @ChannelHandler.Sharable
 public class ProducerRequestDecoder extends ChannelInboundHandlerAdapter {
 
     private static final Logger logger = LoggerFactory.getLogger(ProducerRequestDecoder.class);
 
     public static final String URI_PREFIX = "/producer";
-
-    private static final String REGEX_PRODUCER =
-            "^/producer(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(/[a-z]+)?)?$";
-
-    private static final Pattern PATTERN_PRODUCER = Pattern.compile(REGEX_PRODUCER);
 
     private final ObjectMapper objectMapper;
 
@@ -70,156 +61,73 @@ public class ProducerRequestDecoder extends ChannelInboundHandlerAdapter {
         }
     }
 
-    private void decode(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
+    private static void passBearer(ChannelHandlerContext ctx, FullHttpRequest httpRequest, ProducerRequest request) {
+        var bearer = new RequestBearer(httpRequest, request);
+        ctx.fireChannelRead(bearer);
+    }
 
-        var producerMatcher = PATTERN_PRODUCER.matcher(httpRequest.uri());
-        if (producerMatcher.matches()) {
-            if (producerMatcher.group(1) == null) {
-                decodeRoot(ctx, httpRequest);
-                return;
-            }
-            var producerId = UUID.fromString(producerMatcher.group(2));
-            var pathMethod = producerMatcher.group(3);
-            if (pathMethod == null) {
-                decodeProducerRoot(ctx, httpRequest, producerId);
-                return;
-            }
-            if ("/produce".equals(pathMethod)) {
-                decodeProducerProduce(ctx, httpRequest, producerId);
-                return;
-            }
-            if ("/touch".equals(pathMethod)) {
-                decodeProducerTouch(ctx, httpRequest, producerId);
-                return;
-            }
+    private void decode(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
+        var pathMethod = httpRequest.uri().substring(URI_PREFIX.length());
+        switch (pathMethod) {
+            case "" -> decodeRoot(ctx, httpRequest);
+            case "/send" -> decodeSend(ctx, httpRequest);
+            case "/touch" -> decodeTouch(ctx, httpRequest);
+            default -> HttpUtils.writeNotFoundAndClose(ctx, httpRequest.protocolVersion());
         }
-        HttpUtils.writeNotFoundAndClose(ctx, httpRequest.protocolVersion());
     }
 
     private void decodeRoot(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
         if (httpRequest.method() == HttpMethod.GET) {
-            decodeListProducersRequest(ctx, httpRequest);
+            decodeListRequest(ctx, httpRequest);
         } else if (httpRequest.method() == HttpMethod.POST) {
-            decodeCreateProducerRequest(ctx, httpRequest);
+            decodeJsonRequest(ctx, httpRequest, ProducerCreateRequest.class);
         } else if (httpRequest.method() == HttpMethod.DELETE) {
-            decodeRemoveProducerRequest(ctx, httpRequest, null);
+            decodeJsonRequest(ctx, httpRequest, ProducerRemoveRequest.class);
         } else {
-            HttpUtils.writeMethodNotAllowedAndClose(ctx, httpRequest.protocolVersion());
+            throw new BadRequestException("Unsupported HTTP method.");
         }
     }
 
-    private void decodeProducerRoot(ChannelHandlerContext ctx, FullHttpRequest httpRequest, UUID producerId) throws BadRequestException {
-        if (httpRequest.method() == HttpMethod.GET) {
-            decodeGetProducerRequest(ctx, httpRequest, producerId);
-        } else if (httpRequest.method() == HttpMethod.POST) {
-            decodeProduceRequest(ctx, httpRequest, producerId);
-        } else if (httpRequest.method() == HttpMethod.DELETE) {
-            decodeRemoveProducerRequest(ctx, httpRequest, producerId);
-        } else {
-            HttpUtils.writeMethodNotAllowedAndClose(ctx, httpRequest.protocolVersion());
-        }
-    }
-
-    private void decodeProducerTouch(ChannelHandlerContext ctx, FullHttpRequest httpRequest, UUID producerId) throws BadRequestException {
-        if (httpRequest.method() == HttpMethod.POST || httpRequest.method() == HttpMethod.PUT) {
-            decodeTouchProducerRequest(ctx, httpRequest, producerId);
-        } else {
-            HttpUtils.writeMethodNotAllowedAndClose(ctx, httpRequest.protocolVersion());
-        }
-    }
-
-    private void decodeProducerProduce(ChannelHandlerContext ctx, FullHttpRequest httpRequest, UUID producerId) throws BadRequestException {
+    private void decodeTouch(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
         if (httpRequest.method() == HttpMethod.POST) {
-            decodeProduceRequest(ctx, httpRequest, producerId);
+            decodeJsonRequest(ctx, httpRequest, ProducerTouchRequest.class);
         } else {
-            HttpUtils.writeMethodNotAllowedAndClose(ctx, httpRequest.protocolVersion());
+            throw new BadRequestException("Unsupported HTTP method.");
         }
     }
 
-    private void decodeListProducersRequest(ChannelHandlerContext ctx, FullHttpRequest httpRequest) {
-        var request = new ListProducersRequest();
+    private void decodeSend(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
+        if (httpRequest.method() == HttpMethod.POST) {
+            decodeSendRequest(ctx, httpRequest);
+        } else {
+            throw new BadRequestException("Unsupported HTTP method.");
+        }
+    }
+
+    private void decodeListRequest(ChannelHandlerContext ctx, FullHttpRequest httpRequest) {
+        var request = new ProducerListRequest();
         var bearer = new RequestBearer(httpRequest, request);
         ctx.fireChannelRead(bearer);
     }
 
-    private void decodeGetProducerRequest(ChannelHandlerContext ctx, FullHttpRequest httpRequest, UUID producerId) {
-        var request = new GetProducerRequest();
-        request.setId(producerId);
-        var bearer = new RequestBearer(httpRequest, request);
-        ctx.fireChannelRead(bearer);
-    }
-
-    private void decodeCreateProducerRequest(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
-        var contentType = httpRequest.headers().get(HttpHeaderNames.CONTENT_TYPE);
-        if (contentType == null) {
-            HttpUtils.writeBadRequestAndClose(ctx, httpRequest.protocolVersion(), "Missing 'Content-Type' header");
-            return;
-        }
-        CreateProducerRequest request;
+    private void decodeSendRequest(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
+        var contentType = HttpUtils.getContentType(httpRequest);
+        ProducerSendRequest request;
         if (HttpUtils.isJson(contentType)) {
-            request = JsonUtils.parseJson(objectMapper, httpRequest.content(), CreateProducerRequest.class);
-        } else {
-            HttpUtils.writeBadRequestAndClose(ctx, httpRequest.protocolVersion(), "Invalid 'Content-Type' header");
-            return;
-        }
-        var bearer = new RequestBearer(httpRequest, request);
-        ctx.fireChannelRead(bearer);
+            var stringRequest = JsonUtils.parseJson(objectMapper, httpRequest.content(), ProducerSendStringRequest.class);
+            request = ProducerMapper.mapProduceRequest(stringRequest);
+        } else
+            throw new BadRequestException("Invalid Content-Type header in request.");
+        passBearer(ctx, httpRequest, request);
     }
 
-    private void decodeTouchProducerRequest(ChannelHandlerContext ctx, FullHttpRequest httpRequest, UUID producerId) throws BadRequestException {
-        var contentType = httpRequest.headers().get(HttpHeaderNames.CONTENT_TYPE);
-        if (contentType == null) {
-            HttpUtils.writeBadRequestAndClose(ctx, httpRequest.protocolVersion(), "Missing 'Content-Type' header");
-            return;
-        }
-        TouchProducerRequest request;
-        if (HttpUtils.isJson(contentType)) {
-            request = JsonUtils.parseJson(objectMapper, httpRequest.content(), TouchProducerRequest.class);
-        } else {
-            HttpUtils.writeBadRequestAndClose(ctx, httpRequest.protocolVersion(), "Invalid 'Content-Type' header");
-            return;
-        }
-        request.setId(producerId);
-        var bearer = new RequestBearer(httpRequest, request);
-        ctx.fireChannelRead(bearer);
-    }
-
-    private void decodeRemoveProducerRequest(ChannelHandlerContext ctx, FullHttpRequest httpRequest, UUID producerId) throws BadRequestException {
-        var contentType = httpRequest.headers().get(HttpHeaderNames.CONTENT_TYPE);
-        if (contentType == null) {
-            HttpUtils.writeBadRequestAndClose(ctx, httpRequest.protocolVersion(), "Missing 'Content-Type' header");
-            return;
-        }
-        RemoveProducerRequest request;
-        if (HttpUtils.isJson(contentType)) {
-            request = JsonUtils.parseJson(objectMapper, httpRequest.content(), RemoveProducerRequest.class);
-        } else {
-            HttpUtils.writeBadRequestAndClose(ctx, httpRequest.protocolVersion(), "Invalid 'Content-Type' header");
-            return;
-        }
-        if (producerId != null && !producerId.equals(request.getId())) {
-            HttpUtils.writeBadRequestAndClose(ctx, httpRequest.protocolVersion(), "Invalid Producer Id.");
-            return;
-        }
-        var bearer = new RequestBearer(httpRequest, request);
-        ctx.fireChannelRead(bearer);
-    }
-
-    private void decodeProduceRequest(ChannelHandlerContext ctx, FullHttpRequest httpRequest, UUID producerId) throws BadRequestException {
-        var contentType = httpRequest.headers().get(HttpHeaderNames.CONTENT_TYPE);
-        if (contentType == null) {
-            HttpUtils.writeBadRequestAndClose(ctx, httpRequest.protocolVersion(), "Missing 'Content-Type' header");
-            return;
-        }
-        ProduceRequest request;
-        if (HttpUtils.isJson(contentType)) {
-            var stringRequest = JsonUtils.parseJson(objectMapper, httpRequest.content(), ProduceStringRequest.class);
-            request = ProducerMapper.mapProduceRequest(stringRequest, producerId);
-        } else {
-            HttpUtils.writeBadRequestAndClose(ctx, httpRequest.protocolVersion(), "Invalid 'Content-Type' header");
-            return;
-        }
-        var bearer = new RequestBearer(httpRequest, request);
-        ctx.fireChannelRead(bearer);
+    private <T extends ProducerRequest> void decodeJsonRequest(ChannelHandlerContext ctx, FullHttpRequest httpRequest, Class<T> clazz) throws BadRequestException {
+        var contentType = HttpUtils.getContentType(httpRequest);
+        T request;
+        if (HttpUtils.isJson(contentType))
+            request = JsonUtils.parseJson(objectMapper, httpRequest.content(), clazz);
+        else
+            throw new BadRequestException("Invalid Content-Type header in request.");
+        passBearer(ctx, httpRequest, request);
     }
 }

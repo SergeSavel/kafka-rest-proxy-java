@@ -14,29 +14,11 @@
 
 package pro.savel.kafka.producer.responses;
 
-import java.util.Objects;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
 
-public class ProducerWithTokenResponse extends ProducerResponse {
+@EqualsAndHashCode(callSuper = true)
+@Data
+public class ProducerWithTokenResponse extends Producer implements ProducerResponse {
     private String token;
-
-    public String getToken() {
-        return token;
-    }
-
-    public void setToken(String token) {
-        this.token = token;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (o == null || getClass() != o.getClass()) return false;
-        if (!super.equals(o)) return false;
-        ProducerWithTokenResponse that = (ProducerWithTokenResponse) o;
-        return Objects.equals(token, that.token);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(super.hashCode(), token);
-    }
 }

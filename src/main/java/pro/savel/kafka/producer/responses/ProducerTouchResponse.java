@@ -14,5 +14,5 @@
 
 package pro.savel.kafka.producer.responses;
 
-public class ProducerTouchResponse implements pro.savel.kafka.producer.contract.ProducerResponse {
+public class ProducerTouchResponse implements ProducerResponse {
 }

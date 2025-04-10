@@ -12,13 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package pro.savel.kafka.producer.requests;
+package pro.savel.kafka.producer.responses;
 
 import lombok.Data;
 
 import java.util.UUID;
 
 @Data
-public class GetProducerRequest implements ProducerRequest {
+public class Producer {
     private UUID id;
+    private String name;
+    private String username;
+    private long expiresAt;
 }
