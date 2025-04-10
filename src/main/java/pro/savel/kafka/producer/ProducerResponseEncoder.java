@@ -48,7 +48,7 @@ public class ProducerResponseEncoder extends ChannelOutboundHandlerAdapter {
                     logger.debug("Decoding producer response.");
                 }
                 var httpResponse = createHttpResponse(bearer);
-                var future = ctx.writeAndFlush(httpResponse, promise);
+                var future = ctx.write(httpResponse, promise);
                 if (!bearer.connectionKeepAlive()) {
                     future.addListener(ChannelFutureListener.CLOSE);
                 }
@@ -90,5 +90,4 @@ public class ProducerResponseEncoder extends ChannelOutboundHandlerAdapter {
         }
         return httpResponse;
     }
-
 }
