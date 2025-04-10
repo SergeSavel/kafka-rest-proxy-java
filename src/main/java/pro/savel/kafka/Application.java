@@ -16,7 +16,8 @@ package pro.savel.kafka;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelOption;
-import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.MultiThreadIoEventLoopGroup;
+import io.netty.channel.nio.NioIoHandler;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,8 +29,8 @@ public class Application
     public static void main(String[] args) throws InterruptedException
     {
         final var port = Integer.parseInt(System.getProperty("port", "8086"));
-        var bossGroup = new NioEventLoopGroup();
-        var workerGroup = new NioEventLoopGroup();
+        var bossGroup = new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory());
+        var workerGroup = new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory());
         try (var initializer = new ServerInitializer())
         {
             var bootstrap = new ServerBootstrap();
