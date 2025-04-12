@@ -16,11 +16,11 @@ package pro.savel.kafka.producer.requests;
 
 import lombok.Data;
 
-import java.util.Map;
+import java.util.Properties;
 
 @Data
 public class ProducerCreateRequest implements ProducerRequest {
     private String name;
-    private Map<String, String> config;
+    private Properties config;
     private int expirationTimeout;
 }

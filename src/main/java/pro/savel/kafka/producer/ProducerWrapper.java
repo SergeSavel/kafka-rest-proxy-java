@@ -14,49 +14,24 @@
 
 package pro.savel.kafka.producer;
 
-import org.apache.kafka.clients.producer.Callback;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
 import org.apache.kafka.clients.producer.KafkaProducer;
-import org.apache.kafka.clients.producer.ProducerConfig;
-import org.apache.kafka.clients.producer.ProducerRecord;
-import org.apache.kafka.common.errors.AuthenticationException;
-import org.apache.kafka.common.errors.AuthorizationException;
 import org.apache.kafka.common.serialization.ByteArraySerializer;
 import pro.savel.kafka.common.ClientWrapper;
-import pro.savel.kafka.common.exceptions.UnauthenticatedException;
-import pro.savel.kafka.common.exceptions.UnauthorizedException;
-import pro.savel.kafka.producer.requests.ProducerSendRequest;
 
-import java.util.Map;
 import java.util.Properties;
 
+@Getter
+@EqualsAndHashCode(callSuper = false)
 public class ProducerWrapper extends ClientWrapper {
 
     private final KafkaProducer<byte[], byte[]> producer;
 
-    protected ProducerWrapper(String name, Map<String, String> config, int expirationTimeout) {
+    protected ProducerWrapper(String name, Properties config, int expirationTimeout) {
         super(name, config, expirationTimeout);
-        var properties = getProperties(config);
-        producer = new KafkaProducer<>(properties);
-    }
-
-    private static Properties getProperties(Map<String, String> config) {
-        var properties = new Properties(config.size());
-        config.forEach(properties::setProperty);
-        properties.setProperty(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, ByteArraySerializer.class.getName());
-        properties.setProperty(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, ByteArraySerializer.class.getName());
-        return properties;
-    }
-
-    public void send(ProducerSendRequest request, Callback callback) throws UnauthenticatedException, UnauthorizedException {
-        var record = new ProducerRecord<>(request.getTopic(), request.getPartition(), request.getKey(), request.getValue());
-        request.getHeaders().forEach((key, value) -> record.headers().add(key, value));
-        try {
-            producer.send(record, callback);
-        } catch (AuthenticationException e) {
-            throw new UnauthenticatedException("Unable to produce message.", e);
-        } catch (AuthorizationException e) {
-            throw new UnauthorizedException("Unable to produce message.", e);
-        }
+        var serializer = new ByteArraySerializer();
+        producer = new KafkaProducer<>(config, serializer, serializer);
     }
 
     @Override

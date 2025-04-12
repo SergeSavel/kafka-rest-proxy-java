@@ -14,12 +14,12 @@
 
 package pro.savel.kafka.common;
 
-import lombok.Data;
+import lombok.Getter;
 
-import java.util.Map;
+import java.util.Properties;
 import java.util.UUID;
 
-@Data
+@Getter
 public abstract class ClientWrapper implements AutoCloseable {
 
     private final UUID id = UUID.randomUUID();
@@ -30,15 +30,15 @@ public abstract class ClientWrapper implements AutoCloseable {
 
     private long expiresAt;
 
-    protected ClientWrapper(String name, Map<String, String> config, int expirationTimeout) {
+    protected ClientWrapper(String name, Properties config, int expirationTimeout) {
         this.name = name;
         this.username = getUsernameFromConfig(config);
         this.expirationTimeout = expirationTimeout;
         touch();
     }
 
-    private static String getUsernameFromConfig(Map<String, String> config) {
-        return config.get("sasl.username");
+    private static String getUsernameFromConfig(Properties config) {
+        return config.getProperty("sasl.username");
     }
 
     public void touch() {

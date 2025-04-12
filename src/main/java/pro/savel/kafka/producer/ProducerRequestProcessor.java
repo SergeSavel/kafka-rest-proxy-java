@@ -20,7 +20,10 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.util.ReferenceCountUtil;
 import org.apache.kafka.clients.producer.Callback;
+import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
+import org.apache.kafka.common.errors.AuthenticationException;
+import org.apache.kafka.common.errors.AuthorizationException;
 import org.apache.kafka.common.errors.InvalidTopicException;
 import org.apache.kafka.common.errors.UnknownTopicOrPartitionException;
 import org.slf4j.Logger;
@@ -75,32 +78,41 @@ public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter imple
         provider.close();
     }
 
+    private static ProducerSendResponse mapSendResponse(RecordMetadata source) {
+        var result = new ProducerSendResponse();
+        result.setTopic(source.topic());
+        result.setPartition(source.partition());
+        result.setOffset(source.offset());
+        result.setTimestamp(source.timestamp());
+        return result;
+    }
+
     public void processRequest(ChannelHandlerContext ctx, RequestBearer bearer) throws NotFoundException, BadRequestException, UnauthenticatedException, UnauthorizedException {
         var bearerRequest = bearer.request();
         if (bearerRequest instanceof ProducerSendRequest) {
-            processProduce(ctx, bearer);
+            processSend(ctx, bearer);
             return;
         }
         if (bearerRequest instanceof ProducerCreateRequest) {
-            processCreateProducer(ctx, bearer);
+            processCreate(ctx, bearer);
             return;
         }
         if (bearerRequest instanceof ProducerRemoveRequest) {
-            processRemoveProducer(ctx, bearer);
+            processRemove(ctx, bearer);
             return;
         }
         if (bearerRequest instanceof ProducerTouchRequest) {
-            processTouchProducer(ctx, bearer);
+            processTouch(ctx, bearer);
             return;
         }
         if (bearerRequest instanceof ProducerListRequest) {
-            processListProducers(ctx, bearer);
+            processList(ctx, bearer);
             return;
         }
         throw new RuntimeException("Unexpected producer request type: " + bearerRequest.getClass().getName());
     }
 
-    private void processListProducers(ChannelHandlerContext ctx, RequestBearer requestBearer) {
+    private void processList(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var response = new ProducerListResponse();
         var wrappers = provider.getItems();
         wrappers.forEach(wrapper -> response.add(ProducerResponseMapper.mapProducer(wrapper)));
@@ -108,7 +120,7 @@ public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter imple
         ctx.writeAndFlush(responseBearer);
     }
 
-    private void processCreateProducer(ChannelHandlerContext ctx, RequestBearer requestBearer) {
+    private void processCreate(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (ProducerCreateRequest) requestBearer.request();
         var wrapper = provider.createProducer(request.getName(), request.getConfig(), request.getExpirationTimeout());
         var response = ProducerResponseMapper.mapProducerWithToken(wrapper);
@@ -116,7 +128,7 @@ public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter imple
         ctx.writeAndFlush(responseBearer);
     }
 
-    private void processRemoveProducer(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException {
+    private void processRemove(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException {
         var request = (ProducerRemoveRequest) requestBearer.request();
         ProducerWrapper wrapper;
         wrapper = provider.getItem(request.getProducerId(), request.getToken());
@@ -126,7 +138,7 @@ public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter imple
         ctx.writeAndFlush(responseBearer);
     }
 
-    private void processTouchProducer(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException {
+    private void processTouch(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException {
         var request = (ProducerTouchRequest) requestBearer.request();
         ProducerWrapper wrapper;
         wrapper = provider.getItem(request.getProducerId(), request.getToken());
@@ -136,7 +148,7 @@ public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter imple
         ctx.writeAndFlush(responseBearer);
     }
 
-    private void processProduce(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException, UnauthenticatedException, UnauthorizedException {
+    private void processSend(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException, UnauthenticatedException, UnauthorizedException {
         var request = (ProducerSendRequest) requestBearer.request();
         ProducerWrapper wrapper;
         wrapper = provider.getItem(request.getProducerId(), request.getToken());
@@ -148,11 +160,7 @@ public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter imple
                     logger.debug("Produce request completed.");
                 }
                 if (exception == null) {
-                    var response = new ProducerSendResponse();
-                    response.setTopic(metadata.topic());
-                    response.setPartition(metadata.partition());
-                    response.setOffset(metadata.offset());
-                    response.setTimestamp(metadata.timestamp());
+                    var response = mapSendResponse(metadata);
                     var responseBearer = new ResponseBearer(requestBearer, HttpResponseStatus.CREATED, response);
                     ctx.writeAndFlush(responseBearer);
                 } else {
@@ -167,6 +175,15 @@ public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter imple
         if (logger.isDebugEnabled()) {
             logger.debug("Starting produce request processing.");
         }
-        wrapper.send(request, callback);
+        var producer = wrapper.getProducer();
+        var record = new ProducerRecord<>(request.getTopic(), request.getPartition(), request.getKey(), request.getValue());
+        request.getHeaders().forEach((key, value) -> record.headers().add(key, value));
+        try {
+            producer.send(record, callback);
+        } catch (AuthenticationException e) {
+            throw new UnauthenticatedException("Unable to produce message.", e);
+        } catch (AuthorizationException e) {
+            throw new UnauthorizedException("Unable to produce message.", e);
+        }
     }
 }
