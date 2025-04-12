@@ -14,7 +14,9 @@
 
 package pro.savel.kafka.producer;
 
+import org.apache.kafka.clients.producer.RecordMetadata;
 import pro.savel.kafka.producer.responses.Producer;
+import pro.savel.kafka.producer.responses.ProducerSendResponse;
 import pro.savel.kafka.producer.responses.ProducerWithTokenResponse;
 
 public abstract class ProducerResponseMapper {
@@ -39,6 +41,15 @@ public abstract class ProducerResponseMapper {
         result.setUsername(source.getUsername());
         result.setExpiresAt(source.getExpiresAt());
         result.setToken(source.getToken());
+        return result;
+    }
+
+    public static ProducerSendResponse mapSendResponse(RecordMetadata source) {
+        var result = new ProducerSendResponse();
+        result.setTopic(source.topic());
+        result.setPartition(source.partition());
+        result.setOffset(source.offset());
+        result.setTimestamp(source.timestamp());
         return result;
     }
 }

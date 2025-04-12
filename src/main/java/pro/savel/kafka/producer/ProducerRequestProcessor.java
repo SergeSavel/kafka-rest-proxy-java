@@ -39,7 +39,6 @@ import pro.savel.kafka.common.exceptions.UnauthorizedException;
 import pro.savel.kafka.producer.requests.*;
 import pro.savel.kafka.producer.responses.ProducerListResponse;
 import pro.savel.kafka.producer.responses.ProducerRemoveResponse;
-import pro.savel.kafka.producer.responses.ProducerSendResponse;
 import pro.savel.kafka.producer.responses.ProducerTouchResponse;
 
 @ChannelHandler.Sharable
@@ -76,15 +75,6 @@ public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter imple
     @Override
     public void close() {
         provider.close();
-    }
-
-    private static ProducerSendResponse mapSendResponse(RecordMetadata source) {
-        var result = new ProducerSendResponse();
-        result.setTopic(source.topic());
-        result.setPartition(source.partition());
-        result.setOffset(source.offset());
-        result.setTimestamp(source.timestamp());
-        return result;
     }
 
     public void processRequest(ChannelHandlerContext ctx, RequestBearer bearer) throws NotFoundException, BadRequestException, UnauthenticatedException, UnauthorizedException {
@@ -160,7 +150,7 @@ public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter imple
                     logger.debug("Produce request completed.");
                 }
                 if (exception == null) {
-                    var response = mapSendResponse(metadata);
+                    var response = ProducerResponseMapper.mapSendResponse(metadata);
                     var responseBearer = new ResponseBearer(requestBearer, HttpResponseStatus.CREATED, response);
                     ctx.writeAndFlush(responseBearer);
                 } else {
