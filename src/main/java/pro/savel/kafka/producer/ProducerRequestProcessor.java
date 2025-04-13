@@ -120,9 +120,7 @@ public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter imple
 
     private void processRemove(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException {
         var request = (ProducerRemoveRequest) requestBearer.request();
-        ProducerWrapper wrapper;
-        wrapper = provider.getItem(request.getProducerId(), request.getToken());
-        provider.removeItem(wrapper.getId());
+        provider.removeItem(request.getProducerId(), request.getToken());
         var response = new ProducerRemoveResponse();
         var responseBearer = new ResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, response);
         ctx.writeAndFlush(responseBearer);

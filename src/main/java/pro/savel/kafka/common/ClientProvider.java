@@ -48,9 +48,9 @@ public abstract class ClientProvider<Wrapper extends ClientWrapper> implements A
     }
 
     public Wrapper getItem(UUID id, String token) throws NotFoundException, BadRequestException {
-        var wrapper = wrappers.get(id);
-        if (wrapper == null) throw new NotFoundException("Client not found.", null);
-        if (!wrapper.getToken().equals(token)) throw new BadRequestException("Invalid token.", null);
+        var wrapper = getItem(id);
+        if (!wrapper.getToken().equals(token))
+            throw new BadRequestException("Invalid token.", null);
         return wrapper;
     }
 
@@ -60,10 +60,12 @@ public abstract class ClientProvider<Wrapper extends ClientWrapper> implements A
             wrapper.close();
     }
 
-    public void removeItem(UUID id, String token) throws NotFoundException, BadRequestException {
+    public void removeItem(UUID id, String token) throws BadRequestException {
         var wrapper = wrappers.get(id);
-        if (wrapper == null) throw new NotFoundException("Client not found.", null);
-        if (!token.equals(wrapper.getToken())) throw new BadRequestException("Invalid token.", null);
+        if (wrapper == null)
+            return;
+        if (!token.equals(wrapper.getToken()))
+            throw new BadRequestException("Invalid token.", null);
         wrapper = wrappers.remove(id);
         if (wrapper != null)
             wrapper.close();
