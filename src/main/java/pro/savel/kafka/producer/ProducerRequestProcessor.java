@@ -103,8 +103,8 @@ public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter imple
     }
 
     private void processList(ChannelHandlerContext ctx, RequestBearer requestBearer) {
-        var response = new ProducerListResponse();
         var wrappers = provider.getItems();
+        var response = new ProducerListResponse(wrappers.size());
         wrappers.forEach(wrapper -> response.add(ProducerResponseMapper.mapProducer(wrapper)));
         var responseBearer = new ResponseBearer(requestBearer, HttpResponseStatus.OK, response);
         ctx.writeAndFlush(responseBearer);

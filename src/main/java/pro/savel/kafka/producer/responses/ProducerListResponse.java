@@ -17,4 +17,12 @@ package pro.savel.kafka.producer.responses;
 import java.util.ArrayList;
 
 public class ProducerListResponse extends ArrayList<Producer> implements ProducerResponse {
+
+    public ProducerListResponse() {
+        super();
+    }
+
+    public ProducerListResponse(int initialCapacity) {
+        super(initialCapacity);
+    }
 }
