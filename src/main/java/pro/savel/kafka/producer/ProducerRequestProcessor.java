@@ -155,6 +155,7 @@ public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter imple
                     if (exception instanceof InvalidTopicException || exception instanceof UnknownTopicOrPartitionException) {
                         HttpUtils.writeBadRequestAndClose(ctx, requestBearer.protocolVersion(), exception.getMessage());
                     } else {
+                        logger.error("Unable to produce message.", exception);
                         HttpUtils.writeInternalServerErrorAndClose(ctx, requestBearer.protocolVersion(), exception.getMessage());
                     }
                 }
