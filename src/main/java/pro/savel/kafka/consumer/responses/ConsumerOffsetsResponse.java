@@ -12,15 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package pro.savel.kafka.consumer.requests;
+package pro.savel.kafka.consumer.responses;
 
-import lombok.Data;
+import java.util.HashMap;
+import java.util.List;
 
-import java.util.Properties;
+public class ConsumerOffsetsResponse extends HashMap<String, List<PartitionOffset>> implements ConsumerResponse {
 
-@Data
-public class ConsumerCreateRequest implements ConsumerRequest {
-    private String name;
-    private Properties config;
-    private int expirationTimeout;
+    public ConsumerOffsetsResponse() {
+        super();
+    }
+
+    public ConsumerOffsetsResponse(int size) {
+        super(size);
+    }
 }

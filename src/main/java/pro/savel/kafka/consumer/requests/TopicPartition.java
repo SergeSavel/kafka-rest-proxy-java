@@ -14,13 +14,5 @@
 
 package pro.savel.kafka.consumer.requests;
 
-import lombok.Data;
-
-import java.util.Properties;
-
-@Data
-public class ConsumerCreateRequest implements ConsumerRequest {
-    private String name;
-    private Properties config;
-    private int expirationTimeout;
+public record TopicPartition(String topic, int partition) {
 }

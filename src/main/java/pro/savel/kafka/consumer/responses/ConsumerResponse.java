@@ -12,15 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package pro.savel.kafka.consumer.requests;
+package pro.savel.kafka.consumer.responses;
 
-import lombok.Data;
+import pro.savel.kafka.common.contract.Response;
 
-import java.util.Properties;
-
-@Data
-public class ConsumerCreateRequest implements ConsumerRequest {
-    private String name;
-    private Properties config;
-    private int expirationTimeout;
+public interface ConsumerResponse extends Response {
 }

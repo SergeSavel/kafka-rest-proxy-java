@@ -23,11 +23,5 @@ import java.util.UUID;
 public class ConsumerGetBeginningOffsetsRequest implements ConsumerRequest {
     private UUID consumerId;
     private String token;
-    private Collection<ConsumerGetBeginningOffsetsRequest.TopicPartition> partitions;
-
-    @Data
-    public static class TopicPartition {
-        private String topic;
-        private int partition;
-    }
+    private Collection<TopicPartition> partitions;
 }

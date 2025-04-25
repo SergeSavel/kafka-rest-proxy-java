@@ -16,11 +16,11 @@ package pro.savel.kafka.consumer;
 
 import pro.savel.kafka.common.ClientProvider;
 
-import java.util.Map;
+import java.util.Properties;
 
 public class ConsumerProvider extends ClientProvider<ConsumerWrapper> {
 
-    public ConsumerWrapper createConsumer(String name, Map<String, String> config, int expirationTimeout) {
+    public ConsumerWrapper createConsumer(String name, Properties config, int expirationTimeout) {
         var wrapper = new ConsumerWrapper(name, config, expirationTimeout);
         addItem(wrapper);
         return wrapper;

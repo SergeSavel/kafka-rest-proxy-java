@@ -70,13 +70,15 @@ public class ConsumerRequestDecoder extends ChannelInboundHandlerAdapter {
         switch (pathMethod) {
             case "" -> decodeRoot(ctx, httpRequest);
             case "/poll" -> decodePoll(ctx, httpRequest);
+            case "/commit" -> decodeCommit(ctx, httpRequest);
             case "/seek" -> decodeSeek(ctx, httpRequest);
             case "/assign" -> decodeAssign(ctx, httpRequest);
             case "/subscribe" -> decodeSubscribe(ctx, httpRequest);
-            case "/touch" -> decodeTouch(ctx, httpRequest);
-            case "/partition" -> decodePartition(ctx, httpRequest);
+            case "/partitions" -> decodePartitions(ctx, httpRequest);
+            case "/topics" -> decodeTopics(ctx, httpRequest);
             case "/beginning" -> decodeBeginning(ctx, httpRequest);
             case "/end" -> decodeEnd(ctx, httpRequest);
+            case "/touch" -> decodeTouch(ctx, httpRequest);
             default -> HttpUtils.writeNotFoundAndClose(ctx, httpRequest.protocolVersion());
         }
     }
@@ -126,7 +128,14 @@ public class ConsumerRequestDecoder extends ChannelInboundHandlerAdapter {
             throw new BadRequestException("Unsupported HTTP method.");
     }
 
-    private void decodePartition(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
+    private void decodeTopics(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
+        if (httpRequest.method() == HttpMethod.GET)
+            decodeJsonRequest(ctx, httpRequest, ConsumerGetTopicsRequest.class);
+        else
+            throw new BadRequestException("Unsupported HTTP method.");
+    }
+
+    private void decodePartitions(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
         if (httpRequest.method() == HttpMethod.GET)
             decodeJsonRequest(ctx, httpRequest, ConsumerGetPartitionsRequest.class);
         else
@@ -150,6 +159,13 @@ public class ConsumerRequestDecoder extends ChannelInboundHandlerAdapter {
     private void decodePoll(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
         if (httpRequest.method() == HttpMethod.POST)
             decodeJsonRequest(ctx, httpRequest, ConsumerPollRequest.class);
+        else
+            throw new BadRequestException("Unsupported HTTP method.");
+    }
+
+    private void decodeCommit(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
+        if (httpRequest.method() == HttpMethod.POST)
+            decodeJsonRequest(ctx, httpRequest, ConsumerCommitRequest.class);
         else
             throw new BadRequestException("Unsupported HTTP method.");
     }

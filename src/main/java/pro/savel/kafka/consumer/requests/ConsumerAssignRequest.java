@@ -24,10 +24,4 @@ public class ConsumerAssignRequest implements ConsumerRequest {
     private UUID consumerId;
     private String token;
     private Collection<TopicPartition> partitions;
-
-    @Data
-    public static class TopicPartition {
-        private String topic;
-        private int partition;
-    }
 }

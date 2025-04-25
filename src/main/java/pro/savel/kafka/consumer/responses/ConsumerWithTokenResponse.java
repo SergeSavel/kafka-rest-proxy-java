@@ -12,15 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package pro.savel.kafka.consumer.requests;
+package pro.savel.kafka.consumer.responses;
 
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
-import java.util.Properties;
-
+@EqualsAndHashCode(callSuper = true)
 @Data
-public class ConsumerCreateRequest implements ConsumerRequest {
-    private String name;
-    private Properties config;
-    private int expirationTimeout;
+public class ConsumerWithTokenResponse extends Consumer implements ConsumerResponse {
+    private String token;
 }

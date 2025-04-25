@@ -12,15 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package pro.savel.kafka.consumer.requests;
+package pro.savel.kafka.consumer.responses;
 
 import lombok.Data;
 
-import java.util.Properties;
+import java.util.UUID;
 
 @Data
-public class ConsumerCreateRequest implements ConsumerRequest {
+public class Consumer {
+    private UUID id;
     private String name;
-    private Properties config;
-    private int expirationTimeout;
+    private String username;
+    private long expiresAt;
 }

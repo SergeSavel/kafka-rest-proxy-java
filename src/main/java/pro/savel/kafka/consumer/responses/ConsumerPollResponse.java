@@ -12,15 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package pro.savel.kafka.consumer.requests;
+package pro.savel.kafka.consumer.responses;
 
-import lombok.Data;
+import java.util.ArrayList;
 
-import java.util.Properties;
+public class ConsumerPollResponse extends ArrayList<ConsumerMessage> implements ConsumerResponse {
 
-@Data
-public class ConsumerCreateRequest implements ConsumerRequest {
-    private String name;
-    private Properties config;
-    private int expirationTimeout;
+    public ConsumerPollResponse() {
+        super();
+    }
+
+    public ConsumerPollResponse(int initialCapacity) {
+        super(initialCapacity);
+    }
 }

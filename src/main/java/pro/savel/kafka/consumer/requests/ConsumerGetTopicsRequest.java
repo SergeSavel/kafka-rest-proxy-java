@@ -16,11 +16,10 @@ package pro.savel.kafka.consumer.requests;
 
 import lombok.Data;
 
-import java.util.Properties;
+import java.util.UUID;
 
 @Data
-public class ConsumerCreateRequest implements ConsumerRequest {
-    private String name;
-    private Properties config;
-    private int expirationTimeout;
+public class ConsumerGetTopicsRequest implements ConsumerRequest {
+    private UUID consumerId;
+    private String token;
 }
