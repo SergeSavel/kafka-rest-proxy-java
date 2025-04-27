@@ -115,7 +115,9 @@ public class ProducerRequestDecoder extends ChannelInboundHandlerAdapter {
         ProducerSendRequest request;
         if (HttpUtils.isJson(contentType)) {
             var stringRequest = JsonUtils.parseJson(objectMapper, httpRequest.content(), ProducerSendStringRequest.class);
-            request = ProducerMapper.mapProduceRequest(stringRequest);
+            request = ProducerRequestMapper.mapProduceRequest(stringRequest);
+        } else if (HttpUtils.isOctetStream(contentType)) {
+            request = ProducerRequestDeserializer.deserializeBinarySend(httpRequest.content());
         } else
             throw new BadRequestException("Invalid Content-Type header in request.");
         passBearer(ctx, httpRequest, request);

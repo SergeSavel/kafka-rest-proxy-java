@@ -16,7 +16,6 @@ package pro.savel.kafka.producer;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpResponse;
@@ -52,7 +51,7 @@ public class ProducerResponseEncoder extends ChannelOutboundHandlerAdapter {
                 if (!bearer.connectionKeepAlive()) {
                     future.addListener(ChannelFutureListener.CLOSE);
                 }
-            } catch (JsonProcessingException e) {
+            } catch (Exception e) {
                 var message = "An error occurred during producer response serialization.";
                 logger.error(message, e);
                 HttpUtils.writeInternalServerErrorAndClose(ctx, bearer.protocolVersion(), message);
@@ -65,16 +64,21 @@ public class ProducerResponseEncoder extends ChannelOutboundHandlerAdapter {
     }
 
     private FullHttpResponse createHttpResponse(ResponseBearer bearer) throws JsonProcessingException {
+        var response = (ProducerResponse) bearer.response();
         FullHttpResponse httpResponse;
         if (bearer.response() == null) {
             httpResponse = new DefaultFullHttpResponse(bearer.protocolVersion(), bearer.status());
         } else {
             if (bearer.serializeTo() == Serde.JSON) {
-                var bytes = objectMapper.writeValueAsBytes(bearer.response());
-                httpResponse = new DefaultFullHttpResponse(bearer.protocolVersion(), bearer.status(), Unpooled.wrappedBuffer(bytes));
+                var content = ProducerResponseSerializer.serializeJson(objectMapper, response);
+                httpResponse = new DefaultFullHttpResponse(bearer.protocolVersion(), bearer.status(), content);
                 httpResponse.headers().set(HttpUtils.ASCII_CONTENT_TYPE, HttpUtils.ASCII_APPLICATION_JSON_CHARSET_UTF8);
+            } else if (bearer.serializeTo() == Serde.BINARY) {
+                var content = ProducerResponseSerializer.serializeBinary(response);
+                httpResponse = new DefaultFullHttpResponse(bearer.protocolVersion(), bearer.status(), content);
+                httpResponse.headers().set(HttpUtils.ASCII_CONTENT_TYPE, HttpUtils.ASCII_APPLICATION_OCTET_STREAM);
             } else {
-                throw new RuntimeException("Unimplemented");
+                throw new IllegalStateException("Unexpected serde: " + bearer.serializeTo());
             }
         }
         httpResponse.headers().setInt(HttpUtils.ASCII_CONTENT_LENGTH, httpResponse.content().readableBytes());

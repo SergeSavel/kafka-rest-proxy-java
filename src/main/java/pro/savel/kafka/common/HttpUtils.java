@@ -29,13 +29,14 @@ public abstract class HttpUtils {
 
     public static final String APPLICATION_JSON = "application/json";
     public static final String APPLICATION_JSON_CHARSET_UTF8 = "application/json; charset=utf-8";
-    public static final String TEXT_PLAIN_CHARSET_UTF8 = "text/plain; charset=utf-8";
     public static final String APPLICATION_OCTET_STREAM = "application/octet-stream";
+    public static final String TEXT_PLAIN_CHARSET_UTF8 = "text/plain; charset=utf-8";
 
     public static final AsciiString ASCII_CONTENT_TYPE = AsciiString.cached("Content-Type");
     public static final AsciiString ASCII_CONTENT_LENGTH = AsciiString.cached("Content-Length");
     public static final AsciiString ASCII_CONNECTION = AsciiString.cached("Connection");
     public static final AsciiString ASCII_APPLICATION_JSON_CHARSET_UTF8 = AsciiString.cached(APPLICATION_JSON_CHARSET_UTF8);
+    public static final AsciiString ASCII_APPLICATION_OCTET_STREAM = AsciiString.cached(APPLICATION_OCTET_STREAM);
     public static final AsciiString ASCII_TEXT_PLAIN_CHARSET_UTF8 = AsciiString.cached(TEXT_PLAIN_CHARSET_UTF8);
 
     public static String getContentType(FullHttpRequest httpRequest) throws BadRequestException {
