@@ -113,7 +113,7 @@ public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter imple
     private void processCreate(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (ProducerCreateRequest) requestBearer.request();
         var wrapper = provider.createProducer(request.getName(), request.getConfig(), request.getExpirationTimeout());
-        var response = ProducerResponseMapper.mapProducerWithToken(wrapper);
+        var response = ProducerResponseMapper.mapCreateResponse(wrapper);
         var responseBearer = new ResponseBearer(requestBearer, HttpResponseStatus.CREATED, response);
         ctx.writeAndFlush(responseBearer);
     }

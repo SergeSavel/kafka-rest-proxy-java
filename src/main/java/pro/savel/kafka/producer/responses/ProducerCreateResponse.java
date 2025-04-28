@@ -15,10 +15,11 @@
 package pro.savel.kafka.producer.responses;
 
 import lombok.Data;
-import lombok.EqualsAndHashCode;
 
-@EqualsAndHashCode(callSuper = true)
+import java.util.UUID;
+
 @Data
-public class ProducerWithTokenResponse extends Producer implements ProducerResponse {
+public class ProducerCreateResponse implements ProducerResponse {
+    private UUID id;
     private String token;
 }
