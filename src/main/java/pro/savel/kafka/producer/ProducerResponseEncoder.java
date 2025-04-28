@@ -20,6 +20,7 @@ import io.netty.channel.*;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaderValues;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.util.ReferenceCountUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -72,11 +73,13 @@ public class ProducerResponseEncoder extends ChannelOutboundHandlerAdapter {
             if (bearer.serializeTo() == Serde.JSON) {
                 var content = ProducerResponseSerializer.serializeJson(objectMapper, response);
                 httpResponse = new DefaultFullHttpResponse(bearer.protocolVersion(), bearer.status(), content);
-                httpResponse.headers().set(HttpUtils.ASCII_CONTENT_TYPE, HttpUtils.ASCII_APPLICATION_JSON_CHARSET_UTF8);
+                if (bearer.status() != HttpResponseStatus.NO_CONTENT)
+                    httpResponse.headers().set(HttpUtils.ASCII_CONTENT_TYPE, HttpUtils.ASCII_APPLICATION_JSON_CHARSET_UTF8);
             } else if (bearer.serializeTo() == Serde.BINARY) {
                 var content = ProducerResponseSerializer.serializeBinary(response);
                 httpResponse = new DefaultFullHttpResponse(bearer.protocolVersion(), bearer.status(), content);
-                httpResponse.headers().set(HttpUtils.ASCII_CONTENT_TYPE, HttpUtils.ASCII_APPLICATION_OCTET_STREAM);
+                if (bearer.status() != HttpResponseStatus.NO_CONTENT)
+                    httpResponse.headers().set(HttpUtils.ASCII_CONTENT_TYPE, HttpUtils.ASCII_APPLICATION_OCTET_STREAM);
             } else {
                 throw new IllegalStateException("Unexpected serde: " + bearer.serializeTo());
             }
