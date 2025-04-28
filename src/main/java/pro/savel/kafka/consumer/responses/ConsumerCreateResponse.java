@@ -15,10 +15,11 @@
 package pro.savel.kafka.consumer.responses;
 
 import lombok.Data;
-import lombok.EqualsAndHashCode;
 
-@EqualsAndHashCode(callSuper = true)
+import java.util.UUID;
+
 @Data
-public class ConsumerWithTokenResponse extends Consumer implements ConsumerResponse {
+public class ConsumerCreateResponse implements ConsumerResponse {
+    private UUID id;
     private String token;
 }
