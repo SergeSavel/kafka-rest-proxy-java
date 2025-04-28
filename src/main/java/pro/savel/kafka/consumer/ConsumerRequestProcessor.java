@@ -39,6 +39,8 @@ import pro.savel.kafka.common.exceptions.NotFoundException;
 import pro.savel.kafka.common.exceptions.UnauthenticatedException;
 import pro.savel.kafka.common.exceptions.UnauthorizedException;
 import pro.savel.kafka.consumer.requests.*;
+import pro.savel.kafka.consumer.responses.ConsumerRemoveResponse;
+import pro.savel.kafka.consumer.responses.ConsumerTouchResponse;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -157,8 +159,8 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
     private void processRemove(ChannelHandlerContext ctx, RequestBearer requestBearer) throws BadRequestException {
         var request = (ConsumerRemoveRequest) requestBearer.request();
         provider.removeItem(request.getConsumerId(), request.getToken());
-        //var response = new ConsumerRemoveResponse();
-        var responseBearer = new ResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null);
+        var response = new ConsumerRemoveResponse();
+        var responseBearer = new ResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, response);
         ctx.writeAndFlush(responseBearer);
     }
 
@@ -166,8 +168,8 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
         var request = (ConsumerTouchRequest) requestBearer.request();
         var wrapper = provider.getItem(request.getConsumerId(), request.getToken());
         wrapper.touch();
-        //var response = new ConsumerTouchResponse();
-        var responseBearer = new ResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null);
+        var response = new ConsumerTouchResponse();
+        var responseBearer = new ResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, response);
         ctx.writeAndFlush(responseBearer);
     }
 
