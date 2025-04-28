@@ -16,10 +16,8 @@ package pro.savel.kafka.consumer.responses;
 
 import lombok.Data;
 
-import java.util.UUID;
-
 @Data
 public class ConsumerCreateResponse implements ConsumerResponse {
-    private UUID id;
+    private String id;
     private String token;
 }

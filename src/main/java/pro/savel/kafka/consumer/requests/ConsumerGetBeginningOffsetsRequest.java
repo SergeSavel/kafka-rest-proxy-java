@@ -17,11 +17,10 @@ package pro.savel.kafka.consumer.requests;
 import lombok.Data;
 
 import java.util.Collection;
-import java.util.UUID;
 
 @Data
 public class ConsumerGetBeginningOffsetsRequest implements ConsumerRequest {
-    private UUID consumerId;
+    private String consumerId;
     private String token;
     private Collection<TopicPartition> partitions;
 }

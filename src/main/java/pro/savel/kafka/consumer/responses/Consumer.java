@@ -16,11 +16,9 @@ package pro.savel.kafka.consumer.responses;
 
 import lombok.Data;
 
-import java.util.UUID;
-
 @Data
 public class Consumer {
-    private UUID id;
+    private String id;
     private String name;
     private String username;
     private long expiresAt;

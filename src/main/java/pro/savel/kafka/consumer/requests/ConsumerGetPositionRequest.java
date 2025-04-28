@@ -16,11 +16,9 @@ package pro.savel.kafka.consumer.requests;
 
 import lombok.Data;
 
-import java.util.UUID;
-
 @Data
 public class ConsumerGetPositionRequest implements ConsumerRequest {
-    private UUID consumerId;
+    private String consumerId;
     private String token;
     private String topic;
     private int partition;

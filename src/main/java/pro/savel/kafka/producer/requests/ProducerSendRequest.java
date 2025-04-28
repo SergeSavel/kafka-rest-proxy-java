@@ -17,11 +17,10 @@ package pro.savel.kafka.producer.requests;
 import lombok.Data;
 
 import java.util.Map;
-import java.util.UUID;
 
 @Data
 public class ProducerSendRequest implements ProducerRequest {
-    private UUID producerId;
+    private String producerId;
     private String token;
     private String topic;
     private Integer partition;

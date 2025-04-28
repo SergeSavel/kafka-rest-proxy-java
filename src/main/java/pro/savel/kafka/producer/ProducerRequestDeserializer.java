@@ -21,7 +21,6 @@ import pro.savel.kafka.producer.requests.ProducerSendRequest;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.UUID;
 
 public class ProducerRequestDeserializer {
 
@@ -37,7 +36,7 @@ public class ProducerRequestDeserializer {
 
     private static ProducerSendRequest deserializeBinarySendV1(ByteBuf buf) throws BadRequestException {
         var request = new ProducerSendRequest();
-        request.setProducerId(readUuid(buf));
+        request.setProducerId(readString(buf));
         request.setToken(readString(buf));
         request.setTopic(readString(buf));
         request.setPartition(readNullableInt(buf));
@@ -72,11 +71,6 @@ public class ProducerRequestDeserializer {
     private static String readString(ByteBuf buf) throws BadRequestException {
         var length = readPositiveInt(buf);
         return readString(buf, length);
-    }
-
-    private static UUID readUuid(ByteBuf buf) throws BadRequestException {
-        var uuidString = readString(buf);
-        return UUID.fromString(uuidString);
     }
 
     private static Integer readNullableInt(ByteBuf buf) throws BadRequestException {

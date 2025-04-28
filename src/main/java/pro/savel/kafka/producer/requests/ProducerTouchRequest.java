@@ -16,10 +16,8 @@ package pro.savel.kafka.producer.requests;
 
 import lombok.Data;
 
-import java.util.UUID;
-
 @Data
 public class ProducerTouchRequest implements ProducerRequest {
-    private UUID producerId;
+    private String producerId;
     private String token;
 }

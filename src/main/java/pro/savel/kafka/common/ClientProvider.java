@@ -18,12 +18,11 @@ import pro.savel.kafka.common.exceptions.BadRequestException;
 import pro.savel.kafka.common.exceptions.NotFoundException;
 
 import java.util.Collection;
-import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 public abstract class ClientProvider<Wrapper extends ClientWrapper> implements AutoCloseable {
 
-    private final ConcurrentHashMap<UUID, Wrapper> wrappers = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, Wrapper> wrappers = new ConcurrentHashMap<>();
     private final ClientKiller<Wrapper> killer = new ClientKiller<>(this);
 
     @Override
@@ -40,27 +39,27 @@ public abstract class ClientProvider<Wrapper extends ClientWrapper> implements A
         wrappers.put(wrapper.getId(), wrapper);
     }
 
-    public Wrapper getItem(UUID id) throws NotFoundException {
+    public Wrapper getItem(String id) throws NotFoundException {
         var wrapper = wrappers.get(id);
         if (wrapper == null)
             throw new NotFoundException("Client not found.", null);
         return wrapper;
     }
 
-    public Wrapper getItem(UUID id, String token) throws NotFoundException, BadRequestException {
+    public Wrapper getItem(String id, String token) throws NotFoundException, BadRequestException {
         var wrapper = getItem(id);
         if (!wrapper.getToken().equals(token))
             throw new BadRequestException("Invalid token.", null);
         return wrapper;
     }
 
-    public void removeItem(UUID id) {
+    public void removeItem(String id) {
         var wrapper = wrappers.remove(id);
         if (wrapper != null)
             wrapper.close();
     }
 
-    public void removeItem(UUID id, String token) throws BadRequestException {
+    public void removeItem(String id, String token) throws BadRequestException {
         var wrapper = wrappers.get(id);
         if (wrapper == null)
             return;

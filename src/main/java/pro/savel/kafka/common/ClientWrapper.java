@@ -22,7 +22,7 @@ import java.util.UUID;
 @Getter
 public abstract class ClientWrapper implements AutoCloseable {
 
-    private final UUID id = UUID.randomUUID();
+    private final String id = UUID.randomUUID().toString();
     private final String name;
     private final String username;
     private final int expirationTimeout;

@@ -16,11 +16,9 @@ package pro.savel.kafka.producer.responses;
 
 import lombok.Data;
 
-import java.util.UUID;
-
 @Data
 public class Producer {
-    private UUID id;
+    private String id;
     private String name;
     private String username;
     private long expiresAt;

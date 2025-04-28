@@ -16,10 +16,8 @@ package pro.savel.kafka.consumer.requests;
 
 import lombok.Data;
 
-import java.util.UUID;
-
 @Data
 public class ConsumerGetAssignmentRequest implements ConsumerRequest {
-    private UUID consumerId;
+    private String consumerId;
     private String token;
 }
