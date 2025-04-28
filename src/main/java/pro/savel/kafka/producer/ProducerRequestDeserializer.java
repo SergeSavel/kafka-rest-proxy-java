@@ -15,6 +15,7 @@
 package pro.savel.kafka.producer;
 
 import io.netty.buffer.ByteBuf;
+import pro.savel.kafka.common.exceptions.BadRequestException;
 import pro.savel.kafka.producer.requests.ProducerSendRequest;
 
 import java.nio.charset.StandardCharsets;
@@ -24,17 +25,17 @@ import java.util.UUID;
 
 public class ProducerRequestDeserializer {
 
-    public static ProducerSendRequest deserializeBinarySend(ByteBuf buf) {
+    public static ProducerSendRequest deserializeBinarySend(ByteBuf buf) throws BadRequestException {
         if (buf == null)
             return null;
-        var version = buf.readShort();
+        var version = readPositiveShort(buf);
         if (version == 1)
             return deserializeBinarySendV1(buf);
         else
             throw new IllegalArgumentException("Unsupported version: " + version);
     }
 
-    private static ProducerSendRequest deserializeBinarySendV1(ByteBuf buf) {
+    private static ProducerSendRequest deserializeBinarySendV1(ByteBuf buf) throws BadRequestException {
         var request = new ProducerSendRequest();
         request.setProducerId(readUuid(buf));
         request.setToken(readString(buf));
@@ -46,8 +47,8 @@ public class ProducerRequestDeserializer {
         return request;
     }
 
-    private static Map<String, byte[]> readHeders(ByteBuf buf) {
-        var headersCount = buf.readInt();
+    private static Map<String, byte[]> readHeders(ByteBuf buf) throws BadRequestException {
+        var headersCount = readPositiveInt(buf);
         var headers = new HashMap<String, byte[]>(headersCount);
         for (int i = 1; i <= headersCount; i++) {
             var headerKey = readString(buf);
@@ -68,35 +69,58 @@ public class ProducerRequestDeserializer {
         return new String(bytes, StandardCharsets.UTF_8);
     }
 
-    private static String readString(ByteBuf buf) {
-        var length = buf.readInt();
+    private static String readString(ByteBuf buf) throws BadRequestException {
+        var length = readPositiveInt(buf);
         return readString(buf, length);
     }
 
-    private static UUID readUuid(ByteBuf buf) {
+    private static UUID readUuid(ByteBuf buf) throws BadRequestException {
         var uuidString = readString(buf);
         return UUID.fromString(uuidString);
     }
 
-    private static Integer readNullableInt(ByteBuf buf) {
-        var isNull = buf.readByte();
-        if (isNull == 1)
+    private static Integer readNullableInt(ByteBuf buf) throws BadRequestException {
+        var isNull = readBoolean(buf);
+        if (isNull)
             return null;
-        return buf.readInt();
+        return readPositiveInt(buf);
     }
 
-    private static byte[] readNullableBytes(ByteBuf buf) {
-        var isNull = buf.readByte();
-        if (isNull == 1)
+    private static byte[] readNullableBytes(ByteBuf buf) throws BadRequestException {
+        var isNull = readBoolean(buf);
+        if (isNull)
             return null;
-        int length = buf.readInt();
+        int length = readPositiveInt(buf);
         return readBytes(buf, length);
     }
 
-    private static byte[] readNullableBytesToTheEnd(ByteBuf buf) {
-        var isNull = buf.readByte();
-        if (isNull == 1)
+    private static byte[] readNullableBytesToTheEnd(ByteBuf buf) throws BadRequestException {
+        var isNull = readBoolean(buf);
+        if (isNull)
             return null;
         return readBytes(buf, buf.readableBytes());
+    }
+
+    private static short readPositiveShort(ByteBuf buf) throws BadRequestException {
+        var value = buf.readShort();
+        if (value < 0)
+            throw new BadRequestException("Illegal value in binary content");
+        return value;
+    }
+
+    private static int readPositiveInt(ByteBuf buf) throws BadRequestException {
+        var value = buf.readInt();
+        if (value < 0)
+            throw new BadRequestException("Illegal value in binary content");
+        return value;
+    }
+
+    private static boolean readBoolean(ByteBuf buf) throws BadRequestException {
+        var value = buf.readByte();
+        if (value == 0)
+            return false;
+        else if (value == 1)
+            return true;
+        throw new BadRequestException("Illegal value in binary content");
     }
 }
