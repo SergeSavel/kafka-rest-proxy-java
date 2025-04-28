@@ -22,11 +22,12 @@ import pro.savel.kafka.consumer.responses.*;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 
 public class ConsumerResponseMapper {
 
-    public static ConsumerListResponse mapConsumerListResponse(Collection<ConsumerWrapper> source) {
+    public static ConsumerListResponse mapListResponse(Collection<ConsumerWrapper> source) {
         if (source == null)
             return null;
         var result = new ConsumerListResponse(source.size());
@@ -57,15 +58,15 @@ public class ConsumerResponseMapper {
         return result;
     }
 
-    public static ConsumerPollResponse mapConsumerPollResponse(ConsumerRecords<byte[], byte[]> source) {
+    public static ConsumerPollResponse mapPollResponse(ConsumerRecords<byte[], byte[]> source) {
         if (source == null)
             return null;
         var result = new ConsumerPollResponse(source.count());
-        source.forEach(record -> result.add(mapConsumerMessage(record)));
+        source.forEach(record -> result.add(mapMessage(record)));
         return result;
     }
 
-    public static ConsumerMessage mapConsumerMessage(ConsumerRecord<byte[], byte[]> source) {
+    public static ConsumerMessage mapMessage(ConsumerRecord<byte[], byte[]> source) {
         if (source == null)
             return null;
         var result = new ConsumerMessage();
@@ -73,21 +74,21 @@ public class ConsumerResponseMapper {
         result.setTopic(source.topic());
         result.setPartition(source.partition());
         result.setOffset(source.offset());
-        result.setHeaders(mapConsumerHeaders(source.headers()));
+        result.setHeaders(mapHeaders(source.headers()));
         result.setKey(source.key());
         result.setValue(source.value());
         return result;
     }
 
-    public static Collection<ConsumerMessage.Header> mapConsumerHeaders(Headers source) {
+    public static Collection<ConsumerMessage.Header> mapHeaders(Headers source) {
         if (source == null)
             return null;
         var result = new ArrayList<ConsumerMessage.Header>();
-        source.forEach(header -> result.add(mapConsumerHeader(header)));
+        source.forEach(header -> result.add(mapHeader(header)));
         return result;
     }
 
-    public static ConsumerMessage.Header mapConsumerHeader(Header source) {
+    public static ConsumerMessage.Header mapHeader(Header source) {
         if (source == null)
             return null;
         var result = new ConsumerMessage.Header();
@@ -96,7 +97,7 @@ public class ConsumerResponseMapper {
         return result;
     }
 
-    public static ConsumerAssignmentResponse mapConsumerAssignmentResponse(Collection<org.apache.kafka.common.TopicPartition> source) {
+    public static ConsumerAssignmentResponse mapAssignmentResponse(Collection<org.apache.kafka.common.TopicPartition> source) {
         if (source == null)
             return null;
         var result = new ConsumerAssignmentResponse(source.size());
@@ -110,19 +111,19 @@ public class ConsumerResponseMapper {
         return new TopicPartition(source.topic(), source.partition());
     }
 
-    public static ConsumerPositionResponse mapConsumerPositionResponse(long source) {
+    public static ConsumerPositionResponse mapPositionResponse(long source) {
         var result = new ConsumerPositionResponse();
         result.setOffset(source);
         return result;
     }
 
-    public static ConsumerSubscriptionResponse MapConsumerSubscriptionResponse(Collection<String> source) {
+    public static ConsumerSubscriptionResponse MapSubscriptionResponse(Collection<String> source) {
         if (source == null)
             return null;
         return new ConsumerSubscriptionResponse(source);
     }
 
-    public static ConsumerPartitionsResponse MapConsumerPartitionsResponse(Collection<org.apache.kafka.common.PartitionInfo> source) {
+    public static ConsumerPartitionsResponse MapPartitionsResponse(Collection<org.apache.kafka.common.PartitionInfo> source) {
         if (source == null)
             return null;
         var result = new ConsumerPartitionsResponse(source.size());
@@ -152,13 +153,25 @@ public class ConsumerResponseMapper {
         return result;
     }
 
-    public static ConsumerOffsetsResponse mapConsumerOffsetsResponse(Map<org.apache.kafka.common.TopicPartition, Long> source) {
+    public static ConsumerOffsetsResponse mapOffsetsResponse(Map<org.apache.kafka.common.TopicPartition, Long> source) {
         if (source == null)
             return null;
         var result = new ConsumerOffsetsResponse();
         source.forEach((topicPartition, offset) -> {
             var offsets = result.computeIfAbsent(topicPartition.topic(), k -> new ArrayList<>());
             offsets.add(new PartitionOffset(topicPartition.partition(), offset));
+        });
+        return result;
+    }
+
+    public static ConsumerTopicsResponse MapTopicsResponse(Map<String, List<org.apache.kafka.common.PartitionInfo>> source) {
+        if (source == null)
+            return null;
+        var result = new ConsumerTopicsResponse(source.size());
+        source.forEach((topic, partitionsSource) -> {
+            var partitions = new ArrayList<PartitionInfo>(partitionsSource.size());
+            partitionsSource.forEach(partitionSource -> partitions.add(mapPartitionInfo(partitionSource)));
+            result.put(topic, partitions);
         });
         return result;
     }

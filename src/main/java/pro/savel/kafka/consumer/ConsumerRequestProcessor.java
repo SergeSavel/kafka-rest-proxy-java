@@ -39,7 +39,6 @@ import pro.savel.kafka.common.exceptions.NotFoundException;
 import pro.savel.kafka.common.exceptions.UnauthenticatedException;
 import pro.savel.kafka.common.exceptions.UnauthorizedException;
 import pro.savel.kafka.consumer.requests.*;
-import pro.savel.kafka.consumer.responses.ConsumerOffsetsResponse;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -120,6 +119,8 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
             processGetBeginningOffsets(ctx, requestBearer);
         else if (requestClass == ConsumerGetEndOffsetsRequest.class)
             processGetEndOffsets(ctx, requestBearer);
+        else if (requestClass == ConsumerGetTopicsRequest.class)
+            processGetTopics(ctx, requestBearer);
         else if (requestClass == ConsumerGetPositionRequest.class)
             processGetPosition(ctx, requestBearer);
         else if (requestClass == ConsumerGetAssignmentRequest.class)
@@ -140,7 +141,7 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
 
     private void processList(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var wrappers = provider.getItems();
-        var response = ConsumerResponseMapper.mapConsumerListResponse(wrappers);
+        var response = ConsumerResponseMapper.mapListResponse(wrappers);
         var responseBearer = new ResponseBearer(requestBearer, HttpResponseStatus.OK, response);
         ctx.writeAndFlush(responseBearer);
     }
@@ -185,7 +186,7 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
         } catch (AuthorizationException e) {
             throw new UnauthorizedException("Unable to poll records.", e);
         }
-        var response = ConsumerResponseMapper.mapConsumerPollResponse(records);
+        var response = ConsumerResponseMapper.mapPollResponse(records);
         var responseBearer = new ResponseBearer(requestBearer, HttpResponseStatus.OK, response);
         ctx.writeAndFlush(responseBearer);
     }
@@ -228,7 +229,7 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
         var wrapper = provider.getItem(request.getConsumerId(), request.getToken());
         var consumer = wrapper.getConsumer();
         var assignment = consumer.assignment();
-        var response = ConsumerResponseMapper.mapConsumerAssignmentResponse(assignment);
+        var response = ConsumerResponseMapper.mapAssignmentResponse(assignment);
         var responseBearer = new ResponseBearer(requestBearer, HttpResponseStatus.OK, response);
         ctx.writeAndFlush(responseBearer);
     }
@@ -262,7 +263,7 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
         } catch (AuthorizationException e) {
             throw new UnauthorizedException("Unable to get position.", e);
         }
-        var response = ConsumerResponseMapper.mapConsumerPositionResponse(position);
+        var response = ConsumerResponseMapper.mapPositionResponse(position);
         var responseBearer = new ResponseBearer(requestBearer, HttpResponseStatus.OK, response);
         ctx.writeAndFlush(responseBearer);
     }
@@ -290,7 +291,7 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
         var wrapper = provider.getItem(request.getConsumerId(), request.getToken());
         var consumer = wrapper.getConsumer();
         var subscription = consumer.subscription();
-        var response = ConsumerResponseMapper.MapConsumerSubscriptionResponse(subscription);
+        var response = ConsumerResponseMapper.MapSubscriptionResponse(subscription);
         var responseBearer = new ResponseBearer(requestBearer, HttpResponseStatus.OK, response);
         ctx.writeAndFlush(responseBearer);
     }
@@ -307,7 +308,7 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
         } catch (AuthorizationException e) {
             throw new UnauthorizedException("Unable to get partitions.", e);
         }
-        var response = ConsumerResponseMapper.MapConsumerPartitionsResponse(partitions);
+        var response = ConsumerResponseMapper.MapPartitionsResponse(partitions);
         var responseBearer = new ResponseBearer(requestBearer, HttpResponseStatus.OK, response);
         ctx.writeAndFlush(responseBearer);
     }
@@ -325,7 +326,7 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
         } catch (AuthorizationException e) {
             throw new UnauthorizedException("Unable to get beginning offsets.", e);
         }
-        ConsumerOffsetsResponse response = ConsumerResponseMapper.mapConsumerOffsetsResponse(offsets);
+        var response = ConsumerResponseMapper.mapOffsetsResponse(offsets);
         var responseBearer = new ResponseBearer(requestBearer, HttpResponseStatus.OK, response);
         ctx.writeAndFlush(responseBearer);
     }
@@ -343,7 +344,17 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
         } catch (AuthorizationException e) {
             throw new UnauthorizedException("Unable to get end offsets.", e);
         }
-        ConsumerOffsetsResponse response = ConsumerResponseMapper.mapConsumerOffsetsResponse(offsets);
+        var response = ConsumerResponseMapper.mapOffsetsResponse(offsets);
+        var responseBearer = new ResponseBearer(requestBearer, HttpResponseStatus.OK, response);
+        ctx.writeAndFlush(responseBearer);
+    }
+
+    private void processGetTopics(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException {
+        var request = (ConsumerGetTopicsRequest) requestBearer.request();
+        var wrapper = provider.getItem(request.getConsumerId(), request.getToken());
+        var consumer = wrapper.getConsumer();
+        var topics = consumer.listTopics();
+        var response = ConsumerResponseMapper.MapTopicsResponse(topics);
         var responseBearer = new ResponseBearer(requestBearer, HttpResponseStatus.OK, response);
         ctx.writeAndFlush(responseBearer);
     }
