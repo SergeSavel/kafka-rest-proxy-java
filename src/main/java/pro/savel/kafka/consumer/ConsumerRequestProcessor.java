@@ -149,7 +149,7 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
     private void processCreate(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (ConsumerCreateRequest) requestBearer.request();
         var wrapper = provider.createConsumer(request.getName(), request.getConfig(), request.getExpirationTimeout());
-        var response = ConsumerResponseMapper.mapConsumerWithToken(wrapper);
+        var response = ConsumerResponseMapper.mapCreateResponse(wrapper);
         var responseBearer = new ResponseBearer(requestBearer, HttpResponseStatus.CREATED, response);
         ctx.writeAndFlush(responseBearer);
     }

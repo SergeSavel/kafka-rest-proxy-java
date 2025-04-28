@@ -46,15 +46,13 @@ public class ConsumerResponseMapper {
         return result;
     }
 
-    public static ConsumerCreateResponse mapConsumerWithToken(ConsumerWrapper source) {
+    public static ConsumerCreateResponse mapCreateResponse(ConsumerWrapper source) {
         if (source == null)
             return null;
         var result = new ConsumerCreateResponse();
         result.setId(source.getId());
         result.setToken(source.getToken());
-        result.setName(source.getName());
-        result.setUsername(source.getUsername());
-        result.setExpiresAt(source.getExpiresAt());
+
         return result;
     }
 
