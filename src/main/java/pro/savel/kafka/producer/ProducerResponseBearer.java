@@ -12,7 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package pro.savel.kafka.consumer.responses;
+package pro.savel.kafka.producer;
 
-public class ConsumerTouchResponse implements ConsumerResponse {
+import io.netty.handler.codec.http.HttpResponseStatus;
+import pro.savel.kafka.common.contract.RequestBearer;
+import pro.savel.kafka.common.contract.Response;
+import pro.savel.kafka.common.contract.ResponseBearer;
+
+public class ProducerResponseBearer extends ResponseBearer {
+
+    public ProducerResponseBearer(RequestBearer requestBearer, HttpResponseStatus status, Response response) {
+        super(requestBearer, status, response);
+    }
 }

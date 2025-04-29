@@ -20,7 +20,6 @@ import io.netty.channel.*;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaderValues;
-import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.util.ReferenceCountUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,20 +41,20 @@ public class ProducerResponseEncoder extends ChannelOutboundHandlerAdapter {
 
     @Override
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
-        if (msg instanceof ResponseBearer bearer && bearer.response() instanceof ProducerResponse) {
+        if (msg instanceof ProducerResponseBearer bearer) {
             try {
                 if (logger.isDebugEnabled()) {
                     logger.debug("Decoding producer response.");
                 }
                 var httpResponse = createHttpResponse(bearer);
                 var future = ctx.write(httpResponse, promise);
-                if (!bearer.connectionKeepAlive()) {
+                if (!bearer.isConnectionKeepAlive()) {
                     future.addListener(ChannelFutureListener.CLOSE);
                 }
             } catch (Exception e) {
                 var message = "An error occurred during producer response serialization.";
                 logger.error(message, e);
-                HttpUtils.writeInternalServerErrorAndClose(ctx, bearer.protocolVersion(), message);
+                HttpUtils.writeInternalServerErrorAndClose(ctx, bearer.getProtocolVersion(), message);
             } finally {
                 ReferenceCountUtil.release(msg);
             }
@@ -65,28 +64,26 @@ public class ProducerResponseEncoder extends ChannelOutboundHandlerAdapter {
     }
 
     private FullHttpResponse createHttpResponse(ResponseBearer bearer) throws JsonProcessingException {
-        var response = (ProducerResponse) bearer.response();
+        var response = (ProducerResponse) bearer.getResponse();
         FullHttpResponse httpResponse;
-        if (bearer.response() == null) {
-            httpResponse = new DefaultFullHttpResponse(bearer.protocolVersion(), bearer.status());
+        if (bearer.getResponse() == null) {
+            httpResponse = new DefaultFullHttpResponse(bearer.getProtocolVersion(), bearer.getStatus());
         } else {
-            if (bearer.serializeTo() == Serde.JSON) {
+            if (bearer.getSerializeTo() == Serde.JSON) {
                 var content = ProducerResponseSerializer.serializeJson(objectMapper, response);
-                httpResponse = new DefaultFullHttpResponse(bearer.protocolVersion(), bearer.status(), content);
-                if (bearer.status() != HttpResponseStatus.NO_CONTENT)
-                    httpResponse.headers().set(HttpUtils.ASCII_CONTENT_TYPE, HttpUtils.ASCII_APPLICATION_JSON_CHARSET_UTF8);
-            } else if (bearer.serializeTo() == Serde.BINARY) {
+                httpResponse = new DefaultFullHttpResponse(bearer.getProtocolVersion(), bearer.getStatus(), content);
+                httpResponse.headers().set(HttpUtils.ASCII_CONTENT_TYPE, HttpUtils.ASCII_APPLICATION_JSON_CHARSET_UTF8);
+            } else if (bearer.getSerializeTo() == Serde.BINARY) {
                 var content = ProducerResponseSerializer.serializeBinary(response);
-                httpResponse = new DefaultFullHttpResponse(bearer.protocolVersion(), bearer.status(), content);
-                if (bearer.status() != HttpResponseStatus.NO_CONTENT)
-                    httpResponse.headers().set(HttpUtils.ASCII_CONTENT_TYPE, HttpUtils.ASCII_APPLICATION_OCTET_STREAM);
+                httpResponse = new DefaultFullHttpResponse(bearer.getProtocolVersion(), bearer.getStatus(), content);
+                httpResponse.headers().set(HttpUtils.ASCII_CONTENT_TYPE, HttpUtils.ASCII_APPLICATION_OCTET_STREAM);
             } else {
-                throw new IllegalStateException("Unexpected serde: " + bearer.serializeTo());
+                throw new IllegalStateException("Unexpected serde: " + bearer.getSerializeTo());
             }
         }
         httpResponse.headers().setInt(HttpUtils.ASCII_CONTENT_LENGTH, httpResponse.content().readableBytes());
-        var isKeepAliveDefault = bearer.protocolVersion().isKeepAliveDefault();
-        if (bearer.connectionKeepAlive()) {
+        var isKeepAliveDefault = bearer.getProtocolVersion().isKeepAliveDefault();
+        if (bearer.isConnectionKeepAlive()) {
             if (!isKeepAliveDefault) {
                 httpResponse.headers().set(HttpUtils.ASCII_CONNECTION, HttpHeaderValues.KEEP_ALIVE);
             }

@@ -31,15 +31,12 @@ import org.slf4j.LoggerFactory;
 import pro.savel.kafka.common.HttpUtils;
 import pro.savel.kafka.common.Utils;
 import pro.savel.kafka.common.contract.RequestBearer;
-import pro.savel.kafka.common.contract.ResponseBearer;
 import pro.savel.kafka.common.exceptions.BadRequestException;
 import pro.savel.kafka.common.exceptions.NotFoundException;
 import pro.savel.kafka.common.exceptions.UnauthenticatedException;
 import pro.savel.kafka.common.exceptions.UnauthorizedException;
 import pro.savel.kafka.producer.requests.*;
 import pro.savel.kafka.producer.responses.ProducerListResponse;
-import pro.savel.kafka.producer.responses.ProducerRemoveResponse;
-import pro.savel.kafka.producer.responses.ProducerTouchResponse;
 
 @ChannelHandler.Sharable
 public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter implements AutoCloseable {
@@ -106,7 +103,7 @@ public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter imple
         var wrappers = provider.getItems();
         var response = new ProducerListResponse(wrappers.size());
         wrappers.forEach(wrapper -> response.add(ProducerResponseMapper.mapProducer(wrapper)));
-        var responseBearer = new ResponseBearer(requestBearer, HttpResponseStatus.OK, response);
+        var responseBearer = new ProducerResponseBearer(requestBearer, HttpResponseStatus.OK, response);
         ctx.writeAndFlush(responseBearer);
     }
 
@@ -114,15 +111,14 @@ public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter imple
         var request = (ProducerCreateRequest) requestBearer.request();
         var wrapper = provider.createProducer(request.getName(), request.getConfig(), request.getExpirationTimeout());
         var response = ProducerResponseMapper.mapCreateResponse(wrapper);
-        var responseBearer = new ResponseBearer(requestBearer, HttpResponseStatus.CREATED, response);
+        var responseBearer = new ProducerResponseBearer(requestBearer, HttpResponseStatus.CREATED, response);
         ctx.writeAndFlush(responseBearer);
     }
 
     private void processRemove(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException {
         var request = (ProducerRemoveRequest) requestBearer.request();
         provider.removeItem(request.getProducerId(), request.getToken());
-        var response = new ProducerRemoveResponse();
-        var responseBearer = new ResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, response);
+        var responseBearer = new ProducerResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null);
         ctx.writeAndFlush(responseBearer);
     }
 
@@ -131,8 +127,7 @@ public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter imple
         ProducerWrapper wrapper;
         wrapper = provider.getItem(request.getProducerId(), request.getToken());
         wrapper.touch();
-        var response = new ProducerTouchResponse();
-        var responseBearer = new ResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, response);
+        var responseBearer = new ProducerResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null);
         ctx.writeAndFlush(responseBearer);
     }
 
@@ -149,7 +144,7 @@ public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter imple
                 }
                 if (exception == null) {
                     var response = ProducerResponseMapper.mapSendResponse(metadata);
-                    var responseBearer = new ResponseBearer(requestBearer, HttpResponseStatus.CREATED, response);
+                    var responseBearer = new ProducerResponseBearer(requestBearer, HttpResponseStatus.CREATED, response);
                     ctx.writeAndFlush(responseBearer);
                 } else {
                     if (exception instanceof InvalidTopicException || exception instanceof UnknownTopicOrPartitionException) {

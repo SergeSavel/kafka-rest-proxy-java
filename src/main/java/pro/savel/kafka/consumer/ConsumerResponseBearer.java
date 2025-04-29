@@ -12,7 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package pro.savel.kafka.consumer.responses;
+package pro.savel.kafka.consumer;
 
-public class ConsumerRemoveResponse implements ConsumerResponse {
+import io.netty.handler.codec.http.HttpResponseStatus;
+import pro.savel.kafka.common.contract.RequestBearer;
+import pro.savel.kafka.common.contract.Response;
+import pro.savel.kafka.common.contract.ResponseBearer;
+
+public class ConsumerResponseBearer extends ResponseBearer {
+
+    public ConsumerResponseBearer(RequestBearer requestBearer, HttpResponseStatus status, Response response) {
+        super(requestBearer, status, response);
+    }
 }

@@ -16,12 +16,22 @@ package pro.savel.kafka.common.contract;
 
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
+import lombok.Data;
 
-public record ResponseBearer(Response response, HttpResponseStatus status, Serde serializeTo,
-                             HttpVersion protocolVersion,
-                             boolean connectionKeepAlive) {
+@Data
+public abstract class ResponseBearer {
+
+    private final Response response;
+    private final HttpResponseStatus status;
+    private final Serde serializeTo;
+    private final HttpVersion protocolVersion;
+    private final boolean connectionKeepAlive;
 
     public ResponseBearer(RequestBearer requestBearer, HttpResponseStatus status, Response response) {
-        this(response, status, requestBearer.serializeTo(), requestBearer.protocolVersion(), requestBearer.connectionKeepAlive());
+        this.response = response;
+        this.status = status;
+        this.serializeTo = requestBearer.serializeTo();
+        this.protocolVersion = requestBearer.protocolVersion();
+        this.connectionKeepAlive = requestBearer.connectionKeepAlive();
     }
 }
