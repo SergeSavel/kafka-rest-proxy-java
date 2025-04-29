@@ -19,15 +19,15 @@ import io.netty.handler.codec.http.HttpVersion;
 import lombok.Data;
 
 @Data
-public abstract class ResponseBearer {
+public abstract class ResponseBearer<TResponse extends Response> {
 
-    private final Response response;
+    private final TResponse response;
     private final HttpResponseStatus status;
     private final Serde serializeTo;
     private final HttpVersion protocolVersion;
     private final boolean connectionKeepAlive;
 
-    public ResponseBearer(RequestBearer requestBearer, HttpResponseStatus status, Response response) {
+    public ResponseBearer(RequestBearer requestBearer, HttpResponseStatus status, TResponse response) {
         this.response = response;
         this.status = status;
         this.serializeTo = requestBearer.serializeTo();

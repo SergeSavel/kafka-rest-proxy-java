@@ -24,9 +24,7 @@ import io.netty.util.ReferenceCountUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import pro.savel.kafka.common.HttpUtils;
-import pro.savel.kafka.common.contract.ResponseBearer;
 import pro.savel.kafka.common.contract.Serde;
-import pro.savel.kafka.producer.responses.ProducerResponse;
 
 @ChannelHandler.Sharable
 public class ProducerResponseEncoder extends ChannelOutboundHandlerAdapter {
@@ -63,18 +61,17 @@ public class ProducerResponseEncoder extends ChannelOutboundHandlerAdapter {
         }
     }
 
-    private FullHttpResponse createHttpResponse(ResponseBearer bearer) throws JsonProcessingException {
-        var response = (ProducerResponse) bearer.getResponse();
+    private FullHttpResponse createHttpResponse(ProducerResponseBearer bearer) throws JsonProcessingException {
         FullHttpResponse httpResponse;
         if (bearer.getResponse() == null) {
             httpResponse = new DefaultFullHttpResponse(bearer.getProtocolVersion(), bearer.getStatus());
         } else {
             if (bearer.getSerializeTo() == Serde.JSON) {
-                var content = ProducerResponseSerializer.serializeJson(objectMapper, response);
+                var content = ProducerResponseSerializer.serializeJson(objectMapper, bearer.getResponse());
                 httpResponse = new DefaultFullHttpResponse(bearer.getProtocolVersion(), bearer.getStatus(), content);
                 httpResponse.headers().set(HttpUtils.ASCII_CONTENT_TYPE, HttpUtils.ASCII_APPLICATION_JSON_CHARSET_UTF8);
             } else if (bearer.getSerializeTo() == Serde.BINARY) {
-                var content = ProducerResponseSerializer.serializeBinary(response);
+                var content = ProducerResponseSerializer.serializeBinary(bearer.getResponse());
                 httpResponse = new DefaultFullHttpResponse(bearer.getProtocolVersion(), bearer.getStatus(), content);
                 httpResponse.headers().set(HttpUtils.ASCII_CONTENT_TYPE, HttpUtils.ASCII_APPLICATION_OCTET_STREAM);
             } else {

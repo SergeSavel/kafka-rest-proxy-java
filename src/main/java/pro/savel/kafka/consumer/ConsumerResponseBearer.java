@@ -16,12 +16,12 @@ package pro.savel.kafka.consumer;
 
 import io.netty.handler.codec.http.HttpResponseStatus;
 import pro.savel.kafka.common.contract.RequestBearer;
-import pro.savel.kafka.common.contract.Response;
 import pro.savel.kafka.common.contract.ResponseBearer;
+import pro.savel.kafka.consumer.responses.ConsumerResponse;
 
-public class ConsumerResponseBearer extends ResponseBearer {
+public class ConsumerResponseBearer extends ResponseBearer<ConsumerResponse> {
 
-    public ConsumerResponseBearer(RequestBearer requestBearer, HttpResponseStatus status, Response response) {
+    public ConsumerResponseBearer(RequestBearer requestBearer, HttpResponseStatus status, ConsumerResponse response) {
         super(requestBearer, status, response);
     }
 }
