@@ -14,11 +14,21 @@
 
 package pro.savel.kafka.producer.responses;
 
+import lombok.Data;
+
 import java.util.ArrayList;
 
-public class ProducerListResponse extends ArrayList<Producer> implements ProducerResponse {
+public class ProducerListResponse extends ArrayList<ProducerListResponse.Producer> implements ProducerResponse {
 
     public ProducerListResponse(int initialCapacity) {
         super(initialCapacity);
+    }
+
+    @Data
+    public static class Producer {
+        private String id;
+        private String name;
+        private String username;
+        private long expiresAt;
     }
 }

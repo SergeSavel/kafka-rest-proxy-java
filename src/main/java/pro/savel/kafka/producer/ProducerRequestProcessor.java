@@ -36,7 +36,6 @@ import pro.savel.kafka.common.exceptions.NotFoundException;
 import pro.savel.kafka.common.exceptions.UnauthenticatedException;
 import pro.savel.kafka.common.exceptions.UnauthorizedException;
 import pro.savel.kafka.producer.requests.*;
-import pro.savel.kafka.producer.responses.ProducerListResponse;
 
 @ChannelHandler.Sharable
 public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter implements AutoCloseable {
@@ -91,8 +90,7 @@ public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter imple
 
     private void processList(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var wrappers = provider.getItems();
-        var response = new ProducerListResponse(wrappers.size());
-        wrappers.forEach(wrapper -> response.add(ProducerResponseMapper.mapProducer(wrapper)));
+        var response = ProducerResponseMapper.mapListResponse(wrappers);
         var responseBearer = new ProducerResponseBearer(requestBearer, HttpResponseStatus.OK, response);
         ctx.writeAndFlush(responseBearer);
     }

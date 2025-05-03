@@ -15,16 +15,26 @@
 package pro.savel.kafka.producer;
 
 import org.apache.kafka.clients.producer.RecordMetadata;
-import pro.savel.kafka.producer.responses.Producer;
 import pro.savel.kafka.producer.responses.ProducerCreateResponse;
+import pro.savel.kafka.producer.responses.ProducerListResponse;
 import pro.savel.kafka.producer.responses.ProducerSendResponse;
+
+import java.util.Collection;
 
 public abstract class ProducerResponseMapper {
 
-    public static Producer mapProducer(ProducerWrapper source) {
+    public static ProducerListResponse mapListResponse(Collection<ProducerWrapper> source) {
         if (source == null)
             return null;
-        var result = new Producer();
+        var result = new ProducerListResponse(source.size());
+        source.forEach(wrapper -> result.add(mapProducer(wrapper)));
+        return result;
+    }
+
+    private static ProducerListResponse.Producer mapProducer(ProducerWrapper source) {
+        if (source == null)
+            return null;
+        var result = new ProducerListResponse.Producer();
         result.setId(source.getId());
         result.setName(source.getName());
         result.setUsername(source.getUsername());
