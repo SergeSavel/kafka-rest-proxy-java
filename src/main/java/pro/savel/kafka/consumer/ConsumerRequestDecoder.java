@@ -71,9 +71,9 @@ public class ConsumerRequestDecoder extends ChannelInboundHandlerAdapter {
             case "" -> decodeRoot(ctx, httpRequest);
             case "/poll" -> decodePoll(ctx, httpRequest);
             case "/commit" -> decodeCommit(ctx, httpRequest);
-            case "/seek" -> decodeSeek(ctx, httpRequest);
-            case "/assign" -> decodeAssign(ctx, httpRequest);
-            case "/subscribe" -> decodeSubscribe(ctx, httpRequest);
+            case "/position" -> decodeSeek(ctx, httpRequest);
+            case "/assignment" -> decodeAssign(ctx, httpRequest);
+            case "/subscription" -> decodeSubscribe(ctx, httpRequest);
             case "/partitions" -> decodePartitions(ctx, httpRequest);
             case "/topics" -> decodeTopics(ctx, httpRequest);
             case "/beginning" -> decodeBeginning(ctx, httpRequest);
