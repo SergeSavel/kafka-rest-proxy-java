@@ -21,6 +21,8 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
+import pro.savel.kafka.admin.AdminRequestDecoder;
+import pro.savel.kafka.admin.AdminRequestProcessor;
 import pro.savel.kafka.consumer.ConsumerRequestDecoder;
 import pro.savel.kafka.consumer.ConsumerRequestProcessor;
 import pro.savel.kafka.consumer.ConsumerResponseEncoder;
@@ -34,10 +36,12 @@ class ServerInitializer extends ChannelInitializer<SocketChannel> implements Aut
 
     private final ProducerRequestDecoder producerRequestDecoder = new ProducerRequestDecoder(objectMapper);
     private final ConsumerRequestDecoder consumerRequestDecoder = new ConsumerRequestDecoder(objectMapper);
+    private final AdminRequestDecoder adminRequestDecoder = new AdminRequestDecoder(objectMapper);
     private final DefaultRequestDecoder defaultRequestDecoder = new DefaultRequestDecoder();
 
     private final ProducerRequestProcessor producerRequestProcessor = new ProducerRequestProcessor();
     private final ConsumerRequestProcessor consumerRequestProcessor = new ConsumerRequestProcessor();
+    private final AdminRequestProcessor adminRequestProcessor = new AdminRequestProcessor();
 
     private final ProducerResponseEncoder producerResponseEncoder = new ProducerResponseEncoder(objectMapper);
     private final ConsumerResponseEncoder consumerResponseEncoder = new ConsumerResponseEncoder(objectMapper);
@@ -55,11 +59,13 @@ class ServerInitializer extends ChannelInitializer<SocketChannel> implements Aut
         pipeline.addLast(new HttpObjectAggregator(32 * 1024 * 1024));
         pipeline.addLast(producerRequestDecoder);
         pipeline.addLast(consumerRequestDecoder);
+        pipeline.addLast(adminRequestDecoder);
         pipeline.addLast(defaultRequestDecoder);
         pipeline.addLast(producerResponseEncoder);
         pipeline.addLast(consumerResponseEncoder);
         pipeline.addLast(producerRequestProcessor);
         pipeline.addLast(consumerRequestProcessor);
+        pipeline.addLast(adminRequestProcessor);
         pipeline.addLast(defaultInboundHandler);
     }
 
@@ -67,5 +73,6 @@ class ServerInitializer extends ChannelInitializer<SocketChannel> implements Aut
     public void close() {
         producerRequestProcessor.close();
         consumerRequestProcessor.close();
+        adminRequestProcessor.close();
     }
 }

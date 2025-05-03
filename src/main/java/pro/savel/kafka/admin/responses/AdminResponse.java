@@ -12,14 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package pro.savel.kafka.producer.responses;
+package pro.savel.kafka.admin.responses;
 
-import lombok.Data;
+import pro.savel.kafka.common.contract.Response;
 
-@Data
-public class Producer {
-    private String id;
-    private String name;
-    private String username;
-    private long expiresAt;
+public interface AdminResponse extends Response {
 }
