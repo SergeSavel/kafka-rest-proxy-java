@@ -14,15 +14,21 @@
 
 package pro.savel.kafka.consumer.responses;
 
+import lombok.Data;
+
 import java.util.ArrayList;
 
-public class ConsumerListResponse extends ArrayList<Consumer> implements ConsumerResponse {
-
-    public ConsumerListResponse() {
-        super();
-    }
+public class ConsumerListResponse extends ArrayList<ConsumerListResponse.Consumer> implements ConsumerResponse {
 
     public ConsumerListResponse(int initialCapacity) {
         super(initialCapacity);
+    }
+
+    @Data
+    public static class Consumer {
+        private String id;
+        private String name;
+        private String username;
+        private long expiresAt;
     }
 }

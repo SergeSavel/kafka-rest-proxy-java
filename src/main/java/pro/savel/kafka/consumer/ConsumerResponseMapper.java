@@ -35,10 +35,10 @@ public class ConsumerResponseMapper {
         return result;
     }
 
-    public static Consumer mapConsumer(ConsumerWrapper source) {
+    private static ConsumerListResponse.Consumer mapConsumer(ConsumerWrapper source) {
         if (source == null)
             return null;
-        var result = new Consumer();
+        var result = new ConsumerListResponse.Consumer();
         result.setId(source.getId());
         result.setName(source.getName());
         result.setUsername(source.getUsername());
