@@ -52,7 +52,6 @@ public class ConsumerResponseMapper {
         var result = new ConsumerCreateResponse();
         result.setId(source.getId());
         result.setToken(source.getToken());
-
         return result;
     }
 
