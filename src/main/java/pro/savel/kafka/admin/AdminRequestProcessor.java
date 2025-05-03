@@ -77,7 +77,7 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
             processTouch(ctx, requestBearer);
         else if (requestClass == AdminListRequest.class)
             processList(ctx, requestBearer);
-        throw new RuntimeException("Unexpected producer request type: " + requestClass.getName());
+        throw new RuntimeException("Unexpected admin request type: " + requestClass.getName());
     }
 
     private void processList(ChannelHandlerContext ctx, RequestBearer requestBearer) {
