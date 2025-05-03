@@ -74,29 +74,19 @@ public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter imple
         provider.close();
     }
 
-    public void processRequest(ChannelHandlerContext ctx, RequestBearer bearer) throws NotFoundException, BadRequestException, UnauthenticatedException, UnauthorizedException {
-        var bearerRequest = bearer.request();
-        if (bearerRequest instanceof ProducerSendRequest) {
-            processSend(ctx, bearer);
-            return;
-        }
-        if (bearerRequest instanceof ProducerCreateRequest) {
-            processCreate(ctx, bearer);
-            return;
-        }
-        if (bearerRequest instanceof ProducerRemoveRequest) {
-            processRemove(ctx, bearer);
-            return;
-        }
-        if (bearerRequest instanceof ProducerTouchRequest) {
-            processTouch(ctx, bearer);
-            return;
-        }
-        if (bearerRequest instanceof ProducerListRequest) {
-            processList(ctx, bearer);
-            return;
-        }
-        throw new RuntimeException("Unexpected producer request type: " + bearerRequest.getClass().getName());
+    public void processRequest(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException, UnauthenticatedException, UnauthorizedException {
+        var requestClass = requestBearer.request().getClass();
+        if (requestClass == ProducerSendRequest.class)
+            processSend(ctx, requestBearer);
+        else if (requestClass == ProducerCreateRequest.class)
+            processCreate(ctx, requestBearer);
+        else if (requestClass == ProducerRemoveRequest.class)
+            processRemove(ctx, requestBearer);
+        else if (requestClass == ProducerTouchRequest.class)
+            processTouch(ctx, requestBearer);
+        else if (requestClass == ProducerListRequest.class)
+            processList(ctx, requestBearer);
+        throw new RuntimeException("Unexpected producer request type: " + requestClass.getName());
     }
 
     private void processList(ChannelHandlerContext ctx, RequestBearer requestBearer) {
