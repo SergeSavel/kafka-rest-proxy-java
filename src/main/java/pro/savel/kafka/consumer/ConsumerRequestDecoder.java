@@ -25,8 +25,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import pro.savel.kafka.common.HttpUtils;
 import pro.savel.kafka.common.JsonUtils;
+import pro.savel.kafka.common.RequestBearer;
 import pro.savel.kafka.common.Utils;
-import pro.savel.kafka.common.contract.RequestBearer;
 import pro.savel.kafka.common.exceptions.BadRequestException;
 import pro.savel.kafka.consumer.requests.*;
 

@@ -15,8 +15,8 @@
 package pro.savel.kafka.producer;
 
 import io.netty.handler.codec.http.HttpResponseStatus;
-import pro.savel.kafka.common.contract.RequestBearer;
-import pro.savel.kafka.common.contract.ResponseBearer;
+import pro.savel.kafka.common.RequestBearer;
+import pro.savel.kafka.common.ResponseBearer;
 import pro.savel.kafka.producer.responses.ProducerResponse;
 
 public class ProducerResponseBearer extends ResponseBearer<ProducerResponse> {

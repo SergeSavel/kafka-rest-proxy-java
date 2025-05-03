@@ -12,12 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package pro.savel.kafka.common.contract;
+package pro.savel.kafka.common;
 
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
+import pro.savel.kafka.common.contract.Request;
+import pro.savel.kafka.common.contract.Serde;
 
 public record RequestBearer(Request request, Serde serializeTo, HttpVersion protocolVersion,
                             boolean connectionKeepAlive) {

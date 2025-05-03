@@ -12,11 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package pro.savel.kafka.common.contract;
+package pro.savel.kafka.common;
 
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 import lombok.Data;
+import pro.savel.kafka.common.contract.Response;
+import pro.savel.kafka.common.contract.Serde;
 
 @Data
 public abstract class ResponseBearer<TResponse extends Response> {
