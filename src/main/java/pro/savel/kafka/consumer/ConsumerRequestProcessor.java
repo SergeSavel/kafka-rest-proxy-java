@@ -171,6 +171,7 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
     private void processPoll(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException, UnauthenticatedException, UnauthorizedException {
         var request = (ConsumerPollRequest) requestBearer.request();
         var wrapper = provider.getItem(request.getConsumerId(), request.getToken());
+        wrapper.touch();
         var consumer = wrapper.getConsumer();
         ConsumerRecords<byte[], byte[]> records;
         try {
@@ -191,6 +192,7 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
     private void processCommit(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException {
         var request = (ConsumerPollRequest) requestBearer.request();
         var wrapper = provider.getItem(request.getConsumerId(), request.getToken());
+        wrapper.touch();
         var consumer = wrapper.getConsumer();
         var callback = new org.apache.kafka.clients.consumer.OffsetCommitCallback() {
             @Override
@@ -210,6 +212,7 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
     private void processAssign(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException {
         var request = (ConsumerAssignRequest) requestBearer.request();
         var wrapper = provider.getItem(request.getConsumerId(), request.getToken());
+        wrapper.touch();
         var consumer = wrapper.getConsumer();
         var assignment = mapAssignment(request.getPartitions());
         try {
@@ -224,6 +227,7 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
     private void processGetAssignment(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException {
         var request = (ConsumerGetAssignmentRequest) requestBearer.request();
         var wrapper = provider.getItem(request.getConsumerId(), request.getToken());
+        wrapper.touch();
         var consumer = wrapper.getConsumer();
         var assignment = consumer.assignment();
         var response = ConsumerResponseMapper.mapAssignmentResponse(assignment);
@@ -234,6 +238,7 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
     private void processSeek(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException {
         var request = (ConsumerSeekRequest) requestBearer.request();
         var wrapper = provider.getItem(request.getConsumerId(), request.getToken());
+        wrapper.touch();
         var consumer = wrapper.getConsumer();
         var topicPartition = new TopicPartition(request.getTopic(), request.getPartition());
         try {
@@ -248,6 +253,7 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
     private void processGetPosition(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException, UnauthenticatedException, UnauthorizedException {
         var request = (ConsumerGetPositionRequest) requestBearer.request();
         var wrapper = provider.getItem(request.getConsumerId(), request.getToken());
+        wrapper.touch();
         var consumer = wrapper.getConsumer();
         var topicPartition = new TopicPartition(request.getTopic(), request.getPartition());
         long position;
@@ -268,6 +274,7 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
     private void processSubscribe(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException {
         var request = (ConsumerSubscribeRequest) requestBearer.request();
         var wrapper = provider.getItem(request.getConsumerId(), request.getToken());
+        wrapper.touch();
         var consumer = wrapper.getConsumer();
         try {
             if (request.getTopics() != null)
@@ -286,6 +293,7 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
     private void processGetSubscription(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException {
         var request = (ConsumerGetSubscriptionRequest) requestBearer.request();
         var wrapper = provider.getItem(request.getConsumerId(), request.getToken());
+        wrapper.touch();
         var consumer = wrapper.getConsumer();
         var subscription = consumer.subscription();
         var response = ConsumerResponseMapper.MapSubscriptionResponse(subscription);
@@ -296,6 +304,7 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
     private void processGetPartitions(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException, UnauthenticatedException, UnauthorizedException {
         var request = (ConsumerGetPartitionsRequest) requestBearer.request();
         var wrapper = provider.getItem(request.getConsumerId(), request.getToken());
+        wrapper.touch();
         var consumer = wrapper.getConsumer();
         Collection<PartitionInfo> partitions;
         try {
@@ -313,6 +322,7 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
     private void processGetBeginningOffsets(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException, UnauthenticatedException, UnauthorizedException {
         var request = (ConsumerGetBeginningOffsetsRequest) requestBearer.request();
         var wrapper = provider.getItem(request.getConsumerId(), request.getToken());
+        wrapper.touch();
         var consumer = wrapper.getConsumer();
         var partitions = mapAssignment(request.getPartitions());
         Map<TopicPartition, Long> offsets;
@@ -331,6 +341,7 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
     private void processGetEndOffsets(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException, UnauthenticatedException, UnauthorizedException {
         var request = (ConsumerGetEndOffsetsRequest) requestBearer.request();
         var wrapper = provider.getItem(request.getConsumerId(), request.getToken());
+        wrapper.touch();
         var consumer = wrapper.getConsumer();
         var partitions = mapAssignment(request.getPartitions());
         Map<TopicPartition, Long> offsets;
@@ -349,6 +360,7 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
     private void processGetTopics(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException {
         var request = (ConsumerGetTopicsRequest) requestBearer.request();
         var wrapper = provider.getItem(request.getConsumerId(), request.getToken());
+        wrapper.touch();
         var consumer = wrapper.getConsumer();
         var topics = consumer.listTopics();
         var response = ConsumerResponseMapper.MapTopicsResponse(topics);
