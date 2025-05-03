@@ -114,8 +114,7 @@ public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter imple
 
     private void processTouch(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException {
         var request = (ProducerTouchRequest) requestBearer.request();
-        ProducerWrapper wrapper;
-        wrapper = provider.getItem(request.getProducerId(), request.getToken());
+        var wrapper = provider.getItem(request.getProducerId(), request.getToken());
         wrapper.touch();
         var responseBearer = new ProducerResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null);
         ctx.writeAndFlush(responseBearer);
@@ -123,8 +122,7 @@ public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter imple
 
     private void processSend(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException, UnauthenticatedException, UnauthorizedException {
         var request = (ProducerSendRequest) requestBearer.request();
-        ProducerWrapper wrapper;
-        wrapper = provider.getItem(request.getProducerId(), request.getToken());
+        var wrapper = provider.getItem(request.getProducerId(), request.getToken());
         wrapper.touch();
         var callback = new Callback() {
             @Override
