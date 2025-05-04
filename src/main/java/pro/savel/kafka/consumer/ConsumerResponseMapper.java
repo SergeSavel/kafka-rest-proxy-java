@@ -116,13 +116,13 @@ public class ConsumerResponseMapper {
         return result;
     }
 
-    public static ConsumerSubscriptionResponse MapSubscriptionResponse(Collection<String> source) {
+    public static ConsumerSubscriptionResponse mapSubscriptionResponse(Collection<String> source) {
         if (source == null)
             return null;
         return new ConsumerSubscriptionResponse(source);
     }
 
-    public static ConsumerPartitionsResponse MapPartitionsResponse(Collection<org.apache.kafka.common.PartitionInfo> source) {
+    public static ConsumerPartitionsResponse mapPartitionsResponse(Collection<org.apache.kafka.common.PartitionInfo> source) {
         if (source == null)
             return null;
         var result = new ConsumerPartitionsResponse(source.size());
@@ -141,7 +141,7 @@ public class ConsumerResponseMapper {
         return result;
     }
 
-    public static ConsumerTopicsResponse MapTopicsResponse(Map<String, List<org.apache.kafka.common.PartitionInfo>> source) {
+    public static ConsumerTopicsResponse mapTopicsResponse(Map<String, List<org.apache.kafka.common.PartitionInfo>> source) {
         if (source == null)
             return null;
         var result = new ConsumerTopicsResponse(source.size());

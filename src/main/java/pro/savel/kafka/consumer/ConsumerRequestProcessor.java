@@ -296,7 +296,7 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
         wrapper.touch();
         var consumer = wrapper.getConsumer();
         var subscription = consumer.subscription();
-        var response = ConsumerResponseMapper.MapSubscriptionResponse(subscription);
+        var response = ConsumerResponseMapper.mapSubscriptionResponse(subscription);
         var responseBearer = new ConsumerResponseBearer(requestBearer, HttpResponseStatus.OK, response);
         ctx.writeAndFlush(responseBearer);
     }
@@ -314,7 +314,7 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
         } catch (AuthorizationException e) {
             throw new UnauthorizedException("Unable to get partitions.", e);
         }
-        var response = ConsumerResponseMapper.MapPartitionsResponse(partitions);
+        var response = ConsumerResponseMapper.mapPartitionsResponse(partitions);
         var responseBearer = new ConsumerResponseBearer(requestBearer, HttpResponseStatus.OK, response);
         ctx.writeAndFlush(responseBearer);
     }
@@ -363,7 +363,7 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
         wrapper.touch();
         var consumer = wrapper.getConsumer();
         var topics = consumer.listTopics();
-        var response = ConsumerResponseMapper.MapTopicsResponse(topics);
+        var response = ConsumerResponseMapper.mapTopicsResponse(topics);
         var responseBearer = new ConsumerResponseBearer(requestBearer, HttpResponseStatus.OK, response);
         ctx.writeAndFlush(responseBearer);
     }
