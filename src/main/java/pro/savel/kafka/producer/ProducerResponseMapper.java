@@ -15,8 +15,10 @@
 package pro.savel.kafka.producer;
 
 import org.apache.kafka.clients.producer.RecordMetadata;
+import pro.savel.kafka.common.CommonMapper;
 import pro.savel.kafka.producer.responses.ProducerCreateResponse;
 import pro.savel.kafka.producer.responses.ProducerListResponse;
+import pro.savel.kafka.producer.responses.ProducerPartitionsResponse;
 import pro.savel.kafka.producer.responses.ProducerSendResponse;
 
 import java.util.Collection;
@@ -57,6 +59,14 @@ public abstract class ProducerResponseMapper {
         result.setPartition(source.partition());
         result.setOffset(source.offset());
         result.setTimestamp(source.timestamp());
+        return result;
+    }
+
+    public static ProducerPartitionsResponse mapPartitionsResponse(Collection<org.apache.kafka.common.PartitionInfo> source) {
+        if (source == null)
+            return null;
+        var result = new ProducerPartitionsResponse(source.size());
+        source.forEach(partitionInfo -> result.add(CommonMapper.mapPartitionInfo(partitionInfo)));
         return result;
     }
 }

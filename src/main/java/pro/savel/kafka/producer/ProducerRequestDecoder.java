@@ -71,6 +71,7 @@ public class ProducerRequestDecoder extends ChannelInboundHandlerAdapter {
         switch (pathMethod) {
             case "" -> decodeRoot(ctx, httpRequest);
             case "/send" -> decodeSend(ctx, httpRequest);
+            case "/partitions" -> decodePartitions(ctx, httpRequest);
             case "/touch" -> decodeTouch(ctx, httpRequest);
             default -> HttpUtils.writeNotFoundAndClose(ctx, httpRequest.protocolVersion());
         }
@@ -102,6 +103,13 @@ public class ProducerRequestDecoder extends ChannelInboundHandlerAdapter {
         } else {
             throw new BadRequestException("Unsupported HTTP method.");
         }
+    }
+
+    private void decodePartitions(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
+        if (httpRequest.method() == HttpMethod.GET)
+            decodeJsonRequest(ctx, httpRequest, ProducerGetPartitionsRequest.class);
+        else
+            throw new BadRequestException("Unsupported HTTP method.");
     }
 
     private void decodeListRequest(ChannelHandlerContext ctx, FullHttpRequest httpRequest) {

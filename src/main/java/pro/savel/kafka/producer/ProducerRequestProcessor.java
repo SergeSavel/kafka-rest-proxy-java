@@ -22,6 +22,7 @@ import io.netty.util.ReferenceCountUtil;
 import org.apache.kafka.clients.producer.Callback;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
+import org.apache.kafka.common.PartitionInfo;
 import org.apache.kafka.common.errors.AuthenticationException;
 import org.apache.kafka.common.errors.AuthorizationException;
 import org.apache.kafka.common.errors.InvalidTopicException;
@@ -36,6 +37,8 @@ import pro.savel.kafka.common.exceptions.NotFoundException;
 import pro.savel.kafka.common.exceptions.UnauthenticatedException;
 import pro.savel.kafka.common.exceptions.UnauthorizedException;
 import pro.savel.kafka.producer.requests.*;
+
+import java.util.List;
 
 @ChannelHandler.Sharable
 public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter implements AutoCloseable {
@@ -73,19 +76,15 @@ public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter imple
         provider.close();
     }
 
-    public void processRequest(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException, UnauthenticatedException, UnauthorizedException {
-        var requestClass = requestBearer.request().getClass();
-        if (requestClass == ProducerSendRequest.class)
-            processSend(ctx, requestBearer);
-        else if (requestClass == ProducerCreateRequest.class)
-            processCreate(ctx, requestBearer);
-        else if (requestClass == ProducerRemoveRequest.class)
-            processRemove(ctx, requestBearer);
-        else if (requestClass == ProducerTouchRequest.class)
-            processTouch(ctx, requestBearer);
-        else if (requestClass == ProducerListRequest.class)
-            processList(ctx, requestBearer);
-        throw new RuntimeException("Unexpected producer request type: " + requestClass.getName());
+    private static List<PartitionInfo> getPartitions(ProducerWrapper wrapper, ProducerGetPartitionsRequest request) throws UnauthenticatedException, UnauthorizedException {
+        var producer = wrapper.getProducer();
+        try {
+            return producer.partitionsFor(request.getTopic());
+        } catch (AuthenticationException e) {
+            throw new UnauthenticatedException("Unable to get partitions.", e);
+        } catch (AuthorizationException e) {
+            throw new UnauthorizedException("Unable to get partitions.", e);
+        }
     }
 
     private void processList(ChannelHandlerContext ctx, RequestBearer requestBearer) {
@@ -155,5 +154,32 @@ public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter imple
         } catch (AuthorizationException e) {
             throw new UnauthorizedException("Unable to produce message.", e);
         }
+    }
+
+    public void processRequest(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException, UnauthenticatedException, UnauthorizedException {
+        var requestClass = requestBearer.request().getClass();
+        if (requestClass == ProducerSendRequest.class)
+            processSend(ctx, requestBearer);
+        else if (requestClass == ProducerGetPartitionsRequest.class)
+            processGetPartitions(ctx, requestBearer);
+        else if (requestClass == ProducerCreateRequest.class)
+            processCreate(ctx, requestBearer);
+        else if (requestClass == ProducerRemoveRequest.class)
+            processRemove(ctx, requestBearer);
+        else if (requestClass == ProducerTouchRequest.class)
+            processTouch(ctx, requestBearer);
+        else if (requestClass == ProducerListRequest.class)
+            processList(ctx, requestBearer);
+        throw new RuntimeException("Unexpected producer request type: " + requestClass.getName());
+    }
+
+    private void processGetPartitions(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException, UnauthenticatedException, UnauthorizedException {
+        var request = (ProducerGetPartitionsRequest) requestBearer.request();
+        var wrapper = provider.getItem(request.getProducerId(), request.getToken());
+        wrapper.touch();
+        var partitions = getPartitions(wrapper, request);
+        var response = ProducerResponseMapper.mapPartitionsResponse(partitions);
+        var responseBearer = new ProducerResponseBearer(requestBearer, HttpResponseStatus.OK, response);
+        ctx.writeAndFlush(responseBearer);
     }
 }
