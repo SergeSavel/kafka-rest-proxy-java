@@ -170,7 +170,8 @@ public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter imple
             processTouch(ctx, requestBearer);
         else if (requestClass == ProducerListRequest.class)
             processList(ctx, requestBearer);
-        throw new RuntimeException("Unexpected producer request type: " + requestClass.getName());
+        else
+            throw new RuntimeException("Unexpected producer request type: " + requestClass.getName());
     }
 
     private void processGetPartitions(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException, UnauthenticatedException, UnauthorizedException {
