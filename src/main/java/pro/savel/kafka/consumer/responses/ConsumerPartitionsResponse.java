@@ -14,6 +14,8 @@
 
 package pro.savel.kafka.consumer.responses;
 
+import pro.savel.kafka.common.contract.PartitionInfo;
+
 import java.util.ArrayList;
 
 public class ConsumerPartitionsResponse extends ArrayList<PartitionInfo> implements ConsumerResponse {

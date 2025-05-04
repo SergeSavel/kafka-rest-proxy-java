@@ -12,16 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package pro.savel.kafka.consumer.responses;
+package pro.savel.kafka.common.contract;
 
 import lombok.Data;
 
-import java.util.Collection;
-
 @Data
-public class PartitionInfo {
-    private String topic;
-    private int partition;
-    private Node leader;
-    private Collection<Node> replicas;
+public class Node {
+    private int id;
 }

@@ -18,6 +18,8 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.common.header.Header;
 import org.apache.kafka.common.header.Headers;
+import pro.savel.kafka.common.CommonMapper;
+import pro.savel.kafka.common.contract.PartitionInfo;
 import pro.savel.kafka.consumer.responses.*;
 
 import java.util.ArrayList;
@@ -124,29 +126,7 @@ public class ConsumerResponseMapper {
         if (source == null)
             return null;
         var result = new ConsumerPartitionsResponse(source.size());
-        source.forEach(partitionInfo -> result.add(mapPartitionInfo(partitionInfo)));
-        return result;
-    }
-
-    public static PartitionInfo mapPartitionInfo(org.apache.kafka.common.PartitionInfo source) {
-        if (source == null)
-            return null;
-        var result = new pro.savel.kafka.consumer.responses.PartitionInfo();
-        result.setTopic(source.topic());
-        result.setPartition(source.partition());
-        result.setLeader(mapNode(source.leader()));
-        var replicas = new ArrayList<Node>(source.replicas().length);
-        for (org.apache.kafka.common.Node replica : source.replicas())
-            replicas.add(mapNode(replica));
-        result.setReplicas(replicas);
-        return result;
-    }
-
-    public static Node mapNode(org.apache.kafka.common.Node source) {
-        if (source == null)
-            return null;
-        var result = new Node();
-        result.setId(source.id());
+        source.forEach(partitionInfo -> result.add(CommonMapper.mapPartitionInfo(partitionInfo)));
         return result;
     }
 
@@ -167,7 +147,7 @@ public class ConsumerResponseMapper {
         var result = new ConsumerTopicsResponse(source.size());
         source.forEach((topic, partitionsSource) -> {
             var partitions = new ArrayList<PartitionInfo>(partitionsSource.size());
-            partitionsSource.forEach(partitionSource -> partitions.add(mapPartitionInfo(partitionSource)));
+            partitionsSource.forEach(partitionSource -> partitions.add(CommonMapper.mapPartitionInfo(partitionSource)));
             result.put(topic, partitions);
         });
         return result;
