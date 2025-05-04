@@ -23,6 +23,7 @@ import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
 import pro.savel.kafka.admin.AdminRequestDecoder;
 import pro.savel.kafka.admin.AdminRequestProcessor;
+import pro.savel.kafka.admin.AdminResponseEncoder;
 import pro.savel.kafka.consumer.ConsumerRequestDecoder;
 import pro.savel.kafka.consumer.ConsumerRequestProcessor;
 import pro.savel.kafka.consumer.ConsumerResponseEncoder;
@@ -45,6 +46,7 @@ class ServerInitializer extends ChannelInitializer<SocketChannel> implements Aut
 
     private final ProducerResponseEncoder producerResponseEncoder = new ProducerResponseEncoder(objectMapper);
     private final ConsumerResponseEncoder consumerResponseEncoder = new ConsumerResponseEncoder(objectMapper);
+    private final AdminResponseEncoder adminResponseEncoder = new AdminResponseEncoder(objectMapper);
 
     private final DefaultInboundHandler defaultInboundHandler = new DefaultInboundHandler();
 
@@ -63,6 +65,7 @@ class ServerInitializer extends ChannelInitializer<SocketChannel> implements Aut
         pipeline.addLast(defaultRequestDecoder);
         pipeline.addLast(producerResponseEncoder);
         pipeline.addLast(consumerResponseEncoder);
+        pipeline.addLast(adminResponseEncoder);
         pipeline.addLast(producerRequestProcessor);
         pipeline.addLast(consumerRequestProcessor);
         pipeline.addLast(adminRequestProcessor);
