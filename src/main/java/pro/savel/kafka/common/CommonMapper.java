@@ -12,6 +12,9 @@ public abstract class CommonMapper {
             return null;
         var result = new Node();
         result.setId(source.id());
+        result.setHost(source.host());
+        result.setPort(source.port());
+        result.setRack(source.rack());
         return result;
     }
 

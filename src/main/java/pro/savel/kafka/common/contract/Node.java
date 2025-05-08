@@ -19,4 +19,7 @@ import lombok.Data;
 @Data
 public class Node {
     private int id;
+    private String host;
+    private int port;
+    private String rack;
 }
