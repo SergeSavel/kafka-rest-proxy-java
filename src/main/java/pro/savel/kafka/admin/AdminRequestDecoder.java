@@ -68,6 +68,8 @@ public class AdminRequestDecoder extends ChannelInboundHandlerAdapter {
         var pathMethod = httpRequest.uri().substring(URI_PREFIX.length());
         switch (pathMethod) {
             case "" -> decodeRoot(ctx, httpRequest);
+            case "/topics" -> decodeTopics(ctx, httpRequest);
+            case "/cluster" -> decodeCluster(ctx, httpRequest);
             case "/touch" -> decodeTouch(ctx, httpRequest);
             default -> HttpUtils.writeNotFoundAndClose(ctx, httpRequest.protocolVersion());
         }
@@ -93,6 +95,22 @@ public class AdminRequestDecoder extends ChannelInboundHandlerAdapter {
         }
     }
 
+    private void decodeCluster(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
+        if (httpRequest.method() == HttpMethod.GET) {
+            decodeJsonRequest(ctx, httpRequest, AdminDescribeClusterRequest.class);
+        } else {
+            throw new BadRequestException("Unsupported HTTP method.");
+        }
+    }
+
+    private void decodeTopics(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
+        if (httpRequest.method() == HttpMethod.GET) {
+            decodeJsonRequest(ctx, httpRequest, AdminListTopicsRequest.class);
+        } else {
+            throw new BadRequestException("Unsupported HTTP method.");
+        }
+    }
+
     private void decodeListRequest(ChannelHandlerContext ctx, FullHttpRequest httpRequest) {
         var request = new AdminListRequest();
         var bearer = new RequestBearer(httpRequest, request);
@@ -108,4 +126,5 @@ public class AdminRequestDecoder extends ChannelInboundHandlerAdapter {
             throw new BadRequestException("Invalid Content-Type header in request.");
         passBearer(ctx, httpRequest, request);
     }
+
 }

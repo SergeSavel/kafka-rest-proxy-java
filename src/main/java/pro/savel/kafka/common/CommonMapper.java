@@ -4,8 +4,17 @@ import pro.savel.kafka.common.contract.Node;
 import pro.savel.kafka.common.contract.PartitionInfo;
 
 import java.util.ArrayList;
+import java.util.Collection;
 
 public abstract class CommonMapper {
+
+    public static ArrayList<Node> mapNodes(Collection<org.apache.kafka.common.Node> source) {
+        if (source == null)
+            return null;
+        var result = new ArrayList<Node>(source.size());
+        source.forEach(nodeSource -> result.add(CommonMapper.mapNode(nodeSource)));
+        return result;
+    }
 
     public static Node mapNode(org.apache.kafka.common.Node source) {
         if (source == null)

@@ -22,6 +22,8 @@ import io.netty.util.ReferenceCountUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import pro.savel.kafka.admin.requests.*;
+import pro.savel.kafka.admin.responses.AdminDescribeClusterResponse;
+import pro.savel.kafka.common.CommonMapper;
 import pro.savel.kafka.common.HttpUtils;
 import pro.savel.kafka.common.RequestBearer;
 import pro.savel.kafka.common.Utils;
@@ -30,6 +32,7 @@ import pro.savel.kafka.common.exceptions.NotFoundException;
 import pro.savel.kafka.common.exceptions.UnauthenticatedException;
 import pro.savel.kafka.common.exceptions.UnauthorizedException;
 
+import java.util.concurrent.atomic.AtomicInteger;
 
 @ChannelHandler.Sharable
 public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implements AutoCloseable {
@@ -63,13 +66,23 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
     }
 
     @Override
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+        logger.error("An error occurred while processing admin request.", cause);
+        ctx.close();
+    }
+
+    @Override
     public void close() {
         provider.close();
     }
 
     public void processRequest(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException, UnauthenticatedException, UnauthorizedException {
         var requestClass = requestBearer.request().getClass();
-        if (requestClass == AdminCreateRequest.class)
+        if (requestClass == AdminListTopicsRequest.class)
+            processListTopics(ctx, requestBearer);
+        else if (requestClass == AdminDescribeClusterRequest.class)
+            processDescribeCluster(ctx, requestBearer);
+        else if (requestClass == AdminCreateRequest.class)
             processCreate(ctx, requestBearer);
         else if (requestClass == AdminRemoveRequest.class)
             processRemove(ctx, requestBearer);
@@ -109,5 +122,70 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
         wrapper.touch();
         var responseBearer = new AdminResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null);
         ctx.writeAndFlush(responseBearer);
+    }
+
+    private void processDescribeCluster(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException {
+        var request = (AdminDescribeClusterRequest) requestBearer.request();
+        var wrapper = provider.getItem(request.getAdminId(), request.getToken());
+        var admin = wrapper.getAdmin();
+        var describeResult = admin.describeCluster();
+        var response = new AdminDescribeClusterResponse();
+        AtomicInteger asyncOpCounter = new AtomicInteger(4);
+        describeResult.nodes().whenComplete((nodesSource, error) -> {
+            if (error == null) {
+                response.setNodes(CommonMapper.mapNodes(nodesSource));
+                if (asyncOpCounter.decrementAndGet() == 0)
+                    ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
+            } else {
+                logger.error("Unable to get cluster nodes.", error);
+                HttpUtils.writeInternalServerErrorAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+            }
+        });
+        describeResult.clusterId().whenComplete((clusterId, error) -> {
+            if (error == null) {
+                response.setClusterId(clusterId);
+                if (asyncOpCounter.decrementAndGet() == 0)
+                    ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
+            } else {
+                logger.error("Unable to get cluster identifier.", error);
+                HttpUtils.writeInternalServerErrorAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+            }
+        });
+        describeResult.controller().whenComplete((controllerSource, error) -> {
+            if (error == null) {
+                response.setController(CommonMapper.mapNode(controllerSource));
+                if (asyncOpCounter.decrementAndGet() == 0)
+                    ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
+            } else {
+                logger.error("Unable to get cluster controller.", error);
+                HttpUtils.writeInternalServerErrorAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+            }
+        });
+        describeResult.authorizedOperations().whenComplete((aclOperationsSource, error) -> {
+            if (error == null) {
+                response.setAuthorizedOperations(AdminResponseMapper.mapAclOperations(aclOperationsSource));
+                if (asyncOpCounter.decrementAndGet() == 0)
+                    ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
+            } else {
+                logger.error("Unable to get cluster authorized operations.", error);
+                HttpUtils.writeInternalServerErrorAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+            }
+        });
+    }
+
+    private void processListTopics(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException {
+        var request = (AdminListTopicsRequest) requestBearer.request();
+        var wrapper = provider.getItem(request.getAdminId(), request.getToken());
+        var admin = wrapper.getAdmin();
+        var topicsResult = admin.listTopics();
+        topicsResult.listings().whenComplete((listings, error) -> {
+            if (error == null) {
+                var response = AdminResponseMapper.mapListTopicsResponse(listings);
+                ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
+            } else {
+                logger.error("Unable to get topic listings.", error);
+                HttpUtils.writeInternalServerErrorAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+            }
+        });
     }
 }
