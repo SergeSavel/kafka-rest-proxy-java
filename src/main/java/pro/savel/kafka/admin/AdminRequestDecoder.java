@@ -68,6 +68,7 @@ public class AdminRequestDecoder extends ChannelInboundHandlerAdapter {
         var pathMethod = httpRequest.uri().substring(URI_PREFIX.length());
         switch (pathMethod) {
             case "" -> decodeRoot(ctx, httpRequest);
+            case "/topic" -> decodeTopic(ctx, httpRequest);
             case "/topics" -> decodeTopics(ctx, httpRequest);
             case "/cluster" -> decodeCluster(ctx, httpRequest);
             case "/touch" -> decodeTouch(ctx, httpRequest);
@@ -106,6 +107,14 @@ public class AdminRequestDecoder extends ChannelInboundHandlerAdapter {
     private void decodeTopics(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
         if (httpRequest.method() == HttpMethod.GET) {
             decodeJsonRequest(ctx, httpRequest, AdminListTopicsRequest.class);
+        } else {
+            throw new BadRequestException("Unsupported HTTP method.");
+        }
+    }
+
+    private void decodeTopic(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
+        if (httpRequest.method() == HttpMethod.GET) {
+            decodeJsonRequest(ctx, httpRequest, AdminDescribeTopicRequest.class);
         } else {
             throw new BadRequestException("Unsupported HTTP method.");
         }

@@ -19,6 +19,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.util.ReferenceCountUtil;
+import org.apache.kafka.clients.admin.TopicDescription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import pro.savel.kafka.admin.requests.*;
@@ -32,6 +33,7 @@ import pro.savel.kafka.common.exceptions.NotFoundException;
 import pro.savel.kafka.common.exceptions.UnauthenticatedException;
 import pro.savel.kafka.common.exceptions.UnauthorizedException;
 
+import java.util.Collections;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @ChannelHandler.Sharable
@@ -78,7 +80,9 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
 
     public void processRequest(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException, UnauthenticatedException, UnauthorizedException {
         var requestClass = requestBearer.request().getClass();
-        if (requestClass == AdminListTopicsRequest.class)
+        if (requestClass == AdminDescribeTopicRequest.class)
+            processDescribeTopic(ctx, requestBearer);
+        else if (requestClass == AdminListTopicsRequest.class)
             processListTopics(ctx, requestBearer);
         else if (requestClass == AdminDescribeClusterRequest.class)
             processDescribeCluster(ctx, requestBearer);
@@ -184,6 +188,28 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
                 ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
             } else {
                 logger.error("Unable to get topic listings.", error);
+                HttpUtils.writeInternalServerErrorAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+            }
+        });
+    }
+
+    private void processDescribeTopic(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException {
+        var request = (AdminDescribeTopicRequest) requestBearer.request();
+        var wrapper = provider.getItem(request.getAdminId(), request.getToken());
+        var admin = wrapper.getAdmin();
+        var describeResult = admin.describeTopics(Collections.singleton(request.getTopic()));
+        describeResult.allTopicNames().whenComplete((topicNames, error) -> {
+            if (error == null) {
+                if (topicNames.isEmpty()) {
+                    HttpUtils.writeNotFoundAndClose(ctx, requestBearer.protocolVersion(), "Topic not found.");
+                    return;
+                }
+                for (TopicDescription topicDescription : topicNames.values()) {
+                    var response = AdminResponseMapper.mapDescribeTopicResponse(topicDescription);
+                    ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
+                }
+            } else {
+                logger.error("Unable to get topic description.", error);
                 HttpUtils.writeInternalServerErrorAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
             }
         });

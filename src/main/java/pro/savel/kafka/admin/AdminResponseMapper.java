@@ -14,12 +14,17 @@
 
 package pro.savel.kafka.admin;
 
+import org.apache.kafka.clients.admin.TopicDescription;
 import org.apache.kafka.clients.admin.TopicListing;
+import org.apache.kafka.common.TopicPartitionInfo;
 import org.apache.kafka.common.acl.AclOperation;
 import pro.savel.kafka.admin.responses.AdminCreateResponse;
+import pro.savel.kafka.admin.responses.AdminDescribeTopicResponse;
 import pro.savel.kafka.admin.responses.AdminListResponse;
 import pro.savel.kafka.admin.responses.AdminListTopicsResponse;
+import pro.savel.kafka.common.CommonMapper;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
@@ -77,6 +82,40 @@ public class AdminResponseMapper {
             return null;
         var result = new HashSet<String>(source.size());
         source.forEach(aclOperation -> result.add(aclOperation.name()));
+        return result;
+    }
+
+    public static AdminDescribeTopicResponse mapDescribeTopicResponse(TopicDescription source) {
+        if (source == null)
+            return null;
+        var result = new AdminDescribeTopicResponse();
+        result.setId(source.topicId().toString());
+        result.setName(source.name());
+        result.setInternal(source.isInternal());
+        result.setAuthorizedOperations(mapAclOperations(source.authorizedOperations()));
+        result.setPartitions(mapPartitions(source.partitions()));
+        return result;
+    }
+
+    private static ArrayList<AdminDescribeTopicResponse.PartitionInfo> mapPartitions(Collection<TopicPartitionInfo> source) {
+        if (source == null)
+            return null;
+        var result = new ArrayList<AdminDescribeTopicResponse.PartitionInfo>(source.size());
+        source.forEach(partitionInfoSource -> result.add(mapPartitionInfo(partitionInfoSource)));
+        return result;
+    }
+
+    private static AdminDescribeTopicResponse.PartitionInfo mapPartitionInfo(TopicPartitionInfo source) {
+        if (source == null)
+            return null;
+        var result = new AdminDescribeTopicResponse.PartitionInfo();
+        result.setId(source.partition());
+        result.setReplicas(CommonMapper.mapNodes(source.replicas()));
+        if (source.isr() != null) {
+            var isr = new ArrayList<Integer>(source.isr().size());
+            source.isr().forEach(nodeSource -> isr.add(nodeSource.id()));
+            result.setIsr(isr);
+        }
         return result;
     }
 }
