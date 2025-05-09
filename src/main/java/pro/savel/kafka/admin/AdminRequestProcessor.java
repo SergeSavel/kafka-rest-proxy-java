@@ -134,44 +134,45 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
         var admin = wrapper.getAdmin();
         var describeResult = admin.describeCluster();
         var response = new AdminDescribeClusterResponse();
-        AtomicInteger asyncOpCounter = new AtomicInteger(4);
+        var successCounter = new AtomicInteger(4);
+        var errorCounter = new AtomicInteger(1);
         describeResult.nodes().whenComplete((nodesSource, error) -> {
             if (error == null) {
                 response.setNodes(CommonMapper.mapNodes(nodesSource));
-                if (asyncOpCounter.decrementAndGet() == 0)
+                if (successCounter.decrementAndGet() == 0)
                     ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
-            } else {
-                logger.error("Unable to get cluster nodes.", error);
+            } else if (errorCounter.decrementAndGet() == 0) {
+                logger.error("Unable to get cluster description.", error);
                 HttpUtils.writeInternalServerErrorAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
             }
         });
         describeResult.clusterId().whenComplete((clusterId, error) -> {
             if (error == null) {
                 response.setClusterId(clusterId);
-                if (asyncOpCounter.decrementAndGet() == 0)
+                if (successCounter.decrementAndGet() == 0)
                     ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
-            } else {
-                logger.error("Unable to get cluster identifier.", error);
+            } else if (errorCounter.decrementAndGet() == 0) {
+                logger.error("Unable to get cluster description.", error);
                 HttpUtils.writeInternalServerErrorAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
             }
         });
         describeResult.controller().whenComplete((controllerSource, error) -> {
             if (error == null) {
                 response.setController(CommonMapper.mapNode(controllerSource));
-                if (asyncOpCounter.decrementAndGet() == 0)
+                if (successCounter.decrementAndGet() == 0)
                     ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
-            } else {
-                logger.error("Unable to get cluster controller.", error);
+            } else if (errorCounter.decrementAndGet() == 0) {
+                logger.error("Unable to get cluster description.", error);
                 HttpUtils.writeInternalServerErrorAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
             }
         });
         describeResult.authorizedOperations().whenComplete((aclOperationsSource, error) -> {
             if (error == null) {
                 response.setAuthorizedOperations(AdminResponseMapper.mapAclOperations(aclOperationsSource));
-                if (asyncOpCounter.decrementAndGet() == 0)
+                if (successCounter.decrementAndGet() == 0)
                     ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
-            } else {
-                logger.error("Unable to get cluster authorized operations.", error);
+            } else if (errorCounter.decrementAndGet() == 0) {
+                logger.error("Unable to get cluster description.", error);
                 HttpUtils.writeInternalServerErrorAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
             }
         });
