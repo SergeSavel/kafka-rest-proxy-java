@@ -20,9 +20,11 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.util.ReferenceCountUtil;
 import org.apache.kafka.clients.admin.TopicDescription;
+import org.apache.kafka.common.config.ConfigResource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import pro.savel.kafka.admin.requests.*;
+import pro.savel.kafka.admin.responses.AdminConfigResponse;
 import pro.savel.kafka.admin.responses.AdminDescribeClusterResponse;
 import pro.savel.kafka.common.CommonMapper;
 import pro.savel.kafka.common.HttpUtils;
@@ -84,6 +86,8 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
             processDescribeTopic(ctx, requestBearer);
         else if (requestClass == AdminListTopicsRequest.class)
             processListTopics(ctx, requestBearer);
+        else if (requestClass == AdminDescribeBrokerConfigRequest.class)
+            processDescribeBrokerConfig(ctx, requestBearer);
         else if (requestClass == AdminDescribeClusterRequest.class)
             processDescribeCluster(ctx, requestBearer);
         else if (requestClass == AdminCreateRequest.class)
@@ -211,6 +215,29 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
                 }
             } else {
                 logger.error("Unable to get topic description.", error);
+                HttpUtils.writeInternalServerErrorAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+            }
+        });
+    }
+
+    private void processDescribeBrokerConfig(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException {
+        var request = (AdminDescribeBrokerConfigRequest) requestBearer.request();
+        var wrapper = provider.getItem(request.getAdminId(), request.getToken());
+        var admin = wrapper.getAdmin();
+        var resource = new ConfigResource(ConfigResource.Type.BROKER, String.valueOf(request.getBrokerId()));
+        var describeResult = admin.describeConfigs(Collections.singleton(resource));
+        describeResult.all().whenComplete((configs, error) -> {
+            if (error == null) {
+                if (configs.isEmpty()) {
+                    HttpUtils.writeNotFoundAndClose(ctx, requestBearer.protocolVersion(), "Broker not found.");
+                    return;
+                }
+                configs.values().forEach(config -> {
+                    AdminConfigResponse response = AdminResponseMapper.mapConfigResponse(config);
+                    ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
+                });
+            } else {
+                logger.error("Unable to get broker config description.", error);
                 HttpUtils.writeInternalServerErrorAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
             }
         });

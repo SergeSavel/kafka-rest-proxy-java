@@ -70,6 +70,7 @@ public class AdminRequestDecoder extends ChannelInboundHandlerAdapter {
             case "" -> decodeRoot(ctx, httpRequest);
             case "/topic" -> decodeTopic(ctx, httpRequest);
             case "/topics" -> decodeTopics(ctx, httpRequest);
+            case "/broker-config" -> decodeBrokerConfig(ctx, httpRequest);
             case "/cluster" -> decodeCluster(ctx, httpRequest);
             case "/touch" -> decodeTouch(ctx, httpRequest);
             default -> HttpUtils.writeNotFoundAndClose(ctx, httpRequest.protocolVersion());
@@ -115,6 +116,14 @@ public class AdminRequestDecoder extends ChannelInboundHandlerAdapter {
     private void decodeTopic(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
         if (httpRequest.method() == HttpMethod.GET) {
             decodeJsonRequest(ctx, httpRequest, AdminDescribeTopicRequest.class);
+        } else {
+            throw new BadRequestException("Unsupported HTTP method.");
+        }
+    }
+
+    private void decodeBrokerConfig(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
+        if (httpRequest.method() == HttpMethod.GET) {
+            decodeJsonRequest(ctx, httpRequest, AdminDescribeBrokerConfigRequest.class);
         } else {
             throw new BadRequestException("Unsupported HTTP method.");
         }
