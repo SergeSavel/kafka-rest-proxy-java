@@ -19,6 +19,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.util.ReferenceCountUtil;
+import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.admin.TopicDescription;
 import org.apache.kafka.common.config.ConfigResource;
 import org.slf4j.Logger;
@@ -36,6 +37,7 @@ import pro.savel.kafka.common.exceptions.UnauthenticatedException;
 import pro.savel.kafka.common.exceptions.UnauthorizedException;
 
 import java.util.Collections;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @ChannelHandler.Sharable
@@ -84,6 +86,10 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
         var requestClass = requestBearer.request().getClass();
         if (requestClass == AdminDescribeTopicRequest.class)
             processDescribeTopic(ctx, requestBearer);
+        else if (requestClass == AdminCreateTopicRequest.class)
+            processCreateTopic(ctx, requestBearer);
+        else if (requestClass == AdminDeleteTopicRequest.class)
+            processDeleteTopic(ctx, requestBearer);
         else if (requestClass == AdminListTopicsRequest.class)
             processListTopics(ctx, requestBearer);
         else if (requestClass == AdminDescribeBrokerConfigRequest.class)
@@ -238,6 +244,37 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
                 });
             } else {
                 logger.error("Unable to get broker config description.", error);
+                HttpUtils.writeInternalServerErrorAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+            }
+        });
+    }
+
+    private void processCreateTopic(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException {
+        var request = (AdminCreateTopicRequest) requestBearer.request();
+        var wrapper = provider.getItem(request.getAdminId(), request.getToken());
+        var admin = wrapper.getAdmin();
+        var newTopic = new NewTopic(request.getTopicName(), Optional.ofNullable(request.getNumPartitions()), Optional.ofNullable(request.getReplicationFactor()));
+        var createResult = admin.createTopics(Collections.singleton(newTopic));
+        createResult.all().whenComplete((topics, error) -> {
+            if (error == null) {
+                ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.CREATED, null));
+            } else {
+                logger.error("Unable to create topic.", error);
+                HttpUtils.writeInternalServerErrorAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+            }
+        });
+    }
+
+    private void processDeleteTopic(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException {
+        var request = (AdminDeleteTopicRequest) requestBearer.request();
+        var wrapper = provider.getItem(request.getAdminId(), request.getToken());
+        var admin = wrapper.getAdmin();
+        var deleteResult = admin.deleteTopics(Collections.singleton(request.getTopicName()));
+        deleteResult.all().whenComplete((topics, error) -> {
+            if (error == null) {
+                ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null));
+            } else {
+                logger.error("Unable to delete topic.", error);
                 HttpUtils.writeInternalServerErrorAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
             }
         });

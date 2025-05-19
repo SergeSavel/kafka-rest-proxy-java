@@ -108,6 +108,10 @@ public class AdminRequestDecoder extends ChannelInboundHandlerAdapter {
     private void decodeTopics(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
         if (httpRequest.method() == HttpMethod.GET) {
             decodeJsonRequest(ctx, httpRequest, AdminListTopicsRequest.class);
+        } else if (httpRequest.method() == HttpMethod.POST) {
+            decodeJsonRequest(ctx, httpRequest, AdminCreateTopicRequest.class);
+        } else if (httpRequest.method() == HttpMethod.DELETE) {
+            decodeJsonRequest(ctx, httpRequest, AdminDeleteTopicRequest.class);
         } else {
             throw new BadRequestException("Unsupported HTTP method.");
         }
