@@ -19,6 +19,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.util.ReferenceCountUtil;
+import org.apache.kafka.clients.admin.Admin;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.admin.TopicDescription;
 import org.apache.kafka.common.config.ConfigResource;
@@ -92,6 +93,8 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
             processDeleteTopic(ctx, requestBearer);
         else if (requestClass == AdminListTopicsRequest.class)
             processListTopics(ctx, requestBearer);
+        else if (requestClass == AdminDescribeTopicConfigRequest.class)
+            processDescribeTopicConfig(ctx, requestBearer);
         else if (requestClass == AdminDescribeBrokerConfigRequest.class)
             processDescribeBrokerConfig(ctx, requestBearer);
         else if (requestClass == AdminDescribeClusterRequest.class)
@@ -231,6 +234,18 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
         var wrapper = provider.getItem(request.getAdminId(), request.getToken());
         var admin = wrapper.getAdmin();
         var resource = new ConfigResource(ConfigResource.Type.BROKER, String.valueOf(request.getBrokerId()));
+        processDescribeConfig(ctx, requestBearer, admin, resource);
+    }
+
+    private void processDescribeTopicConfig(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException {
+        var request = (AdminDescribeTopicConfigRequest) requestBearer.request();
+        var wrapper = provider.getItem(request.getAdminId(), request.getToken());
+        var admin = wrapper.getAdmin();
+        var resource = new ConfigResource(ConfigResource.Type.TOPIC, request.getTopicName());
+        processDescribeConfig(ctx, requestBearer, admin, resource);
+    }
+
+    private void processDescribeConfig(ChannelHandlerContext ctx, RequestBearer requestBearer, Admin admin, ConfigResource resource) {
         var describeResult = admin.describeConfigs(Collections.singleton(resource));
         describeResult.all().whenComplete((configs, error) -> {
             if (error == null) {
