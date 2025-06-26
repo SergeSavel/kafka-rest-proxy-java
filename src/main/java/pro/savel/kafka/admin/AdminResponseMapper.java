@@ -18,10 +18,10 @@ import org.apache.kafka.clients.admin.Config;
 import org.apache.kafka.clients.admin.ConfigEntry;
 import org.apache.kafka.clients.admin.TopicDescription;
 import org.apache.kafka.clients.admin.TopicListing;
-import org.apache.kafka.common.TopicPartitionInfo;
 import org.apache.kafka.common.acl.AclOperation;
 import pro.savel.kafka.admin.responses.*;
 import pro.savel.kafka.common.CommonMapper;
+import pro.savel.kafka.common.contract.TopicPartitionInfo;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -96,25 +96,11 @@ public class AdminResponseMapper {
         return result;
     }
 
-    private static ArrayList<AdminDescribeTopicResponse.PartitionInfo> mapPartitions(Collection<TopicPartitionInfo> source) {
+    private static ArrayList<TopicPartitionInfo> mapPartitions(Collection<org.apache.kafka.common.TopicPartitionInfo> source) {
         if (source == null)
             return null;
-        var result = new ArrayList<AdminDescribeTopicResponse.PartitionInfo>(source.size());
-        source.forEach(partitionInfoSource -> result.add(mapPartitionInfo(partitionInfoSource)));
-        return result;
-    }
-
-    private static AdminDescribeTopicResponse.PartitionInfo mapPartitionInfo(TopicPartitionInfo source) {
-        if (source == null)
-            return null;
-        var result = new AdminDescribeTopicResponse.PartitionInfo();
-        result.setId(source.partition());
-        result.setReplicas(CommonMapper.mapNodes(source.replicas()));
-        if (source.isr() != null) {
-            var isr = new ArrayList<Integer>(source.isr().size());
-            source.isr().forEach(nodeSource -> isr.add(nodeSource.id()));
-            result.setIsr(isr);
-        }
+        var result = new ArrayList<TopicPartitionInfo>(source.size());
+        source.forEach(partitionInfoSource -> result.add(CommonMapper.mapTopicPartitionInfo(partitionInfoSource)));
         return result;
     }
 

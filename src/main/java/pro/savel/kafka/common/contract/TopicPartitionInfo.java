@@ -12,18 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package pro.savel.kafka.admin.responses;
+package pro.savel.kafka.common.contract;
 
 import lombok.Data;
-import pro.savel.kafka.common.contract.TopicPartitionInfo;
 
 import java.util.Collection;
 
 @Data
-public class AdminDescribeTopicResponse implements AdminResponse {
-    private String id;
-    private String name;
-    private boolean isInternal;
-    private Collection<String> authorizedOperations;
-    private Collection<TopicPartitionInfo> partitions;
+public class TopicPartitionInfo {
+    private int partition;
+    private Node leader;
+    private Collection<Node> replicas;
+    private Collection<Node> isr;
+    private Collection<Node> elr;
 }
