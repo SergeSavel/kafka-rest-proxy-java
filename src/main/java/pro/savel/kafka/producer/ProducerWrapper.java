@@ -21,17 +21,26 @@ import org.apache.kafka.common.serialization.ByteArraySerializer;
 import pro.savel.kafka.common.ClientWrapper;
 
 import java.util.Properties;
+import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @Getter
 @EqualsAndHashCode(callSuper = false)
 public class ProducerWrapper extends ClientWrapper {
 
     private final KafkaProducer<byte[], byte[]> producer;
+    private final String token = UUID.randomUUID().toString();
+    private final AtomicInteger counter;
 
-    protected ProducerWrapper(String name, Properties config, int expirationTimeout) {
-        super(name, config, expirationTimeout);
+    protected ProducerWrapper(String id, String name, Properties config, int expirationTimeout) {
+        super(id, name, config, expirationTimeout);
         var serializer = new ByteArraySerializer();
         producer = new KafkaProducer<>(config, serializer, serializer);
+        counter = new AtomicInteger(1);
+    }
+
+    protected ProducerWrapper(String name, Properties config, int expirationTimeout) {
+        this(UUID.randomUUID().toString(), name, config, expirationTimeout);
     }
 
     @Override

@@ -17,20 +17,19 @@ package pro.savel.kafka.common;
 import lombok.Getter;
 
 import java.util.Properties;
-import java.util.UUID;
 
 @Getter
 public abstract class ClientWrapper implements AutoCloseable {
 
-    private final String id = UUID.randomUUID().toString();
+    private final String id;
     private final String name;
     private final String username;
     private final int expirationTimeout;
-    private final String token = UUID.randomUUID().toString();
 
     private long expiresAt;
 
-    protected ClientWrapper(String name, Properties config, int expirationTimeout) {
+    protected ClientWrapper(String id, String name, Properties config, int expirationTimeout) {
+        this.id = id;
         this.name = name;
         this.username = getUsernameFromConfig(config);
         this.expirationTimeout = expirationTimeout;

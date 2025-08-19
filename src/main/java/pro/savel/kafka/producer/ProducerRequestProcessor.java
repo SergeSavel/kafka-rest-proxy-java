@@ -96,7 +96,7 @@ public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter imple
 
     private void processCreate(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (ProducerCreateRequest) requestBearer.request();
-        var wrapper = provider.createProducer(request.getName(), request.getConfig(), request.getExpirationTimeout());
+        var wrapper = provider.createProducer(request.getId(), request.getName(), request.getConfig(), request.getExpirationTimeout());
         var response = ProducerResponseMapper.mapCreateResponse(wrapper);
         var responseBearer = new ProducerResponseBearer(requestBearer, HttpResponseStatus.CREATED, response);
         ctx.writeAndFlush(responseBearer);
@@ -104,14 +104,14 @@ public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter imple
 
     private void processRemove(ChannelHandlerContext ctx, RequestBearer requestBearer) throws BadRequestException {
         var request = (ProducerRemoveRequest) requestBearer.request();
-        provider.removeItem(request.getProducerId(), request.getToken());
+        provider.removeProducer(request.getProducerId(), request.getToken());
         var responseBearer = new ProducerResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null);
         ctx.writeAndFlush(responseBearer);
     }
 
     private void processTouch(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException {
         var request = (ProducerTouchRequest) requestBearer.request();
-        var wrapper = provider.getItem(request.getProducerId(), request.getToken());
+        var wrapper = provider.getProducer(request.getProducerId(), request.getToken());
         wrapper.touch();
         var responseBearer = new ProducerResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null);
         ctx.writeAndFlush(responseBearer);
@@ -119,7 +119,7 @@ public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter imple
 
     private void processSend(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException, UnauthenticatedException, UnauthorizedException {
         var request = (ProducerSendRequest) requestBearer.request();
-        var wrapper = provider.getItem(request.getProducerId(), request.getToken());
+        var wrapper = provider.getProducer(request.getProducerId(), request.getToken());
         wrapper.touch();
         var callback = new Callback() {
             @Override
@@ -176,7 +176,7 @@ public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter imple
 
     private void processGetPartitions(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException, UnauthenticatedException, UnauthorizedException {
         var request = (ProducerGetPartitionsRequest) requestBearer.request();
-        var wrapper = provider.getItem(request.getProducerId(), request.getToken());
+        var wrapper = provider.getProducer(request.getProducerId(), request.getToken());
         wrapper.touch();
         var partitions = getPartitions(wrapper, request);
         var response = ProducerResponseMapper.mapPartitionsResponse(partitions);

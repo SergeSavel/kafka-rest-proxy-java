@@ -20,15 +20,17 @@ import org.apache.kafka.clients.admin.Admin;
 import pro.savel.kafka.common.ClientWrapper;
 
 import java.util.Properties;
+import java.util.UUID;
 
 @Getter
 @EqualsAndHashCode(callSuper = false)
 public class AdminWrapper extends ClientWrapper {
 
     private final Admin admin;
+    private final String token = UUID.randomUUID().toString();
 
     protected AdminWrapper(String name, Properties config, int expirationTimeout) {
-        super(name, config, expirationTimeout);
+        super(UUID.randomUUID().toString(), name, config, expirationTimeout);
         admin = Admin.create(config);
     }
 

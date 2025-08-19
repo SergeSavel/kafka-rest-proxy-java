@@ -15,6 +15,8 @@
 package pro.savel.kafka.consumer;
 
 import pro.savel.kafka.common.ClientProvider;
+import pro.savel.kafka.common.exceptions.BadRequestException;
+import pro.savel.kafka.common.exceptions.NotFoundException;
 
 import java.util.Properties;
 
@@ -24,5 +26,21 @@ public class ConsumerProvider extends ClientProvider<ConsumerWrapper> {
         var wrapper = new ConsumerWrapper(name, config, expirationTimeout);
         addItem(wrapper);
         return wrapper;
+    }
+
+    protected ConsumerWrapper getConsumer(String id, String token) throws NotFoundException, BadRequestException {
+        var wrapper = getItem(id);
+        if (!wrapper.getToken().equals(token))
+            throw new BadRequestException("Invalid token.", null);
+        return wrapper;
+    }
+
+    public void removeConsumer(String id, String token) throws BadRequestException {
+        var wrapper = wrappers.get(id);
+        if (wrapper == null)
+            return;
+        if (!token.equals(wrapper.getToken()))
+            throw new BadRequestException("Invalid token.", null);
+        removeItem(id);
     }
 }

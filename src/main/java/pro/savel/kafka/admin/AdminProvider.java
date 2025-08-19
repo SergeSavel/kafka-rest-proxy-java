@@ -15,13 +15,32 @@
 package pro.savel.kafka.admin;
 
 import pro.savel.kafka.common.ClientProvider;
+import pro.savel.kafka.common.exceptions.BadRequestException;
+import pro.savel.kafka.common.exceptions.NotFoundException;
 
 import java.util.Properties;
 
 public class AdminProvider extends ClientProvider<AdminWrapper> {
+
     public AdminWrapper createAdmin(String name, Properties config, int expirationTimeout) {
         var wrapper = new AdminWrapper(name, config, expirationTimeout);
         addItem(wrapper);
         return wrapper;
+    }
+
+    protected AdminWrapper getAdmin(String id, String token) throws NotFoundException, BadRequestException {
+        var wrapper = getItem(id);
+        if (!wrapper.getToken().equals(token))
+            throw new BadRequestException("Invalid token.", null);
+        return wrapper;
+    }
+
+    public void removeAdmin(String id, String token) throws BadRequestException {
+        var wrapper = wrappers.get(id);
+        if (wrapper == null)
+            return;
+        if (!token.equals(wrapper.getToken()))
+            throw new BadRequestException("Invalid token.", null);
+        removeItem(id);
     }
 }

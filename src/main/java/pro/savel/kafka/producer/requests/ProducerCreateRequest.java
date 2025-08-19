@@ -20,6 +20,7 @@ import java.util.Properties;
 
 @Data
 public class ProducerCreateRequest implements ProducerRequest {
+    private String id;
     private String name;
     private Properties config;
     private int expirationTimeout;

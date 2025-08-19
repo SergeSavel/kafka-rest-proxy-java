@@ -21,15 +21,17 @@ import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 import pro.savel.kafka.common.ClientWrapper;
 
 import java.util.Properties;
+import java.util.UUID;
 
 @Getter
 @EqualsAndHashCode(callSuper = false)
 public class ConsumerWrapper extends ClientWrapper {
 
     private final KafkaConsumer<byte[], byte[]> consumer;
+    private final String token = UUID.randomUUID().toString();
 
     protected ConsumerWrapper(String name, Properties config, int expirationTimeout) {
-        super(name, config, expirationTimeout);
+        super(UUID.randomUUID().toString(), name, config, expirationTimeout);
         var deserializer = new ByteArrayDeserializer();
         consumer = new KafkaConsumer<>(config, deserializer, deserializer);
     }

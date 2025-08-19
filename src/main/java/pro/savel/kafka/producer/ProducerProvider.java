@@ -15,14 +15,45 @@
 package pro.savel.kafka.producer;
 
 import pro.savel.kafka.common.ClientProvider;
+import pro.savel.kafka.common.exceptions.BadRequestException;
+import pro.savel.kafka.common.exceptions.NotFoundException;
 
 import java.util.Properties;
 
 public class ProducerProvider extends ClientProvider<ProducerWrapper> {
 
-    public ProducerWrapper createProducer(String name, Properties config, int expirationTimeout) {
-        var wrapper = new ProducerWrapper(name, config, expirationTimeout);
-        addItem(wrapper);
+    public ProducerWrapper createProducer(String id, String name, Properties config, int expirationTimeout) {
+        if (id == null || id.isEmpty()) {
+            var wrapper = new ProducerWrapper(name, config, expirationTimeout);
+            addItem(wrapper);
+            return wrapper;
+        } else {
+            return wrappers.compute(id, (key, value) -> {
+                if (value == null) {
+                    return new ProducerWrapper(id, name, config, expirationTimeout);
+                } else {
+                    value.getCounter().incrementAndGet();
+                    return value;
+                }
+            });
+        }
+    }
+
+    protected ProducerWrapper getProducer(String id, String token) throws NotFoundException, BadRequestException {
+        var wrapper = getItem(id);
+        if (!wrapper.getToken().equals(token))
+            throw new BadRequestException("Invalid token.", null);
         return wrapper;
+    }
+
+    public void removeProducer(String id, String token) throws BadRequestException {
+        var wrapper = wrappers.get(id);
+        if (wrapper == null)
+            return;
+        if (!token.equals(wrapper.getToken()))
+            throw new BadRequestException("Invalid token.", null);
+        var counter = wrapper.getCounter().decrementAndGet();
+        if (counter == 0)
+            removeItem(id);
     }
 }
