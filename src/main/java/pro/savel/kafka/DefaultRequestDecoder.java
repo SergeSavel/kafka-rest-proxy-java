@@ -19,10 +19,14 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.util.ReferenceCountUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import pro.savel.kafka.common.HttpUtils;
 
 @ChannelHandler.Sharable
 public class DefaultRequestDecoder extends ChannelInboundHandlerAdapter {
+
+    private static final Logger logger = LoggerFactory.getLogger(DefaultRequestDecoder.class);
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) {
