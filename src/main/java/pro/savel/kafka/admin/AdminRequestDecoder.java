@@ -67,23 +67,39 @@ public class AdminRequestDecoder extends ChannelInboundHandlerAdapter {
     private void decode(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
         var pathMethod = httpRequest.uri().substring(URI_PREFIX.length());
         switch (pathMethod) {
-            case "" -> decodeRoot(ctx, httpRequest);
-            case "/topic" -> decodeTopic(ctx, httpRequest);
-            case "/topics" -> decodeTopics(ctx, httpRequest);
-            case "/topic-config" -> decodeTopicConfig(ctx, httpRequest);
-            case "/broker-config" -> decodeBrokerConfig(ctx, httpRequest);
-            case "/cluster" -> decodeCluster(ctx, httpRequest);
+            case "/describe-topic" -> decodeDescribeTopic(ctx, httpRequest);
+            case "/list-topics" -> decodeListTopics(ctx, httpRequest);
+            case "/create-topic" -> decodeCreateTopic(ctx, httpRequest);
+            case "/delete-topic" -> decodeDeleteTopic(ctx, httpRequest);
+            case "/describe-topic-config" -> decodeDescribeTopicConfig(ctx, httpRequest);
+            case "/describe-broker-config" -> decodeDescribeBrokerConfig(ctx, httpRequest);
+            case "/describe-cluster" -> decodeDescribeCluster(ctx, httpRequest);
             case "/touch" -> decodeTouch(ctx, httpRequest);
+            case "/create" -> decodeCreate(ctx, httpRequest);
+            case "/release" -> decodeRemove(ctx, httpRequest);
+            case "" -> decodeList(ctx, httpRequest);
             default -> HttpUtils.writeNotFoundAndClose(ctx, httpRequest.protocolVersion());
         }
     }
 
-    private void decodeRoot(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
+    private void decodeList(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
         if (httpRequest.method() == HttpMethod.GET) {
             decodeListRequest(ctx, httpRequest);
-        } else if (httpRequest.method() == HttpMethod.POST) {
+        } else {
+            throw new BadRequestException("Unsupported HTTP method.");
+        }
+    }
+
+    private void decodeCreate(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
+        if (httpRequest.method() == HttpMethod.POST) {
             decodeJsonRequest(ctx, httpRequest, AdminCreateRequest.class);
-        } else if (httpRequest.method() == HttpMethod.DELETE) {
+        } else {
+            throw new BadRequestException("Unsupported HTTP method.");
+        }
+    }
+
+    private void decodeRemove(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
+        if (httpRequest.method() == HttpMethod.POST) {
             decodeJsonRequest(ctx, httpRequest, AdminRemoveRequest.class);
         } else {
             throw new BadRequestException("Unsupported HTTP method.");
@@ -98,44 +114,56 @@ public class AdminRequestDecoder extends ChannelInboundHandlerAdapter {
         }
     }
 
-    private void decodeCluster(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
-        if (httpRequest.method() == HttpMethod.GET) {
+    private void decodeDescribeCluster(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
+        if (httpRequest.method() == HttpMethod.POST) {
             decodeJsonRequest(ctx, httpRequest, AdminDescribeClusterRequest.class);
         } else {
             throw new BadRequestException("Unsupported HTTP method.");
         }
     }
 
-    private void decodeTopics(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
+    private void decodeListTopics(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
         if (httpRequest.method() == HttpMethod.GET) {
             decodeJsonRequest(ctx, httpRequest, AdminListTopicsRequest.class);
-        } else if (httpRequest.method() == HttpMethod.POST) {
+        } else {
+            throw new BadRequestException("Unsupported HTTP method.");
+        }
+    }
+
+    private void decodeCreateTopic(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
+        if (httpRequest.method() == HttpMethod.POST) {
             decodeJsonRequest(ctx, httpRequest, AdminCreateTopicRequest.class);
-        } else if (httpRequest.method() == HttpMethod.DELETE) {
+        } else {
+            throw new BadRequestException("Unsupported HTTP method.");
+        }
+    }
+
+    private void decodeDeleteTopic(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
+        if (httpRequest.method() == HttpMethod.POST) {
             decodeJsonRequest(ctx, httpRequest, AdminDeleteTopicRequest.class);
         } else {
             throw new BadRequestException("Unsupported HTTP method.");
         }
     }
 
-    private void decodeTopic(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
-        if (httpRequest.method() == HttpMethod.GET) {
+    private void decodeDescribeTopic(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
+        if (httpRequest.method() == HttpMethod.POST) {
             decodeJsonRequest(ctx, httpRequest, AdminDescribeTopicRequest.class);
         } else {
             throw new BadRequestException("Unsupported HTTP method.");
         }
     }
 
-    private void decodeBrokerConfig(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
-        if (httpRequest.method() == HttpMethod.GET) {
+    private void decodeDescribeBrokerConfig(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
+        if (httpRequest.method() == HttpMethod.POST) {
             decodeJsonRequest(ctx, httpRequest, AdminDescribeBrokerConfigRequest.class);
         } else {
             throw new BadRequestException("Unsupported HTTP method.");
         }
     }
 
-    private void decodeTopicConfig(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
-        if (httpRequest.method() == HttpMethod.GET) {
+    private void decodeDescribeTopicConfig(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
+        if (httpRequest.method() == HttpMethod.POST) {
             decodeJsonRequest(ctx, httpRequest, AdminDescribeTopicConfigRequest.class);
         } else {
             throw new BadRequestException("Unsupported HTTP method.");
