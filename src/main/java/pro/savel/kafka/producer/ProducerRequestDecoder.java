@@ -70,7 +70,7 @@ public class ProducerRequestDecoder extends ChannelInboundHandlerAdapter {
         var pathMethod = httpRequest.uri().substring(URI_PREFIX.length());
         switch (pathMethod) {
             case "/send" -> decodeSend(ctx, httpRequest);
-            case "/get-partitions" -> decodePartitions(ctx, httpRequest);
+            case "/get-partitions" -> decodeGetPartitions(ctx, httpRequest);
             case "/touch" -> decodeTouch(ctx, httpRequest);
             case "/create" -> decodeCreate(ctx, httpRequest);
             case "/release" -> decodeRemove(ctx, httpRequest);
@@ -119,7 +119,7 @@ public class ProducerRequestDecoder extends ChannelInboundHandlerAdapter {
         }
     }
 
-    private void decodePartitions(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
+    private void decodeGetPartitions(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
         if (httpRequest.method() == HttpMethod.POST)
             decodeJsonRequest(ctx, httpRequest, ProducerGetPartitionsRequest.class);
         else
