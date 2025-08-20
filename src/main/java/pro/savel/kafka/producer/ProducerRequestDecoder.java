@@ -73,7 +73,7 @@ public class ProducerRequestDecoder extends ChannelInboundHandlerAdapter {
             case "/get-partitions" -> decodePartitions(ctx, httpRequest);
             case "/touch" -> decodeTouch(ctx, httpRequest);
             case "/create" -> decodeCreate(ctx, httpRequest);
-            case "/remove" -> decodeRemove(ctx, httpRequest);
+            case "/release" -> decodeRemove(ctx, httpRequest);
             case "" -> decodeList(ctx, httpRequest);
             default -> HttpUtils.writeNotFoundAndClose(ctx, httpRequest.protocolVersion());
         }
