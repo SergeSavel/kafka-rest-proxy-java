@@ -69,20 +69,34 @@ public class ProducerRequestDecoder extends ChannelInboundHandlerAdapter {
     private void decode(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
         var pathMethod = httpRequest.uri().substring(URI_PREFIX.length());
         switch (pathMethod) {
-            case "" -> decodeRoot(ctx, httpRequest);
             case "/send" -> decodeSend(ctx, httpRequest);
-            case "/partitions" -> decodePartitions(ctx, httpRequest);
+            case "/get-partitions" -> decodePartitions(ctx, httpRequest);
             case "/touch" -> decodeTouch(ctx, httpRequest);
+            case "/create" -> decodeCreate(ctx, httpRequest);
+            case "/remove" -> decodeRemove(ctx, httpRequest);
+            case "" -> decodeList(ctx, httpRequest);
             default -> HttpUtils.writeNotFoundAndClose(ctx, httpRequest.protocolVersion());
         }
     }
 
-    private void decodeRoot(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
+    private void decodeList(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
         if (httpRequest.method() == HttpMethod.GET) {
             decodeListRequest(ctx, httpRequest);
-        } else if (httpRequest.method() == HttpMethod.POST) {
+        } else {
+            throw new BadRequestException("Unsupported HTTP method.");
+        }
+    }
+
+    private void decodeCreate(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
+        if (httpRequest.method() == HttpMethod.POST) {
             decodeJsonRequest(ctx, httpRequest, ProducerCreateRequest.class);
-        } else if (httpRequest.method() == HttpMethod.DELETE) {
+        } else {
+            throw new BadRequestException("Unsupported HTTP method.");
+        }
+    }
+
+    private void decodeRemove(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
+        if (httpRequest.method() == HttpMethod.POST) {
             decodeJsonRequest(ctx, httpRequest, ProducerRemoveRequest.class);
         } else {
             throw new BadRequestException("Unsupported HTTP method.");
@@ -106,7 +120,7 @@ public class ProducerRequestDecoder extends ChannelInboundHandlerAdapter {
     }
 
     private void decodePartitions(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
-        if (httpRequest.method() == HttpMethod.GET)
+        if (httpRequest.method() == HttpMethod.POST)
             decodeJsonRequest(ctx, httpRequest, ProducerGetPartitionsRequest.class);
         else
             throw new BadRequestException("Unsupported HTTP method.");
