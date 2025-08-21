@@ -119,8 +119,8 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
             processGetBeginningOffsets(ctx, requestBearer);
         else if (requestClass == ConsumerGetEndOffsetsRequest.class)
             processGetEndOffsets(ctx, requestBearer);
-        else if (requestClass == ConsumerGetTopicsRequest.class)
-            processGetTopics(ctx, requestBearer);
+        else if (requestClass == ConsumerListTopicsRequest.class)
+            processListTopics(ctx, requestBearer);
         else if (requestClass == ConsumerGetPositionRequest.class)
             processGetPosition(ctx, requestBearer);
         else if (requestClass == ConsumerGetAssignmentRequest.class)
@@ -129,7 +129,7 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
             processGetSubscription(ctx, requestBearer);
         else if (requestClass == ConsumerCreateRequest.class)
             processCreate(ctx, requestBearer);
-        else if (requestClass == ConsumerRemoveRequest.class)
+        else if (requestClass == ConsumerReleaseRequest.class)
             processRemove(ctx, requestBearer);
         else if (requestClass == ConsumerListRequest.class)
             processList(ctx, requestBearer);
@@ -155,7 +155,7 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
     }
 
     private void processRemove(ChannelHandlerContext ctx, RequestBearer requestBearer) throws BadRequestException {
-        var request = (ConsumerRemoveRequest) requestBearer.request();
+        var request = (ConsumerReleaseRequest) requestBearer.request();
         provider.removeConsumer(request.getConsumerId(), request.getToken());
         var responseBearer = new ConsumerResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null);
         ctx.writeAndFlush(responseBearer);
@@ -370,8 +370,8 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
         ctx.writeAndFlush(responseBearer);
     }
 
-    private void processGetTopics(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException {
-        var request = (ConsumerGetTopicsRequest) requestBearer.request();
+    private void processListTopics(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException {
+        var request = (ConsumerListTopicsRequest) requestBearer.request();
         var wrapper = provider.getConsumer(request.getConsumerId(), request.getToken());
         wrapper.touch();
         var consumer = wrapper.getConsumer();

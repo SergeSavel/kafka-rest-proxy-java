@@ -17,7 +17,7 @@ package pro.savel.kafka.consumer.requests;
 import lombok.Data;
 
 @Data
-public class ConsumerRemoveRequest implements ConsumerRequest {
+public class ConsumerListTopicsRequest implements ConsumerRequest {
     private String consumerId;
     private String token;
 }

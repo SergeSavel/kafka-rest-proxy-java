@@ -68,28 +68,43 @@ public class ConsumerRequestDecoder extends ChannelInboundHandlerAdapter {
     private void decode(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
         var pathMethod = httpRequest.uri().substring(URI_PREFIX.length());
         switch (pathMethod) {
-            case "" -> decodeRoot(ctx, httpRequest);
             case "/poll" -> decodePoll(ctx, httpRequest);
             case "/commit" -> decodeCommit(ctx, httpRequest);
-            case "/position" -> decodeSeek(ctx, httpRequest);
-            case "/assignment" -> decodeAssign(ctx, httpRequest);
-            case "/subscription" -> decodeSubscribe(ctx, httpRequest);
-            case "/partitions" -> decodePartitions(ctx, httpRequest);
-            case "/topics" -> decodeTopics(ctx, httpRequest);
-            case "/beginning" -> decodeBeginning(ctx, httpRequest);
-            case "/end" -> decodeEnd(ctx, httpRequest);
+            case "/seek" -> decodeSeek(ctx, httpRequest);
+            case "/get-position" -> decodeGetPosition(ctx, httpRequest);
+            case "/assign" -> decodeAssign(ctx, httpRequest);
+            case "/get-assignment" -> decodeGetAssignment(ctx, httpRequest);
+            case "/subscribe" -> decodeSubscribe(ctx, httpRequest);
+            case "/get-subscription" -> decodeGetSubscription(ctx, httpRequest);
+            case "/get-partitions" -> decodeGetPartitions(ctx, httpRequest);
+            case "/list-topics" -> decodeListTopics(ctx, httpRequest);
+            case "/get-beginning-offsets" -> decodeGetBeginningOffsets(ctx, httpRequest);
+            case "/get-end-offsets" -> decodeGetEndOffsets(ctx, httpRequest);
             case "/touch" -> decodeTouch(ctx, httpRequest);
+            case "/create" -> decodeCreate(ctx, httpRequest);
+            case "/release" -> decodeRelease(ctx, httpRequest);
+            case "" -> decodeList(ctx, httpRequest);
             default -> HttpUtils.writeNotFoundAndClose(ctx, httpRequest.protocolVersion());
         }
     }
 
-    private void decodeRoot(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
+    private void decodeList(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
         if (httpRequest.method() == HttpMethod.GET)
             decodeListRequest(ctx, httpRequest);
-        else if (httpRequest.method() == HttpMethod.POST)
+        else
+            throw new BadRequestException("Unsupported HTTP method.");
+    }
+
+    private void decodeCreate(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
+        if (httpRequest.method() == HttpMethod.POST)
             decodeJsonRequest(ctx, httpRequest, ConsumerCreateRequest.class);
-        else if (httpRequest.method() == HttpMethod.DELETE)
-            decodeJsonRequest(ctx, httpRequest, ConsumerRemoveRequest.class);
+        else
+            throw new BadRequestException("Unsupported HTTP method.");
+    }
+
+    private void decodeRelease(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
+        if (httpRequest.method() == HttpMethod.POST)
+            decodeJsonRequest(ctx, httpRequest, ConsumerReleaseRequest.class);
         else
             throw new BadRequestException("Unsupported HTTP method.");
     }
@@ -102,55 +117,70 @@ public class ConsumerRequestDecoder extends ChannelInboundHandlerAdapter {
     }
 
     private void decodeAssign(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
-        if (httpRequest.method() == HttpMethod.GET)
-            decodeJsonRequest(ctx, httpRequest, ConsumerGetAssignmentRequest.class);
-        else if (httpRequest.method() == HttpMethod.POST)
+        if (httpRequest.method() == HttpMethod.POST)
             decodeJsonRequest(ctx, httpRequest, ConsumerAssignRequest.class);
         else
             throw new BadRequestException("Unsupported HTTP method.");
     }
 
+    private void decodeGetAssignment(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
+        if (httpRequest.method() == HttpMethod.POST)
+            decodeJsonRequest(ctx, httpRequest, ConsumerGetAssignmentRequest.class);
+        else
+            throw new BadRequestException("Unsupported HTTP method.");
+    }
+
     private void decodeSeek(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
-        if (httpRequest.method() == HttpMethod.GET)
-            decodeJsonRequest(ctx, httpRequest, ConsumerGetPositionRequest.class);
-        else if (httpRequest.method() == HttpMethod.POST)
+        if (httpRequest.method() == HttpMethod.POST)
             decodeJsonRequest(ctx, httpRequest, ConsumerSeekRequest.class);
         else
             throw new BadRequestException("Unsupported HTTP method.");
     }
 
+    private void decodeGetPosition(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
+        if (httpRequest.method() == HttpMethod.POST)
+            decodeJsonRequest(ctx, httpRequest, ConsumerGetPositionRequest.class);
+        else
+            throw new BadRequestException("Unsupported HTTP method.");
+    }
+
     private void decodeSubscribe(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
-        if (httpRequest.method() == HttpMethod.GET)
-            decodeJsonRequest(ctx, httpRequest, ConsumerGetSubscriptionRequest.class);
-        else if (httpRequest.method() == HttpMethod.POST)
+        if (httpRequest.method() == HttpMethod.POST)
             decodeJsonRequest(ctx, httpRequest, ConsumerSubscribeRequest.class);
         else
             throw new BadRequestException("Unsupported HTTP method.");
     }
 
-    private void decodeTopics(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
-        if (httpRequest.method() == HttpMethod.GET)
-            decodeJsonRequest(ctx, httpRequest, ConsumerGetTopicsRequest.class);
+    private void decodeGetSubscription(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
+        if (httpRequest.method() == HttpMethod.POST)
+            decodeJsonRequest(ctx, httpRequest, ConsumerGetSubscriptionRequest.class);
         else
             throw new BadRequestException("Unsupported HTTP method.");
     }
 
-    private void decodePartitions(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
-        if (httpRequest.method() == HttpMethod.GET)
+    private void decodeListTopics(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
+        if (httpRequest.method() == HttpMethod.POST)
+            decodeJsonRequest(ctx, httpRequest, ConsumerListTopicsRequest.class);
+        else
+            throw new BadRequestException("Unsupported HTTP method.");
+    }
+
+    private void decodeGetPartitions(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
+        if (httpRequest.method() == HttpMethod.POST)
             decodeJsonRequest(ctx, httpRequest, ConsumerGetPartitionsRequest.class);
         else
             throw new BadRequestException("Unsupported HTTP method.");
     }
 
-    private void decodeBeginning(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
-        if (httpRequest.method() == HttpMethod.GET)
+    private void decodeGetBeginningOffsets(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
+        if (httpRequest.method() == HttpMethod.POST)
             decodeJsonRequest(ctx, httpRequest, ConsumerGetBeginningOffsetsRequest.class);
         else
             throw new BadRequestException("Unsupported HTTP method.");
     }
 
-    private void decodeEnd(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
-        if (httpRequest.method() == HttpMethod.GET)
+    private void decodeGetEndOffsets(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
+        if (httpRequest.method() == HttpMethod.POST)
             decodeJsonRequest(ctx, httpRequest, ConsumerGetEndOffsetsRequest.class);
         else
             throw new BadRequestException("Unsupported HTTP method.");
