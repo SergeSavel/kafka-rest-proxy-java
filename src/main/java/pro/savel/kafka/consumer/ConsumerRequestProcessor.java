@@ -270,9 +270,9 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
         try {
             return consumer.partitionsFor(request.getTopic());
         } catch (AuthenticationException e) {
-            throw new UnauthenticatedException("Unable to get partitions.", e);
+            throw new UnauthenticatedException("Unable to get partitions (unauthenticated).", e);
         } catch (AuthorizationException e) {
-            throw new UnauthorizedException("Unable to get partitions.", e);
+            throw new UnauthorizedException("Unable to get partitions (unauthorized).", e);
         }
     }
 
