@@ -20,7 +20,7 @@ repositories {
 }
 
 dependencies {
-    implementation("io.netty:netty-all:4.2.4.Final")
+    implementation("io.netty:netty-all:4.2.6.Final")
     implementation("org.apache.kafka:kafka-clients:4.1.0")
     //implementation("org.apache.logging.log4j:log4j:2.24.3")
     implementation("org.slf4j:slf4j-api:2.0.17")
