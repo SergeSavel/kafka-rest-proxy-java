@@ -147,6 +147,7 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
     private void processDescribeCluster(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException {
         var request = (AdminDescribeClusterRequest) requestBearer.request();
         var wrapper = provider.getAdmin(request.getAdminId(), request.getToken());
+        wrapper.touch();
         var admin = wrapper.getAdmin();
         var describeResult = admin.describeCluster();
         var response = new AdminDescribeClusterResponse();
@@ -197,6 +198,7 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
     private void processListTopics(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException {
         var request = (AdminListTopicsRequest) requestBearer.request();
         var wrapper = provider.getAdmin(request.getAdminId(), request.getToken());
+        wrapper.touch();
         var admin = wrapper.getAdmin();
         var topicsResult = admin.listTopics();
         topicsResult.listings().whenComplete((listings, error) -> {
@@ -213,6 +215,7 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
     private void processDescribeTopic(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException {
         var request = (AdminDescribeTopicRequest) requestBearer.request();
         var wrapper = provider.getAdmin(request.getAdminId(), request.getToken());
+        wrapper.touch();
         var admin = wrapper.getAdmin();
         var describeResult = admin.describeTopics(Collections.singleton(request.getTopic()));
         describeResult.allTopicNames().whenComplete((topicNames, error) -> {
@@ -235,6 +238,7 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
     private void processDescribeBrokerConfigs(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException {
         var request = (AdminDescribeBrokerConfigsRequest) requestBearer.request();
         var wrapper = provider.getAdmin(request.getAdminId(), request.getToken());
+        wrapper.touch();
         var admin = wrapper.getAdmin();
         var resource = new ConfigResource(ConfigResource.Type.BROKER, String.valueOf(request.getBrokerId()));
         processDescribeConfigs(ctx, requestBearer, admin, resource);
@@ -243,6 +247,7 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
     private void processDescribeTopicConfigs(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException {
         var request = (AdminDescribeTopicConfigsRequest) requestBearer.request();
         var wrapper = provider.getAdmin(request.getAdminId(), request.getToken());
+        wrapper.touch();
         var admin = wrapper.getAdmin();
         var resource = new ConfigResource(ConfigResource.Type.TOPIC, request.getTopicName());
         processDescribeConfigs(ctx, requestBearer, admin, resource);
@@ -270,6 +275,7 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
     private void processSetTopicConfig(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException {
         var request = (AdminSetTopicConfigRequest) requestBearer.request();
         var wrapper = provider.getAdmin(request.getAdminId(), request.getToken());
+        wrapper.touch();
         var admin = wrapper.getAdmin();
         var configResource = new ConfigResource(ConfigResource.Type.TOPIC, request.getTopicName());
         var configEntry = new ConfigEntry(request.getConfigName(), request.getNewValue());
@@ -299,6 +305,7 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
     private void processDeleteTopicConfig(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException {
         var request = (AdminDeleteTopicConfigRequest) requestBearer.request();
         var wrapper = provider.getAdmin(request.getAdminId(), request.getToken());
+        wrapper.touch();
         var admin = wrapper.getAdmin();
         var configResource = new ConfigResource(ConfigResource.Type.TOPIC, request.getTopicName());
         var configEntry = new ConfigEntry(request.getConfigName(), null);
@@ -328,6 +335,7 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
     private void processCreateTopic(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException {
         var request = (AdminCreateTopicRequest) requestBearer.request();
         var wrapper = provider.getAdmin(request.getAdminId(), request.getToken());
+        wrapper.touch();
         var admin = wrapper.getAdmin();
         var newTopic = new NewTopic(request.getTopicName(), Optional.ofNullable(request.getNumPartitions()), Optional.ofNullable(request.getReplicationFactor()));
         var createResult = admin.createTopics(Collections.singleton(newTopic));
@@ -344,6 +352,7 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
     private void processDeleteTopic(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException {
         var request = (AdminDeleteTopicRequest) requestBearer.request();
         var wrapper = provider.getAdmin(request.getAdminId(), request.getToken());
+        wrapper.touch();
         var admin = wrapper.getAdmin();
         var deleteResult = admin.deleteTopics(Collections.singleton(request.getTopicName()));
         deleteResult.all().whenComplete((topics, error) -> {
