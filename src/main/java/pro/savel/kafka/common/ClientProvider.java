@@ -82,27 +82,9 @@ public abstract class ClientProvider<Wrapper extends ClientWrapper> implements A
         return wrapper;
     }
 
-//    protected Wrapper getItem(String id, String token) throws NotFoundException, BadRequestException {
-//        var wrapper = getItem(id);
-//        if (!wrapper.getToken().equals(token))
-//            throw new BadRequestException("Invalid token.", null);
-//        return wrapper;
-//    }
-
     protected void removeItem(String id) {
         var wrapper = wrappers.remove(id);
         if (wrapper != null)
             wrapper.close();
     }
-
-//    protected void removeItem(String id, String token) throws BadRequestException {
-//        var wrapper = wrappers.get(id);
-//        if (wrapper == null)
-//            return;
-//        if (!token.equals(wrapper.getToken()))
-//            throw new BadRequestException("Invalid token.", null);
-//        wrapper = wrappers.remove(id);
-//        if (wrapper != null)
-//            wrapper.close();
-//    }
 }
