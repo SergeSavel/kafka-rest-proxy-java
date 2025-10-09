@@ -17,8 +17,9 @@ package pro.savel.kafka.admin.requests;
 import lombok.Data;
 
 @Data
-public class AdminDescribeTopicConfigRequest implements AdminRequest {
+public class AdminDeleteTopicConfigRequest implements AdminRequest {
     private String adminId;
     private String token;
     private String topicName;
+    private String configName;
 }

@@ -17,7 +17,7 @@ package pro.savel.kafka.admin.requests;
 import lombok.Data;
 
 @Data
-public class AdminDescribeBrokerConfigRequest implements AdminRequest {
+public class AdminDescribeBrokerConfigsRequest implements AdminRequest {
     private String adminId;
     private String token;
     private int brokerId;

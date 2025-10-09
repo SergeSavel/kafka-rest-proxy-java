@@ -19,10 +19,9 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.util.ReferenceCountUtil;
-import org.apache.kafka.clients.admin.Admin;
-import org.apache.kafka.clients.admin.NewTopic;
-import org.apache.kafka.clients.admin.TopicDescription;
+import org.apache.kafka.clients.admin.*;
 import org.apache.kafka.common.config.ConfigResource;
+import org.apache.kafka.common.errors.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import pro.savel.kafka.admin.requests.*;
@@ -93,10 +92,10 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
             processDeleteTopic(ctx, requestBearer);
         else if (requestClass == AdminListTopicsRequest.class)
             processListTopics(ctx, requestBearer);
-        else if (requestClass == AdminDescribeTopicConfigRequest.class)
-            processDescribeTopicConfig(ctx, requestBearer);
-        else if (requestClass == AdminDescribeBrokerConfigRequest.class)
-            processDescribeBrokerConfig(ctx, requestBearer);
+        else if (requestClass == AdminDescribeTopicConfigsRequest.class)
+            processDescribeTopicConfigs(ctx, requestBearer);
+        else if (requestClass == AdminDescribeBrokerConfigsRequest.class)
+            processDescribeBrokerConfigs(ctx, requestBearer);
         else if (requestClass == AdminDescribeClusterRequest.class)
             processDescribeCluster(ctx, requestBearer);
         else if (requestClass == AdminCreateRequest.class)
@@ -107,6 +106,10 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
             processTouch(ctx, requestBearer);
         else if (requestClass == AdminListRequest.class)
             processList(ctx, requestBearer);
+        else if (requestClass == AdminSetTopicConfigRequest.class)
+            processSetTopicConfig(ctx, requestBearer);
+        else if (requestClass == AdminDeleteTopicConfigRequest.class)
+            processDeleteTopicConfig(ctx, requestBearer);
         else
             throw new RuntimeException("Unexpected admin request type: " + requestClass.getName());
     }
@@ -229,23 +232,23 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
         });
     }
 
-    private void processDescribeBrokerConfig(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException {
-        var request = (AdminDescribeBrokerConfigRequest) requestBearer.request();
+    private void processDescribeBrokerConfigs(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException {
+        var request = (AdminDescribeBrokerConfigsRequest) requestBearer.request();
         var wrapper = provider.getAdmin(request.getAdminId(), request.getToken());
         var admin = wrapper.getAdmin();
         var resource = new ConfigResource(ConfigResource.Type.BROKER, String.valueOf(request.getBrokerId()));
-        processDescribeConfig(ctx, requestBearer, admin, resource);
+        processDescribeConfigs(ctx, requestBearer, admin, resource);
     }
 
-    private void processDescribeTopicConfig(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException {
-        var request = (AdminDescribeTopicConfigRequest) requestBearer.request();
+    private void processDescribeTopicConfigs(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException {
+        var request = (AdminDescribeTopicConfigsRequest) requestBearer.request();
         var wrapper = provider.getAdmin(request.getAdminId(), request.getToken());
         var admin = wrapper.getAdmin();
         var resource = new ConfigResource(ConfigResource.Type.TOPIC, request.getTopicName());
-        processDescribeConfig(ctx, requestBearer, admin, resource);
+        processDescribeConfigs(ctx, requestBearer, admin, resource);
     }
 
-    private void processDescribeConfig(ChannelHandlerContext ctx, RequestBearer requestBearer, Admin admin, ConfigResource resource) {
+    private void processDescribeConfigs(ChannelHandlerContext ctx, RequestBearer requestBearer, Admin admin, ConfigResource resource) {
         var describeResult = admin.describeConfigs(Collections.singleton(resource));
         describeResult.all().whenComplete((configs, error) -> {
             if (error == null) {
@@ -259,6 +262,64 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
                 });
             } else {
                 logger.error("Unable to get broker config description.", error);
+                HttpUtils.writeInternalServerErrorAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+            }
+        });
+    }
+
+    private void processSetTopicConfig(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException {
+        var request = (AdminSetTopicConfigRequest) requestBearer.request();
+        var wrapper = provider.getAdmin(request.getAdminId(), request.getToken());
+        var admin = wrapper.getAdmin();
+        var configResource = new ConfigResource(ConfigResource.Type.TOPIC, request.getTopicName());
+        var configEntry = new ConfigEntry(request.getConfigName(), request.getNewValue());
+        var alterConfigOp = new AlterConfigOp(configEntry, AlterConfigOp.OpType.SET);
+        var alterConfigsResult = admin.incrementalAlterConfigs(Collections.singletonMap(configResource, Collections.singleton(alterConfigOp)));
+        alterConfigsResult.all().whenComplete((ignore, error) -> {
+            if (error == null) {
+                var responseBearer = new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, null);
+                ctx.writeAndFlush(responseBearer);
+            } else if (error instanceof ClusterAuthorizationException)
+                HttpUtils.writeUnauthorizedAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+            else if (error instanceof TopicAuthorizationException)
+                HttpUtils.writeUnauthorizedAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+            else if (error instanceof UnknownTopicOrPartitionException)
+                HttpUtils.writeBadRequestAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+            else if (error instanceof InvalidRequestException)
+                HttpUtils.writeBadRequestAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+            else if (error instanceof InvalidConfigurationException)
+                HttpUtils.writeBadRequestAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+            else {
+                logger.error("Unable to set topic config.", error);
+                HttpUtils.writeInternalServerErrorAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+            }
+        });
+    }
+
+    private void processDeleteTopicConfig(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException {
+        var request = (AdminDeleteTopicConfigRequest) requestBearer.request();
+        var wrapper = provider.getAdmin(request.getAdminId(), request.getToken());
+        var admin = wrapper.getAdmin();
+        var configResource = new ConfigResource(ConfigResource.Type.TOPIC, request.getTopicName());
+        var configEntry = new ConfigEntry(request.getConfigName(), null);
+        var alterConfigOp = new AlterConfigOp(configEntry, AlterConfigOp.OpType.DELETE);
+        var alterConfigsResult = admin.incrementalAlterConfigs(Collections.singletonMap(configResource, Collections.singleton(alterConfigOp)));
+        alterConfigsResult.all().whenComplete((ignore, error) -> {
+            if (error == null) {
+                var responseBearer = new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, null);
+                ctx.writeAndFlush(responseBearer);
+            } else if (error instanceof ClusterAuthorizationException)
+                HttpUtils.writeUnauthorizedAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+            else if (error instanceof TopicAuthorizationException)
+                HttpUtils.writeUnauthorizedAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+            else if (error instanceof UnknownTopicOrPartitionException)
+                HttpUtils.writeBadRequestAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+            else if (error instanceof InvalidRequestException)
+                HttpUtils.writeBadRequestAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+            else if (error instanceof InvalidConfigurationException)
+                HttpUtils.writeBadRequestAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+            else {
+                logger.error("Unable to delete topic config.", error);
                 HttpUtils.writeInternalServerErrorAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
             }
         });
