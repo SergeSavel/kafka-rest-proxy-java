@@ -110,6 +110,8 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
             processSetTopicConfig(ctx, requestBearer);
         else if (requestClass == AdminDeleteTopicConfigRequest.class)
             processDeleteTopicConfig(ctx, requestBearer);
+        else if (requestClass == AdminDescribeUserScramCredentialsRequest.class)
+            processDescribeUserScramCredentials(ctx, requestBearer);
         else
             throw new RuntimeException("Unexpected admin request type: " + requestClass.getName());
     }
@@ -267,6 +269,29 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
                 });
             } else {
                 logger.error("Unable to get broker config description.", error);
+                HttpUtils.writeInternalServerErrorAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+            }
+        });
+    }
+
+    private void processDescribeUserScramCredentials(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException {
+        var request = (AdminDescribeUserScramCredentialsRequest) requestBearer.request();
+        var wrapper = provider.getAdmin(request.getAdminId(), request.getToken());
+        wrapper.touch();
+        var admin = wrapper.getAdmin();
+        var describeResult = admin.describeUserScramCredentials(request.getUsers());
+        describeResult.all().whenComplete((descriptions, error) -> {
+            if (error == null) {
+                var response = AdminResponseMapper.mapDescribeUserScramCredentialsResponse(descriptions);
+                ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
+            } else if (error instanceof ClusterAuthorizationException)
+                HttpUtils.writeUnauthorizedAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+            else if (error instanceof ResourceNotFoundException)
+                HttpUtils.writeBadRequestAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+            else if (error instanceof DuplicateResourceException)
+                HttpUtils.writeBadRequestAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+            else {
+                logger.error("Unable to describe user SCRAM credentials.", error);
                 HttpUtils.writeInternalServerErrorAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
             }
         });

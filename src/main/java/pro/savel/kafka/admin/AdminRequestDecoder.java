@@ -79,6 +79,7 @@ public class AdminRequestDecoder extends ChannelInboundHandlerAdapter {
             case "/release" -> decodeRemove(ctx, httpRequest);
             case "/set-topic-config" -> decodeSetTopicConfig(ctx, httpRequest);
             case "/delete-topic-config" -> decodeDeleteTopicConfig(ctx, httpRequest);
+            case "/describe-user-scram-credentials" -> decodeDescribeUserScramCredentials(ctx, httpRequest);
             case "" -> decodeList(ctx, httpRequest);
             default -> HttpUtils.writeNotFoundAndClose(ctx, httpRequest.protocolVersion());
         }
@@ -183,6 +184,14 @@ public class AdminRequestDecoder extends ChannelInboundHandlerAdapter {
     private void decodeDeleteTopicConfig(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
         if (httpRequest.method() == HttpMethod.POST) {
             decodeJsonRequest(ctx, httpRequest, AdminDeleteTopicConfigRequest.class);
+        } else {
+            throw new BadRequestException("Unsupported HTTP method.");
+        }
+    }
+
+    private void decodeDescribeUserScramCredentials(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
+        if (httpRequest.method() == HttpMethod.POST) {
+            decodeJsonRequest(ctx, httpRequest, AdminDescribeUserScramCredentialsRequest.class);
         } else {
             throw new BadRequestException("Unsupported HTTP method.");
         }

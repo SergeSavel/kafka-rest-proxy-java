@@ -14,19 +14,13 @@
 
 package pro.savel.kafka.admin;
 
-import org.apache.kafka.clients.admin.Config;
-import org.apache.kafka.clients.admin.ConfigEntry;
-import org.apache.kafka.clients.admin.TopicDescription;
-import org.apache.kafka.clients.admin.TopicListing;
+import org.apache.kafka.clients.admin.*;
 import org.apache.kafka.common.acl.AclOperation;
 import pro.savel.kafka.admin.responses.*;
 import pro.savel.kafka.common.CommonMapper;
 import pro.savel.kafka.common.contract.TopicPartitionInfo;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 
 public class AdminResponseMapper {
 
@@ -124,6 +118,41 @@ public class AdminResponseMapper {
         result.setReadOnly(source.isReadOnly());
         result.setType(source.type().name());
         result.setDocumentation(source.documentation());
+        return result;
+    }
+
+    public static AdminDescribeUserScramCredentialsResponse mapDescribeUserScramCredentialsResponse(Map<String, UserScramCredentialsDescription> source) {
+        if (source == null)
+            return null;
+        var sourceDescriptions = source.values();
+        var result = new AdminDescribeUserScramCredentialsResponse(sourceDescriptions.size());
+        sourceDescriptions.forEach(sourceDescription -> result.add(mapScramCredentialDescription(sourceDescription)));
+        return result;
+    }
+
+    private static AdminDescribeUserScramCredentialsResponse.ScramCredentialDescription mapScramCredentialDescription(UserScramCredentialsDescription source) {
+        if (source == null)
+            return null;
+        var result = new AdminDescribeUserScramCredentialsResponse.ScramCredentialDescription();
+        result.setName(source.name());
+        result.setCredentialInfos(mapScramCredentialInfos(source.credentialInfos()));
+        return result;
+    }
+
+    private static ArrayList<AdminDescribeUserScramCredentialsResponse.ScramCredentialInfo> mapScramCredentialInfos(Collection<ScramCredentialInfo> source) {
+        if (source == null)
+            return null;
+        var result = new ArrayList<AdminDescribeUserScramCredentialsResponse.ScramCredentialInfo>(source.size());
+        source.forEach(sourceItem -> result.add(mapScramCredentialInfo(sourceItem)));
+        return result;
+    }
+
+    private static AdminDescribeUserScramCredentialsResponse.ScramCredentialInfo mapScramCredentialInfo(ScramCredentialInfo source) {
+        if (source == null)
+            return null;
+        var result = new AdminDescribeUserScramCredentialsResponse.ScramCredentialInfo();
+        result.setScramMechanism(source.mechanism().mechanismName());
+        result.setIterations(source.iterations());
         return result;
     }
 }
