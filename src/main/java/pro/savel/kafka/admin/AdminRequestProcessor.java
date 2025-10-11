@@ -112,6 +112,10 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
             processDeleteTopicConfig(ctx, requestBearer);
         else if (requestClass == AdminDescribeUserScramCredentialsRequest.class)
             processDescribeUserScramCredentials(ctx, requestBearer);
+        else if (requestClass == AdminUpsertUserScramCredentialsRequest.class)
+            processUpsertUserScramCredentials(ctx, requestBearer);
+        else if (requestClass == AdminDeleteUserScramCredentialsRequest.class)
+            processDeleteUserScramCredentials(ctx, requestBearer);
         else
             throw new RuntimeException("Unexpected admin request type: " + requestClass.getName());
     }
@@ -292,6 +296,49 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
                 HttpUtils.writeBadRequestAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
             else {
                 logger.error("Unable to describe user SCRAM credentials.", error);
+                HttpUtils.writeInternalServerErrorAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+            }
+        });
+    }
+
+    private void processUpsertUserScramCredentials(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException {
+        var request = (AdminUpsertUserScramCredentialsRequest) requestBearer.request();
+        var wrapper = provider.getAdmin(request.getAdminId(), request.getToken());
+        wrapper.touch();
+        var admin = wrapper.getAdmin();
+        var iterations = request.getIterations() == null ? 4096 : request.getIterations();
+        var credentialInfo = new ScramCredentialInfo(ScramMechanism.fromMechanismName(request.getMechanism()), iterations);
+        var alteration = new UserScramCredentialUpsertion(request.getUser(), credentialInfo, request.getPassword());
+        processAlterUserScramCredentials(ctx, requestBearer, admin, alteration);
+    }
+
+    private void processDeleteUserScramCredentials(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException {
+        var request = (AdminDeleteUserScramCredentialsRequest) requestBearer.request();
+        var wrapper = provider.getAdmin(request.getAdminId(), request.getToken());
+        wrapper.touch();
+        var admin = wrapper.getAdmin();
+        var alteration = new UserScramCredentialDeletion(request.getUser(), ScramMechanism.fromMechanismName(request.getMechanism()));
+        processAlterUserScramCredentials(ctx, requestBearer, admin, alteration);
+    }
+
+    private void processAlterUserScramCredentials(ChannelHandlerContext ctx, RequestBearer requestBearer, Admin admin, UserScramCredentialAlteration alteration) {
+        var alterationResult = admin.alterUserScramCredentials(Collections.singletonList(alteration));
+        alterationResult.all().whenComplete((ignore, error) -> {
+            if (error == null) {
+                var responseBearer = new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, null);
+                ctx.writeAndFlush(responseBearer);
+            } else if (error instanceof NotControllerException)
+                HttpUtils.writeBadRequestAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+            else if (error instanceof ClusterAuthorizationException)
+                HttpUtils.writeUnauthorizedAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+            else if (error instanceof UnsupportedByAuthenticationException)
+                HttpUtils.writeUnauthorizedAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+            else if (error instanceof UnsupportedSaslMechanismException)
+                HttpUtils.writeBadRequestAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+            else if (error instanceof UnacceptableCredentialException)
+                HttpUtils.writeBadRequestAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+            else {
+                logger.error("Unable to upsert user SCRAM credentials.", error);
                 HttpUtils.writeInternalServerErrorAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
             }
         });

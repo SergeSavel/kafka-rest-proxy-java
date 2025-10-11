@@ -80,6 +80,8 @@ public class AdminRequestDecoder extends ChannelInboundHandlerAdapter {
             case "/set-topic-config" -> decodeSetTopicConfig(ctx, httpRequest);
             case "/delete-topic-config" -> decodeDeleteTopicConfig(ctx, httpRequest);
             case "/describe-user-scram-credentials" -> decodeDescribeUserScramCredentials(ctx, httpRequest);
+            case "/upsert-user-scram-credentials" -> decodeUpsertUserScramCredentials(ctx, httpRequest);
+            case "/delete-user-scram-credentials" -> decodeDeleteUserScramCredentials(ctx, httpRequest);
             case "" -> decodeList(ctx, httpRequest);
             default -> HttpUtils.writeNotFoundAndClose(ctx, httpRequest.protocolVersion());
         }
@@ -192,6 +194,22 @@ public class AdminRequestDecoder extends ChannelInboundHandlerAdapter {
     private void decodeDescribeUserScramCredentials(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
         if (httpRequest.method() == HttpMethod.POST) {
             decodeJsonRequest(ctx, httpRequest, AdminDescribeUserScramCredentialsRequest.class);
+        } else {
+            throw new BadRequestException("Unsupported HTTP method.");
+        }
+    }
+
+    private void decodeUpsertUserScramCredentials(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
+        if (httpRequest.method() == HttpMethod.POST) {
+            decodeJsonRequest(ctx, httpRequest, AdminUpsertUserScramCredentialsRequest.class);
+        } else {
+            throw new BadRequestException("Unsupported HTTP method.");
+        }
+    }
+
+    private void decodeDeleteUserScramCredentials(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
+        if (httpRequest.method() == HttpMethod.POST) {
+            decodeJsonRequest(ctx, httpRequest, AdminDeleteUserScramCredentialsRequest.class);
         } else {
             throw new BadRequestException("Unsupported HTTP method.");
         }
