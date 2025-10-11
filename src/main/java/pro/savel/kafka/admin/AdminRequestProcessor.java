@@ -150,6 +150,15 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
         ctx.writeAndFlush(responseBearer);
     }
 
+    private static void processDescribeClusterError(ChannelHandlerContext ctx, RequestBearer requestBearer, Throwable error) {
+        if (error instanceof SaslAuthenticationException)
+            HttpUtils.writeUnauthorizedAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+        else {
+            logger.error("Unable to get cluster description.", error);
+            HttpUtils.writeInternalServerErrorAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+        }
+    }
+
     private void processDescribeCluster(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException {
         var request = (AdminDescribeClusterRequest) requestBearer.request();
         var wrapper = provider.getAdmin(request.getAdminId(), request.getToken());
@@ -165,8 +174,7 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
                 if (successCounter.decrementAndGet() == 0)
                     ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
             } else if (errorCounter.decrementAndGet() == 0) {
-                logger.error("Unable to get cluster description.", error);
-                HttpUtils.writeInternalServerErrorAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+                processDescribeClusterError(ctx, requestBearer, error);
             }
         });
         describeResult.clusterId().whenComplete((clusterId, error) -> {
@@ -175,8 +183,7 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
                 if (successCounter.decrementAndGet() == 0)
                     ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
             } else if (errorCounter.decrementAndGet() == 0) {
-                logger.error("Unable to get cluster description.", error);
-                HttpUtils.writeInternalServerErrorAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+                processDescribeClusterError(ctx, requestBearer, error);
             }
         });
         describeResult.controller().whenComplete((controllerSource, error) -> {
@@ -185,8 +192,7 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
                 if (successCounter.decrementAndGet() == 0)
                     ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
             } else if (errorCounter.decrementAndGet() == 0) {
-                logger.error("Unable to get cluster description.", error);
-                HttpUtils.writeInternalServerErrorAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+                processDescribeClusterError(ctx, requestBearer, error);
             }
         });
         describeResult.authorizedOperations().whenComplete((aclOperationsSource, error) -> {
@@ -195,8 +201,7 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
                 if (successCounter.decrementAndGet() == 0)
                     ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
             } else if (errorCounter.decrementAndGet() == 0) {
-                logger.error("Unable to get cluster description.", error);
-                HttpUtils.writeInternalServerErrorAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+                processDescribeClusterError(ctx, requestBearer, error);
             }
         });
     }
