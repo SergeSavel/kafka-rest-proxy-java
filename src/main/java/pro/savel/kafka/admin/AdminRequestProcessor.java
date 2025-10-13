@@ -326,27 +326,44 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
         processAlterUserScramCredentials(ctx, requestBearer, admin, alteration);
     }
 
-    private void processAlterUserScramCredentials(ChannelHandlerContext ctx, RequestBearer requestBearer, Admin admin, UserScramCredentialAlteration alteration) {
-        var alterationResult = admin.alterUserScramCredentials(Collections.singletonList(alteration));
-        alterationResult.all().whenComplete((ignore, error) -> {
-            if (error == null) {
-                var responseBearer = new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, null);
-                ctx.writeAndFlush(responseBearer);
-            } else if (error instanceof NotControllerException)
-                HttpUtils.writeBadRequestAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
-            else if (error instanceof ClusterAuthorizationException)
-                HttpUtils.writeUnauthorizedAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
-            else if (error instanceof UnsupportedByAuthenticationException)
-                HttpUtils.writeUnauthorizedAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
-            else if (error instanceof UnsupportedSaslMechanismException)
-                HttpUtils.writeBadRequestAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
-            else if (error instanceof UnacceptableCredentialException)
-                HttpUtils.writeBadRequestAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
-            else {
-                logger.error("Unable to upsert user SCRAM credentials.", error);
-                HttpUtils.writeInternalServerErrorAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
-            }
-        });
+    public void processRequest(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException, UnauthenticatedException, UnauthorizedException {
+        var requestClass = requestBearer.request().getClass();
+        if (requestClass == AdminDescribeTopicRequest.class)
+            processDescribeTopic(ctx, requestBearer);
+        else if (requestClass == AdminCreateTopicRequest.class)
+            processCreateTopic(ctx, requestBearer);
+        else if (requestClass == AdminDeleteTopicRequest.class)
+            processDeleteTopic(ctx, requestBearer);
+        else if (requestClass == AdminListTopicsRequest.class)
+            processListTopics(ctx, requestBearer);
+        else if (requestClass == AdminDescribeTopicConfigsRequest.class)
+            processDescribeTopicConfigs(ctx, requestBearer);
+        else if (requestClass == AdminDescribeBrokerConfigsRequest.class)
+            processDescribeBrokerConfigs(ctx, requestBearer);
+        else if (requestClass == AdminDescribeClusterRequest.class)
+            processDescribeCluster(ctx, requestBearer);
+        else if (requestClass == AdminCreateRequest.class)
+            processCreate(ctx, requestBearer);
+        else if (requestClass == AdminRemoveRequest.class)
+            processRemove(ctx, requestBearer);
+        else if (requestClass == AdminTouchRequest.class)
+            processTouch(ctx, requestBearer);
+        else if (requestClass == AdminListRequest.class)
+            processList(ctx, requestBearer);
+        else if (requestClass == AdminSetTopicConfigRequest.class)
+            processSetTopicConfig(ctx, requestBearer);
+        else if (requestClass == AdminDeleteTopicConfigRequest.class)
+            processDeleteTopicConfig(ctx, requestBearer);
+        else if (requestClass == AdminDescribeUserScramCredentialsRequest.class)
+            processDescribeUserScramCredentials(ctx, requestBearer);
+        else if (requestClass == AdminUpsertUserScramCredentialsRequest.class)
+            processUpsertUserScramCredentials(ctx, requestBearer);
+        else if (requestClass == AdminDeleteUserScramCredentialsRequest.class)
+            processDeleteUserScramCredentials(ctx, requestBearer);
+        else if (requestClass == AdminDescribeAclsRequest.class)
+            processDescribeAcls(ctx, requestBearer);
+        else
+            throw new RuntimeException("Unexpected admin request type: " + requestClass.getName());
     }
 
     private void processSetTopicConfig(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException {
