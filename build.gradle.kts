@@ -38,6 +38,14 @@ dependencies {
     testAnnotationProcessor("org.projectlombok:lombok:1.18.42")
 }
 
+distributions {
+    main {
+        contents {
+            from("LICENSE")
+        }
+    }
+}
+
 tasks.test {
     useJUnitPlatform()
 }
