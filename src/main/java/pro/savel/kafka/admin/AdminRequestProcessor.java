@@ -424,7 +424,7 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
         var createResult = admin.createTopics(Collections.singleton(newTopic));
         createResult.all().whenComplete((topics, error) -> {
             if (error == null) {
-                ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.CREATED, null));
+                ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null));
             } else {
                 logger.error("Unable to create topic.", error);
                 HttpUtils.writeInternalServerErrorAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
