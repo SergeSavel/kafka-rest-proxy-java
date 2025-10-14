@@ -82,6 +82,9 @@ public class AdminRequestDecoder extends ChannelInboundHandlerAdapter {
             case "/describe-user-scram-credentials" -> decodeDescribeUserScramCredentials(ctx, httpRequest);
             case "/upsert-user-scram-credentials" -> decodeUpsertUserScramCredentials(ctx, httpRequest);
             case "/delete-user-scram-credentials" -> decodeDeleteUserScramCredentials(ctx, httpRequest);
+            case "/describe-acls" -> decodeDescribeAcls(ctx, httpRequest);
+            case "/create-acls" -> decodeCreateAcls(ctx, httpRequest);
+            case "/delete-acls" -> decodeDeleteAcls(ctx, httpRequest);
             case "" -> decodeList(ctx, httpRequest);
             default -> HttpUtils.writeNotFoundAndClose(ctx, httpRequest.protocolVersion());
         }
@@ -210,6 +213,30 @@ public class AdminRequestDecoder extends ChannelInboundHandlerAdapter {
     private void decodeDeleteUserScramCredentials(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
         if (httpRequest.method() == HttpMethod.POST) {
             decodeJsonRequest(ctx, httpRequest, AdminDeleteUserScramCredentialsRequest.class);
+        } else {
+            throw new BadRequestException("Unsupported HTTP method.");
+        }
+    }
+
+    private void decodeDescribeAcls(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
+        if (httpRequest.method() == HttpMethod.POST) {
+            decodeJsonRequest(ctx, httpRequest, AdminDescribeAclsRequest.class);
+        } else {
+            throw new BadRequestException("Unsupported HTTP method.");
+        }
+    }
+
+    private void decodeCreateAcls(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
+        if (httpRequest.method() == HttpMethod.POST) {
+            decodeJsonRequest(ctx, httpRequest, AdminCreateAclsRequest.class);
+        } else {
+            throw new BadRequestException("Unsupported HTTP method.");
+        }
+    }
+
+    private void decodeDeleteAcls(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
+        if (httpRequest.method() == HttpMethod.POST) {
+            decodeJsonRequest(ctx, httpRequest, AdminDeleteAclsRequest.class);
         } else {
             throw new BadRequestException("Unsupported HTTP method.");
         }

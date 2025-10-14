@@ -82,42 +82,13 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
         provider.close();
     }
 
-    public void processRequest(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException, UnauthenticatedException, UnauthorizedException {
-        var requestClass = requestBearer.request().getClass();
-        if (requestClass == AdminDescribeTopicRequest.class)
-            processDescribeTopic(ctx, requestBearer);
-        else if (requestClass == AdminCreateTopicRequest.class)
-            processCreateTopic(ctx, requestBearer);
-        else if (requestClass == AdminDeleteTopicRequest.class)
-            processDeleteTopic(ctx, requestBearer);
-        else if (requestClass == AdminListTopicsRequest.class)
-            processListTopics(ctx, requestBearer);
-        else if (requestClass == AdminDescribeTopicConfigsRequest.class)
-            processDescribeTopicConfigs(ctx, requestBearer);
-        else if (requestClass == AdminDescribeBrokerConfigsRequest.class)
-            processDescribeBrokerConfigs(ctx, requestBearer);
-        else if (requestClass == AdminDescribeClusterRequest.class)
-            processDescribeCluster(ctx, requestBearer);
-        else if (requestClass == AdminCreateRequest.class)
-            processCreate(ctx, requestBearer);
-        else if (requestClass == AdminRemoveRequest.class)
-            processRemove(ctx, requestBearer);
-        else if (requestClass == AdminTouchRequest.class)
-            processTouch(ctx, requestBearer);
-        else if (requestClass == AdminListRequest.class)
-            processList(ctx, requestBearer);
-        else if (requestClass == AdminSetTopicConfigRequest.class)
-            processSetTopicConfig(ctx, requestBearer);
-        else if (requestClass == AdminDeleteTopicConfigRequest.class)
-            processDeleteTopicConfig(ctx, requestBearer);
-        else if (requestClass == AdminDescribeUserScramCredentialsRequest.class)
-            processDescribeUserScramCredentials(ctx, requestBearer);
-        else if (requestClass == AdminUpsertUserScramCredentialsRequest.class)
-            processUpsertUserScramCredentials(ctx, requestBearer);
-        else if (requestClass == AdminDeleteUserScramCredentialsRequest.class)
-            processDeleteUserScramCredentials(ctx, requestBearer);
-        else
-            throw new RuntimeException("Unexpected admin request type: " + requestClass.getName());
+    private static void processDescribeClusterError(ChannelHandlerContext ctx, RequestBearer requestBearer, Throwable error) {
+        if (error instanceof SaslAuthenticationException)
+            HttpUtils.writeUnauthorizedAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+        else {
+            logger.error("Unable to get cluster description.", error);
+            HttpUtils.writeInternalServerErrorAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+        }
     }
 
     private void processList(ChannelHandlerContext ctx, RequestBearer requestBearer) {
@@ -148,15 +119,6 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
         wrapper.touch();
         var responseBearer = new AdminResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null);
         ctx.writeAndFlush(responseBearer);
-    }
-
-    private static void processDescribeClusterError(ChannelHandlerContext ctx, RequestBearer requestBearer, Throwable error) {
-        if (error instanceof SaslAuthenticationException)
-            HttpUtils.writeUnauthorizedAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
-        else {
-            logger.error("Unable to get cluster description.", error);
-            HttpUtils.writeInternalServerErrorAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
-        }
     }
 
     private void processDescribeCluster(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException {
@@ -202,6 +164,29 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
                     ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
             } else if (errorCounter.decrementAndGet() == 0) {
                 processDescribeClusterError(ctx, requestBearer, error);
+            }
+        });
+    }
+
+    private static void processAlterUserScramCredentials(ChannelHandlerContext ctx, RequestBearer requestBearer, Admin admin, UserScramCredentialAlteration alteration) {
+        var alterationResult = admin.alterUserScramCredentials(Collections.singletonList(alteration));
+        alterationResult.all().whenComplete((ignore, error) -> {
+            if (error == null) {
+                var responseBearer = new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, null);
+                ctx.writeAndFlush(responseBearer);
+            } else if (error instanceof NotControllerException)
+                HttpUtils.writeBadRequestAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+            else if (error instanceof ClusterAuthorizationException)
+                HttpUtils.writeUnauthorizedAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+            else if (error instanceof UnsupportedByAuthenticationException)
+                HttpUtils.writeUnauthorizedAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+            else if (error instanceof UnsupportedSaslMechanismException)
+                HttpUtils.writeBadRequestAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+            else if (error instanceof UnacceptableCredentialException)
+                HttpUtils.writeBadRequestAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+            else {
+                logger.error("Unable to upsert user SCRAM credentials.", error);
+                HttpUtils.writeInternalServerErrorAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
             }
         });
     }
@@ -362,6 +347,10 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
             processDeleteUserScramCredentials(ctx, requestBearer);
         else if (requestClass == AdminDescribeAclsRequest.class)
             processDescribeAcls(ctx, requestBearer);
+        else if (requestClass == AdminCreateAclsRequest.class)
+            processCreateAcls(ctx, requestBearer);
+        else if (requestClass == AdminDeleteAclsRequest.class)
+            processDeleteAcls(ctx, requestBearer);
         else
             throw new RuntimeException("Unexpected admin request type: " + requestClass.getName());
     }
@@ -454,6 +443,62 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
                 ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null));
             } else {
                 logger.error("Unable to delete topic.", error);
+                HttpUtils.writeInternalServerErrorAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+            }
+        });
+    }
+
+    private void processDescribeAcls(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException {
+        var request = (AdminDescribeAclsRequest) requestBearer.request();
+        var wrapper = provider.getAdmin(request.getAdminId(), request.getToken());
+        wrapper.touch();
+        var admin = wrapper.getAdmin();
+        var filter = AdminRequestMapper.mapAclBindingFilter(request.getFilter());
+        var describeResult = admin.describeAcls(filter);
+        describeResult.values().whenComplete((aclBindings, error) -> {
+            if (error == null) {
+                var response = AdminResponseMapper.mapDescribeAclsResponse(aclBindings);
+                ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
+            } else {
+                logger.error("Unable to describe ACLs.", error);
+                HttpUtils.writeInternalServerErrorAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+            }
+        });
+    }
+
+    private void processCreateAcls(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException {
+        var request = (AdminCreateAclsRequest) requestBearer.request();
+        var wrapper = provider.getAdmin(request.getAdminId(), request.getToken());
+        wrapper.touch();
+        var admin = wrapper.getAdmin();
+        var acls = AdminRequestMapper.mapAclBindings(request.getAcls());
+        var createAclsResult = admin.createAcls(acls);
+        createAclsResult.all().whenComplete((ignore, error) -> {
+            if (error == null)
+                ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null));
+            else if (error instanceof InvalidRequestException)
+                HttpUtils.writeBadRequestAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+            else {
+                logger.error("Unable to create ACLs.", error);
+                HttpUtils.writeInternalServerErrorAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+            }
+        });
+    }
+
+    private void processDeleteAcls(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException {
+        var request = (AdminDeleteAclsRequest) requestBearer.request();
+        var wrapper = provider.getAdmin(request.getAdminId(), request.getToken());
+        wrapper.touch();
+        var admin = wrapper.getAdmin();
+        var filters = AdminRequestMapper.mapAclBindingFilters(request.getFilters());
+        var createAclsResult = admin.deleteAcls(filters);
+        createAclsResult.all().whenComplete((ignore, error) -> {
+            if (error == null)
+                ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null));
+            else if (error instanceof InvalidRequestException)
+                HttpUtils.writeBadRequestAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+            else {
+                logger.error("Unable to delete ACLs.", error);
                 HttpUtils.writeInternalServerErrorAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
             }
         });

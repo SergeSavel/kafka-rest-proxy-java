@@ -15,7 +15,11 @@
 package pro.savel.kafka.admin;
 
 import org.apache.kafka.clients.admin.*;
+import org.apache.kafka.common.acl.AccessControlEntry;
+import org.apache.kafka.common.acl.AclBinding;
 import org.apache.kafka.common.acl.AclOperation;
+import org.apache.kafka.common.resource.ResourcePattern;
+import pro.savel.kafka.admin.data.AdminAclBinding;
 import pro.savel.kafka.admin.responses.*;
 import pro.savel.kafka.common.CommonMapper;
 import pro.savel.kafka.common.contract.TopicPartitionInfo;
@@ -153,6 +157,44 @@ public class AdminResponseMapper {
         var result = new AdminDescribeUserScramCredentialsResponse.ScramCredentialInfo();
         result.setScramMechanism(source.mechanism().mechanismName());
         result.setIterations(source.iterations());
+        return result;
+    }
+
+    public static AdminDescribeAclsResponse mapDescribeAclsResponse(Collection<AclBinding> source) {
+        if (source == null)
+            return null;
+        var result = new AdminDescribeAclsResponse(source.size());
+        source.forEach(aclBinding -> result.add(mapAclBinding(aclBinding)));
+        return result;
+    }
+
+    private static AdminAclBinding mapAclBinding(AclBinding source) {
+        if (source == null)
+            return null;
+        var result = new AdminAclBinding();
+        result.setPattern(mapResourcePattern(source.pattern()));
+        result.setEntry(mapAccessControlEntry(source.entry()));
+        return result;
+    }
+
+    private static AdminAclBinding.ResourcePattern mapResourcePattern(ResourcePattern source) {
+        if (source == null)
+            return null;
+        var result = new AdminAclBinding.ResourcePattern();
+        result.setResourceType(source.resourceType().name());
+        result.setName(source.name());
+        result.setPatternType(source.patternType().name());
+        return result;
+    }
+
+    private static AdminAclBinding.AccessControlEntry mapAccessControlEntry(AccessControlEntry source) {
+        if (source == null)
+            return null;
+        var result = new AdminAclBinding.AccessControlEntry();
+        result.setPrincipal(source.principal());
+        result.setHost(source.host());
+        result.setOperation(source.operation().name());
+        result.setPermissionType(source.permissionType().name());
         return result;
     }
 }
