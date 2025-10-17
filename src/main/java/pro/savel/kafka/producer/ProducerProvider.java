@@ -32,7 +32,7 @@ public class ProducerProvider extends ClientProvider<ProducerWrapper> {
                 if (value == null) {
                     return new ProducerWrapper(id, name, config, expirationTimeout);
                 } else {
-                    value.getCounter().incrementAndGet();
+                    value.getInstantiationsCounter().incrementAndGet();
                     return value;
                 }
             });
@@ -52,7 +52,7 @@ public class ProducerProvider extends ClientProvider<ProducerWrapper> {
             return;
         if (!token.equals(wrapper.getToken()))
             throw new BadRequestException("Invalid token.", null);
-        var counter = wrapper.getCounter().decrementAndGet();
+        var counter = wrapper.getInstantiationsCounter().decrementAndGet();
         if (counter == 0)
             removeItem(id);
     }
