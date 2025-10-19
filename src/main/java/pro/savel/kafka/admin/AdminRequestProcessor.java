@@ -177,7 +177,7 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
             } else if (error instanceof NotControllerException)
                 HttpUtils.writeBadRequestAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
             else if (error instanceof ClusterAuthorizationException)
-                HttpUtils.writeUnauthorizedAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+                HttpUtils.writeForbiddenAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
             else if (error instanceof UnsupportedByAuthenticationException)
                 HttpUtils.writeUnauthorizedAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
             else if (error instanceof UnsupportedSaslMechanismException)
@@ -249,7 +249,7 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
         processDescribeConfigs(ctx, requestBearer, admin, resource);
     }
 
-    private void processDescribeConfigs(ChannelHandlerContext ctx, RequestBearer requestBearer, Admin admin, ConfigResource resource) {
+    private static void processDescribeConfigs(ChannelHandlerContext ctx, RequestBearer requestBearer, Admin admin, ConfigResource resource) {
         var describeResult = admin.describeConfigs(Collections.singleton(resource));
         describeResult.all().whenComplete((configs, error) -> {
             if (error == null) {
@@ -261,7 +261,15 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
                     AdminConfigResponse response = AdminResponseMapper.mapConfigResponse(config);
                     ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
                 });
-            } else {
+            } else if (error instanceof ClusterAuthorizationException)
+                HttpUtils.writeForbiddenAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+            else if (error.getCause() instanceof ClusterAuthorizationException)
+                HttpUtils.writeForbiddenAndClose(ctx, requestBearer.protocolVersion(), error.getCause().getMessage());
+            else if (error instanceof TopicAuthorizationException)
+                HttpUtils.writeForbiddenAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+            else if (error.getCause() instanceof TopicAuthorizationException)
+                HttpUtils.writeForbiddenAndClose(ctx, requestBearer.protocolVersion(), error.getCause().getMessage());
+            else {
                 logger.error("Unable to get broker config description.", error);
                 HttpUtils.writeInternalServerErrorAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
             }
@@ -279,7 +287,7 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
                 var response = AdminResponseMapper.mapDescribeUserScramCredentialsResponse(descriptions);
                 ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
             } else if (error instanceof ClusterAuthorizationException)
-                HttpUtils.writeUnauthorizedAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+                HttpUtils.writeForbiddenAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
             else if (error instanceof ResourceNotFoundException)
                 HttpUtils.writeBadRequestAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
             else if (error instanceof DuplicateResourceException)
@@ -369,9 +377,9 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
                 var responseBearer = new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, null);
                 ctx.writeAndFlush(responseBearer);
             } else if (error instanceof ClusterAuthorizationException)
-                HttpUtils.writeUnauthorizedAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+                HttpUtils.writeForbiddenAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
             else if (error instanceof TopicAuthorizationException)
-                HttpUtils.writeUnauthorizedAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+                HttpUtils.writeForbiddenAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
             else if (error instanceof UnknownTopicOrPartitionException)
                 HttpUtils.writeBadRequestAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
             else if (error instanceof InvalidRequestException)
@@ -399,9 +407,9 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
                 var responseBearer = new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, null);
                 ctx.writeAndFlush(responseBearer);
             } else if (error instanceof ClusterAuthorizationException)
-                HttpUtils.writeUnauthorizedAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+                HttpUtils.writeForbiddenAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
             else if (error instanceof TopicAuthorizationException)
-                HttpUtils.writeUnauthorizedAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+                HttpUtils.writeForbiddenAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
             else if (error instanceof UnknownTopicOrPartitionException)
                 HttpUtils.writeBadRequestAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
             else if (error instanceof InvalidRequestException)
@@ -459,7 +467,9 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
             if (error == null) {
                 var response = AdminResponseMapper.mapDescribeAclsResponse(aclBindings);
                 ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
-            } else {
+            } else if (error instanceof ClusterAuthorizationException)
+                HttpUtils.writeForbiddenAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+            else {
                 logger.error("Unable to describe ACLs.", error);
                 HttpUtils.writeInternalServerErrorAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
             }
