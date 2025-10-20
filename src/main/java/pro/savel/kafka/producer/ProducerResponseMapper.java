@@ -59,6 +59,8 @@ public abstract class ProducerResponseMapper {
         result.setPartition(source.partition());
         result.setOffset(source.offset());
         result.setTimestamp(source.timestamp());
+        result.setSerializedKeySize(source.serializedKeySize());
+        result.setSerializedValueSize(source.serializedValueSize());
         return result;
     }
 

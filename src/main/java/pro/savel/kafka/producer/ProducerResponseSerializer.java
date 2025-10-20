@@ -49,6 +49,8 @@ public class ProducerResponseSerializer {
         buf.writeInt(response.getPartition());
         buf.writeLong(response.getOffset());
         buf.writeLong(response.getTimestamp());
+        buf.writeInt(response.getSerializedKeySize());
+        buf.writeInt(response.getSerializedValueSize());
         return buf;
     }
 

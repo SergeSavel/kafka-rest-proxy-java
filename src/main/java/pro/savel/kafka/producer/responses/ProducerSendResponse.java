@@ -22,4 +22,6 @@ public class ProducerSendResponse implements ProducerResponse {
     private int partition;
     private long offset;
     private long timestamp;
+    private int serializedKeySize;
+    private int serializedValueSize;
 }
