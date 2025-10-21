@@ -41,8 +41,6 @@ public class ProducerProvider extends ClientProvider<ProducerWrapper> {
             return;
         if (!token.equals(wrapper.getToken()))
             throw new BadRequestException("Invalid token.", null);
-        var counter = wrapper.getInstantiationsCounter().decrementAndGet();
-        if (counter == 0)
-            removeItem(id);
+        removeItem(id);
     }
 }
