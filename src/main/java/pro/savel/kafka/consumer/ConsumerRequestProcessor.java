@@ -90,10 +90,15 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
         }
     }
 
-    @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        logger.error("An error occurred while processing consumer request.", cause);
-        ctx.close();
+    private static List<PartitionInfo> listPartitions(ConsumerWrapper wrapper, ConsumerListPartitionsRequest request) throws UnauthenticatedException, UnauthorizedException {
+        var consumer = wrapper.getConsumer();
+        try {
+            return consumer.partitionsFor(request.getTopic());
+        } catch (AuthenticationException e) {
+            throw new UnauthenticatedException("Unable to get partitions (unauthenticated).", e);
+        } catch (AuthorizationException e) {
+            throw new UnauthorizedException("Unable to get partitions (unauthorized).", e);
+        }
     }
 
     @Override
@@ -101,42 +106,10 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
         provider.close();
     }
 
-    private void processRequest(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException, UnauthenticatedException, UnauthorizedException {
-        var requestClass = requestBearer.request().getClass();
-        if (requestClass == ConsumerPollRequest.class)
-            processPoll(ctx, requestBearer);
-        else if (requestClass == ConsumerCommitRequest.class)
-            processCommit(ctx, requestBearer);
-        else if (requestClass == ConsumerSeekRequest.class)
-            processSeek(ctx, requestBearer);
-        else if (requestClass == ConsumerGetPartitionsRequest.class)
-            processGetPartitions(ctx, requestBearer);
-        else if (requestClass == ConsumerAssignRequest.class)
-            processAssign(ctx, requestBearer);
-        else if (requestClass == ConsumerSubscribeRequest.class)
-            processSubscribe(ctx, requestBearer);
-        else if (requestClass == ConsumerGetBeginningOffsetsRequest.class)
-            processGetBeginningOffsets(ctx, requestBearer);
-        else if (requestClass == ConsumerGetEndOffsetsRequest.class)
-            processGetEndOffsets(ctx, requestBearer);
-        else if (requestClass == ConsumerListTopicsRequest.class)
-            processListTopics(ctx, requestBearer);
-        else if (requestClass == ConsumerGetPositionRequest.class)
-            processGetPosition(ctx, requestBearer);
-        else if (requestClass == ConsumerGetAssignmentRequest.class)
-            processGetAssignment(ctx, requestBearer);
-        else if (requestClass == ConsumerGetSubscriptionRequest.class)
-            processGetSubscription(ctx, requestBearer);
-        else if (requestClass == ConsumerCreateRequest.class)
-            processCreate(ctx, requestBearer);
-        else if (requestClass == ConsumerReleaseRequest.class)
-            processRemove(ctx, requestBearer);
-        else if (requestClass == ConsumerListRequest.class)
-            processList(ctx, requestBearer);
-        else if (requestClass == ConsumerTouchRequest.class)
-            processTouch(ctx, requestBearer);
-        else
-            throw new RuntimeException("Unexpected consumer request type: " + requestClass.getName());
+    @Override
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+        logger.error("An error occurred while processing consumer request.", cause);
+        ctx.close();
     }
 
     private void processList(ChannelHandlerContext ctx, RequestBearer requestBearer) {
@@ -265,15 +238,42 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
         }
     }
 
-    private static List<PartitionInfo> getPartitions(ConsumerWrapper wrapper, ConsumerGetPartitionsRequest request) throws UnauthenticatedException, UnauthorizedException {
-        var consumer = wrapper.getConsumer();
-        try {
-            return consumer.partitionsFor(request.getTopic());
-        } catch (AuthenticationException e) {
-            throw new UnauthenticatedException("Unable to get partitions (unauthenticated).", e);
-        } catch (AuthorizationException e) {
-            throw new UnauthorizedException("Unable to get partitions (unauthorized).", e);
-        }
+    private void processRequest(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException, UnauthenticatedException, UnauthorizedException {
+        var requestClass = requestBearer.request().getClass();
+        if (requestClass == ConsumerPollRequest.class)
+            processPoll(ctx, requestBearer);
+        else if (requestClass == ConsumerCommitRequest.class)
+            processCommit(ctx, requestBearer);
+        else if (requestClass == ConsumerSeekRequest.class)
+            processSeek(ctx, requestBearer);
+        else if (requestClass == ConsumerListPartitionsRequest.class)
+            processListPartitions(ctx, requestBearer);
+        else if (requestClass == ConsumerAssignRequest.class)
+            processAssign(ctx, requestBearer);
+        else if (requestClass == ConsumerSubscribeRequest.class)
+            processSubscribe(ctx, requestBearer);
+        else if (requestClass == ConsumerGetBeginningOffsetsRequest.class)
+            processGetBeginningOffsets(ctx, requestBearer);
+        else if (requestClass == ConsumerGetEndOffsetsRequest.class)
+            processGetEndOffsets(ctx, requestBearer);
+        else if (requestClass == ConsumerListTopicsRequest.class)
+            processListTopics(ctx, requestBearer);
+        else if (requestClass == ConsumerGetPositionRequest.class)
+            processGetPosition(ctx, requestBearer);
+        else if (requestClass == ConsumerGetAssignmentRequest.class)
+            processGetAssignment(ctx, requestBearer);
+        else if (requestClass == ConsumerGetSubscriptionRequest.class)
+            processGetSubscription(ctx, requestBearer);
+        else if (requestClass == ConsumerCreateRequest.class)
+            processCreate(ctx, requestBearer);
+        else if (requestClass == ConsumerReleaseRequest.class)
+            processRemove(ctx, requestBearer);
+        else if (requestClass == ConsumerListRequest.class)
+            processList(ctx, requestBearer);
+        else if (requestClass == ConsumerTouchRequest.class)
+            processTouch(ctx, requestBearer);
+        else
+            throw new RuntimeException("Unexpected consumer request type: " + requestClass.getName());
     }
 
     private void processSubscribe(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException {
@@ -340,11 +340,11 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
         ctx.writeAndFlush(responseBearer);
     }
 
-    private void processGetPartitions(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException, UnauthenticatedException, UnauthorizedException {
-        var request = (ConsumerGetPartitionsRequest) requestBearer.request();
+    private void processListPartitions(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException, UnauthenticatedException, UnauthorizedException {
+        var request = (ConsumerListPartitionsRequest) requestBearer.request();
         var wrapper = provider.getConsumer(request.getConsumerId(), request.getToken());
         wrapper.touch();
-        var partitions = getPartitions(wrapper, request);
+        var partitions = listPartitions(wrapper, request);
         var response = ConsumerResponseMapper.mapPartitionsResponse(partitions);
         var responseBearer = new ConsumerResponseBearer(requestBearer, HttpResponseStatus.OK, response);
         ctx.writeAndFlush(responseBearer);
