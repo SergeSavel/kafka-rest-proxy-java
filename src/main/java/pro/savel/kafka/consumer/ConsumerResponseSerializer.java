@@ -95,10 +95,10 @@ public class ConsumerResponseSerializer {
         buf.writeShort(1); //version
         buf.writeInt(response.size());
         for (ConsumerMessage message : response) {
-            buf.writeLong(message.getTimestamp());
             writeBytes(buf, message.getTopic());
             buf.writeInt(message.getPartition());
             buf.writeLong(message.getOffset());
+            buf.writeLong(message.getTimestamp());
             buf.writeInt(message.getHeaders().size());
             for (ConsumerMessage.Header header : message.getHeaders()) {
                 writeBytes(buf, header.getKey());
