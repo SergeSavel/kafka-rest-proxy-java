@@ -1,13 +1,14 @@
 plugins {
     id("application")
+    java
 }
 
 group = "pro.savel.kafka"
-version = "5.0-SNAPSHOT"
+version = "5.0.0-SNAPSHOT"
 
 java {
     toolchain {
-        languageVersion.set(JavaLanguageVersion.of(17))
+        languageVersion = JavaLanguageVersion.of(17)
     }
 }
 
@@ -43,6 +44,12 @@ distributions {
         contents {
             from("LICENSE")
         }
+    }
+}
+
+tasks.jar {
+    manifest {
+        attributes(mapOf("Implementation-Version" to version))
     }
 }
 

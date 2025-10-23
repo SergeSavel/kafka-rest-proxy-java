@@ -54,6 +54,10 @@ public abstract class HttpUtils {
         return APPLICATION_OCTET_STREAM.equals(contentType);
     }
 
+    public static void writeOkAndClose(ChannelHandlerContext ctx, HttpVersion version, String message) {
+        writeHttpResponseAndClose(ctx, version, HttpResponseStatus.OK, message);
+    }
+
     public static void writeBadRequestAndClose(ChannelHandlerContext ctx, HttpVersion version, String message) {
         writeHttpResponseAndClose(ctx, version, HttpResponseStatus.BAD_REQUEST, message);
     }

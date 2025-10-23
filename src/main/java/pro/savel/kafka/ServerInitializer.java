@@ -38,6 +38,7 @@ class ServerInitializer extends ChannelInitializer<SocketChannel> implements Aut
     private final ProducerRequestDecoder producerRequestDecoder = new ProducerRequestDecoder(objectMapper);
     private final ConsumerRequestDecoder consumerRequestDecoder = new ConsumerRequestDecoder(objectMapper);
     private final AdminRequestDecoder adminRequestDecoder = new AdminRequestDecoder(objectMapper);
+    private final VersionRequestDecoder versionRequestDecoder = new VersionRequestDecoder();
     private final DefaultRequestDecoder defaultRequestDecoder = new DefaultRequestDecoder();
 
     private final ProducerRequestProcessor producerRequestProcessor = new ProducerRequestProcessor();
@@ -62,6 +63,7 @@ class ServerInitializer extends ChannelInitializer<SocketChannel> implements Aut
         pipeline.addLast(producerRequestDecoder);
         pipeline.addLast(consumerRequestDecoder);
         pipeline.addLast(adminRequestDecoder);
+        pipeline.addLast(versionRequestDecoder);
         pipeline.addLast(defaultRequestDecoder);
         pipeline.addLast(producerResponseEncoder);
         pipeline.addLast(consumerResponseEncoder);
