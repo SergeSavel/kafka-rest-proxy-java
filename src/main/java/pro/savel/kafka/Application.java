@@ -42,8 +42,14 @@ public class Application
             var channel = bootstrap.bind(port).sync().channel();
             logger.info("Server started on port {}", port);
 
+            Runtime.getRuntime().addShutdownHook(new Thread(() ->
+            {
+                logger.info("Server is shutting down...");
+                bossGroup.shutdownGracefully();
+                workerGroup.shutdownGracefully();
+            }));
+
             channel.closeFuture().sync();
-            logger.info("Server is shutting down...");
         }
         finally
         {
