@@ -8,7 +8,7 @@ Type=simple
 User=kafka-proxy
 Environment=JAVA_OPTS="-Xms256M -Xmx2G"
 Environment=KAFKA_PROXY_OPTS="-Dport=8086"
-ExecStart=/bin/sh -c '/opt/kafka-rest-proxy/bin/kafka-proxy > /var/log/kafka-proxy/kafka-proxy.log 2>&1'
+ExecStart=/bin/sh -c '/opt/kafka-proxy/bin/kafka-proxy > /var/log/kafka-proxy/kafka-proxy.log 2>&1'
 ExecStop=/bin/kill -15 $MAINPID
 Restart=on-failure
 RestartSec=5
