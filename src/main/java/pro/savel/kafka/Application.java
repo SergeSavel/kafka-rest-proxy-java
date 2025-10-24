@@ -50,6 +50,7 @@ public class Application
                 logger.info("Server is shutting down...");
                 bossGroup.shutdownGracefully();
                 workerGroup.shutdownGracefully();
+                logger.info("Shutdown completed.");
                 latch.countDown();
             }));
 
