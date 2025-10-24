@@ -1,0 +1,18 @@
+[Unit]
+Description=Kafka REST Proxy
+Requires=network.target
+After=network.target
+
+[Service]
+Type=simple
+User=kafka-proxy
+Environment=JAVA_OPTS="-Xms256M -Xmx2G"
+Environment=KAFKA_PROXY_OPTS="-Dport=8086"
+ExecStart=/bin/sh -c '/opt/kafka-rest-proxy/bin/kafka-proxy > /var/log/kafka-proxy/kafka-proxy.log 2>&1'
+ExecStop=/bin/kill -15 $MAINPID
+Restart=on-failure
+RestartSec=5
+SuccessExitStatus=143
+
+[Install]
+WantedBy=multi-user.target
