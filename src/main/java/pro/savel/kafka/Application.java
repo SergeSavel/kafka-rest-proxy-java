@@ -47,6 +47,7 @@ public class Application
             var latch = new CountDownLatch(1);
             Runtime.getRuntime().addShutdownHook(new Thread(() ->
             {
+                logger.info("Server is shutting down...");
                 bossGroup.shutdownGracefully();
                 workerGroup.shutdownGracefully();
                 latch.countDown();
@@ -54,7 +55,6 @@ public class Application
 
             channel.closeFuture().sync();
 
-            logger.info("Server is shutting down...");
             latch.await();
         }
         finally
