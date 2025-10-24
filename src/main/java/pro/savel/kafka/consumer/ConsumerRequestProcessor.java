@@ -136,7 +136,7 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
         ctx.writeAndFlush(responseBearer);
     }
 
-    private void processPoll(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException, UnauthenticatedException, UnauthorizedException {
+    private void processPoll(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException {
         var request = (ConsumerPollRequest) requestBearer.request();
         var wrapper = provider.getConsumer(request.getConsumerId(), request.getToken());
         wrapper.touch();
@@ -277,7 +277,7 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
         ctx.writeAndFlush(responseBearer);
     }
 
-    private void processGetPosition(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException, UnauthenticatedException, UnauthorizedException {
+    private void processGetPosition(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException {
         var request = (ConsumerGetPositionRequest) requestBearer.request();
         var wrapper = provider.getConsumer(request.getConsumerId(), request.getToken());
         wrapper.touch();
@@ -289,7 +289,7 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
         ctx.writeAndFlush(responseBearer);
     }
 
-    private void processListPartitions(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException, UnauthenticatedException, UnauthorizedException {
+    private void processListPartitions(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException {
         var request = (ConsumerListPartitionsRequest) requestBearer.request();
         var wrapper = provider.getConsumer(request.getConsumerId(), request.getToken());
         wrapper.touch();
@@ -300,7 +300,7 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
         ctx.writeAndFlush(responseBearer);
     }
 
-    private void processGetBeginningOffsets(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException, UnauthenticatedException, UnauthorizedException {
+    private void processGetBeginningOffsets(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException {
         var request = (ConsumerGetBeginningOffsetsRequest) requestBearer.request();
         var wrapper = provider.getConsumer(request.getConsumerId(), request.getToken());
         wrapper.touch();
@@ -312,7 +312,7 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
         ctx.writeAndFlush(responseBearer);
     }
 
-    private void processGetEndOffsets(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException, UnauthenticatedException, UnauthorizedException {
+    private void processGetEndOffsets(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException {
         var request = (ConsumerGetEndOffsetsRequest) requestBearer.request();
         var wrapper = provider.getConsumer(request.getConsumerId(), request.getToken());
         wrapper.touch();
