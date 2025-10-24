@@ -22,6 +22,8 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.concurrent.CountDownLatch;
+
 public class Application
 {
     private static final Logger logger = LoggerFactory.getLogger(Application.class);
@@ -42,14 +44,18 @@ public class Application
             var channel = bootstrap.bind(port).sync().channel();
             logger.info("Server started on port {}", port);
 
+            var latch = new CountDownLatch(1);
             Runtime.getRuntime().addShutdownHook(new Thread(() ->
             {
-                logger.info("Server is shutting down...");
                 bossGroup.shutdownGracefully();
                 workerGroup.shutdownGracefully();
+                latch.countDown();
             }));
 
             channel.closeFuture().sync();
+
+            logger.info("Server is shutting down...");
+            latch.await();
         }
         finally
         {
