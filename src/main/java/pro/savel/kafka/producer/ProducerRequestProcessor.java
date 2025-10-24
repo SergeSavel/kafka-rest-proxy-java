@@ -23,10 +23,7 @@ import org.apache.kafka.clients.producer.Callback;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.PartitionInfo;
-import org.apache.kafka.common.errors.AuthenticationException;
-import org.apache.kafka.common.errors.AuthorizationException;
-import org.apache.kafka.common.errors.InvalidTopicException;
-import org.apache.kafka.common.errors.UnknownTopicOrPartitionException;
+import org.apache.kafka.common.errors.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import pro.savel.kafka.common.HttpUtils;
@@ -132,9 +129,11 @@ public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter imple
                     var responseBearer = new ProducerResponseBearer(requestBearer, HttpResponseStatus.CREATED, response);
                     ctx.writeAndFlush(responseBearer);
                 } else {
-                    if (exception instanceof InvalidTopicException || exception instanceof UnknownTopicOrPartitionException) {
+                    if (exception instanceof InvalidTopicException || exception instanceof UnknownTopicOrPartitionException)
                         HttpUtils.writeBadRequestAndClose(ctx, requestBearer.protocolVersion(), exception.getMessage());
-                    } else {
+                    else if (exception instanceof SaslAuthenticationException)
+                        HttpUtils.writeUnauthorizedAndClose(ctx, requestBearer.protocolVersion(), exception.getMessage());
+                    else {
                         logger.error("Unable to produce message.", exception);
                         HttpUtils.writeInternalServerErrorAndClose(ctx, requestBearer.protocolVersion(), exception.getMessage());
                     }

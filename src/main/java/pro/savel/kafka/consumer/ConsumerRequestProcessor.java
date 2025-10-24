@@ -23,7 +23,6 @@ import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.InvalidOffsetException;
 import org.apache.kafka.clients.consumer.OffsetAndMetadata;
 import org.apache.kafka.clients.consumer.SubscriptionPattern;
-import org.apache.kafka.common.PartitionInfo;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.errors.AuthenticationException;
 import org.apache.kafka.common.errors.AuthorizationException;
@@ -42,7 +41,6 @@ import pro.savel.kafka.consumer.requests.*;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.List;
 import java.util.Map;
 
 @ChannelHandler.Sharable
@@ -79,6 +77,13 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
                 HttpUtils.writeUnauthorizedAndClose(ctx, bearer.protocolVersion(), Utils.combineErrorMessage(e));
             } catch (UnauthorizedException e) {
                 HttpUtils.writeForbiddenAndClose(ctx, bearer.protocolVersion(), Utils.combineErrorMessage(e));
+            } catch (AuthenticationException e) {
+                HttpUtils.writeUnauthorizedAndClose(ctx, bearer.protocolVersion(), e.getMessage());
+            } catch (AuthorizationException e) {
+                HttpUtils.writeForbiddenAndClose(ctx, bearer.protocolVersion(), e.getMessage());
+            } catch (InvalidTopicException | InvalidOffsetException | IllegalArgumentException | IllegalStateException |
+                     ArithmeticException e) {
+                HttpUtils.writeBadRequestAndClose(ctx, bearer.protocolVersion(), e.getMessage());
             } catch (Exception e) {
                 logger.error("An unexpected error occurred while processing consumer request.", e);
                 HttpUtils.writeInternalServerErrorAndClose(ctx, bearer.protocolVersion(), Utils.combineErrorMessage(e));
@@ -87,17 +92,6 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
             }
         } else {
             ctx.fireChannelRead(msg);
-        }
-    }
-
-    private static List<PartitionInfo> listPartitions(ConsumerWrapper wrapper, ConsumerListPartitionsRequest request) throws UnauthenticatedException, UnauthorizedException {
-        var consumer = wrapper.getConsumer();
-        try {
-            return consumer.partitionsFor(request.getTopic());
-        } catch (AuthenticationException e) {
-            throw new UnauthenticatedException("Unable to get partitions (unauthenticated).", e);
-        } catch (AuthorizationException e) {
-            throw new UnauthorizedException("Unable to get partitions (unauthorized).", e);
         }
     }
 
@@ -148,16 +142,7 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
         wrapper.touch();
         var consumer = wrapper.getConsumer();
         ConsumerRecords<byte[], byte[]> records;
-        try {
-            records = consumer.poll(Duration.ofMillis(request.getTimeout()));
-        } catch (InvalidTopicException | InvalidOffsetException | IllegalArgumentException | IllegalStateException |
-                 ArithmeticException e) {
-            throw new BadRequestException("Unable to poll records.", e);
-        } catch (AuthenticationException e) {
-            throw new UnauthenticatedException("Unable to poll records.", e);
-        } catch (AuthorizationException e) {
-            throw new UnauthorizedException("Unable to poll records.", e);
-        }
+        records = consumer.poll(Duration.ofMillis(request.getTimeout()));
         var response = ConsumerResponseMapper.mapPollResponse(records);
         var responseBearer = new ConsumerResponseBearer(requestBearer, HttpResponseStatus.OK, response);
         ctx.writeAndFlush(responseBearer);
@@ -222,20 +207,6 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
         }
         var responseBearer = new ConsumerResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null);
         ctx.writeAndFlush(responseBearer);
-    }
-
-    private static long getPosition(ConsumerWrapper wrapper, ConsumerGetPositionRequest request) throws BadRequestException, UnauthenticatedException, UnauthorizedException {
-        var consumer = wrapper.getConsumer();
-        var topicPartition = new TopicPartition(request.getTopic(), request.getPartition());
-        try {
-            return consumer.position(topicPartition);
-        } catch (IllegalArgumentException | IllegalStateException e) {
-            throw new BadRequestException("Unable to get position.", e);
-        } catch (AuthenticationException e) {
-            throw new UnauthenticatedException("Unable to get position.", e);
-        } catch (AuthorizationException e) {
-            throw new UnauthorizedException("Unable to get position.", e);
-        }
     }
 
     private void processRequest(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException, UnauthenticatedException, UnauthorizedException {
@@ -306,35 +277,13 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
         ctx.writeAndFlush(responseBearer);
     }
 
-    private static Map<TopicPartition, Long> getBeginningOffsets(ConsumerWrapper wrapper, ConsumerGetBeginningOffsetsRequest request) throws UnauthenticatedException, UnauthorizedException {
-        var consumer = wrapper.getConsumer();
-        var partitions = mapAssignment(request.getPartitions());
-        try {
-            return consumer.beginningOffsets(partitions);
-        } catch (AuthenticationException e) {
-            throw new UnauthenticatedException("Unable to get beginning offsets.", e);
-        } catch (AuthorizationException e) {
-            throw new UnauthorizedException("Unable to get beginning offsets.", e);
-        }
-    }
-
-    private static Map<TopicPartition, Long> getEndOffsets(ConsumerWrapper wrapper, ConsumerGetEndOffsetsRequest request) throws UnauthenticatedException, UnauthorizedException {
-        var consumer = wrapper.getConsumer();
-        var partitions = mapAssignment(request.getPartitions());
-        try {
-            return consumer.endOffsets(partitions);
-        } catch (AuthenticationException e) {
-            throw new UnauthenticatedException("Unable to get beginning offsets.", e);
-        } catch (AuthorizationException e) {
-            throw new UnauthorizedException("Unable to get beginning offsets.", e);
-        }
-    }
-
     private void processGetPosition(ChannelHandlerContext ctx, RequestBearer requestBearer) throws NotFoundException, BadRequestException, UnauthenticatedException, UnauthorizedException {
         var request = (ConsumerGetPositionRequest) requestBearer.request();
         var wrapper = provider.getConsumer(request.getConsumerId(), request.getToken());
         wrapper.touch();
-        long position = getPosition(wrapper, request);
+        var consumer = wrapper.getConsumer();
+        var topicPartition = new TopicPartition(request.getTopic(), request.getPartition());
+        long position = consumer.position(topicPartition);
         var response = ConsumerResponseMapper.mapPositionResponse(position);
         var responseBearer = new ConsumerResponseBearer(requestBearer, HttpResponseStatus.OK, response);
         ctx.writeAndFlush(responseBearer);
@@ -344,7 +293,8 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
         var request = (ConsumerListPartitionsRequest) requestBearer.request();
         var wrapper = provider.getConsumer(request.getConsumerId(), request.getToken());
         wrapper.touch();
-        var partitions = listPartitions(wrapper, request);
+        var consumer = wrapper.getConsumer();
+        var partitions = consumer.partitionsFor(request.getTopic());
         var response = ConsumerResponseMapper.mapPartitionsResponse(partitions);
         var responseBearer = new ConsumerResponseBearer(requestBearer, HttpResponseStatus.OK, response);
         ctx.writeAndFlush(responseBearer);
@@ -354,7 +304,9 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
         var request = (ConsumerGetBeginningOffsetsRequest) requestBearer.request();
         var wrapper = provider.getConsumer(request.getConsumerId(), request.getToken());
         wrapper.touch();
-        var offsets = getBeginningOffsets(wrapper, request);
+        var consumer = wrapper.getConsumer();
+        var partitions = mapAssignment(request.getPartitions());
+        var offsets = consumer.beginningOffsets(partitions);
         var response = ConsumerResponseMapper.mapOffsetsResponse(offsets);
         var responseBearer = new ConsumerResponseBearer(requestBearer, HttpResponseStatus.OK, response);
         ctx.writeAndFlush(responseBearer);
@@ -364,7 +316,9 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
         var request = (ConsumerGetEndOffsetsRequest) requestBearer.request();
         var wrapper = provider.getConsumer(request.getConsumerId(), request.getToken());
         wrapper.touch();
-        var offsets = getEndOffsets(wrapper, request);
+        var consumer = wrapper.getConsumer();
+        var partitions = mapAssignment(request.getPartitions());
+        var offsets = consumer.endOffsets(partitions);
         var response = ConsumerResponseMapper.mapOffsetsResponse(offsets);
         var responseBearer = new ConsumerResponseBearer(requestBearer, HttpResponseStatus.OK, response);
         ctx.writeAndFlush(responseBearer);
