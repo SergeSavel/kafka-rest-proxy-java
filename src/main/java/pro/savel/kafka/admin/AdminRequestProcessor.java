@@ -295,7 +295,7 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
                 var response = AdminDescribeLogDirsResponse.of(descriptions);
                 ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
             } else if (!handleError(ctx, requestBearer, error)) {
-                logger.error("Unable to get topic description.", error);
+                logger.error("Unable to get log dir descriptions.", error);
                 HttpUtils.writeInternalServerErrorAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
             }
         });
