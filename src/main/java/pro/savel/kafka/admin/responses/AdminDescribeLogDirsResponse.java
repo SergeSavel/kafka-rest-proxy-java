@@ -53,6 +53,4 @@ public class AdminDescribeLogDirsResponse extends ArrayList<AdminDescribeLogDirs
             return result;
         }
     }
-
-
 }
