@@ -28,6 +28,7 @@ import org.hibernate.validator.messageinterpolation.ParameterMessageInterpolator
 import pro.savel.kafka.admin.AdminRequestDecoder;
 import pro.savel.kafka.admin.AdminRequestProcessor;
 import pro.savel.kafka.admin.AdminResponseEncoder;
+import pro.savel.kafka.common.BlockingTaskExecutor;
 import pro.savel.kafka.consumer.ConsumerRequestDecoder;
 import pro.savel.kafka.consumer.ConsumerRequestProcessor;
 import pro.savel.kafka.consumer.ConsumerResponseEncoder;
@@ -55,8 +56,9 @@ class ServerInitializer extends ChannelInitializer<SocketChannel> implements Aut
     private final VersionRequestDecoder versionRequestDecoder = new VersionRequestDecoder();
     private final DefaultRequestDecoder defaultRequestDecoder = new DefaultRequestDecoder();
 
-    private final ProducerRequestProcessor producerRequestProcessor = new ProducerRequestProcessor();
-    private final ConsumerRequestProcessor consumerRequestProcessor = new ConsumerRequestProcessor();
+    private final BlockingTaskExecutor blockingTaskExecutor = new BlockingTaskExecutor();
+    private final ProducerRequestProcessor producerRequestProcessor = new ProducerRequestProcessor(blockingTaskExecutor);
+    private final ConsumerRequestProcessor consumerRequestProcessor = new ConsumerRequestProcessor(blockingTaskExecutor);
     private final AdminRequestProcessor adminRequestProcessor = new AdminRequestProcessor();
 
     private final ProducerResponseEncoder producerResponseEncoder = new ProducerResponseEncoder(objectMapper);
@@ -92,6 +94,7 @@ class ServerInitializer extends ChannelInitializer<SocketChannel> implements Aut
 
     @Override
     public void close() {
+        blockingTaskExecutor.close();
         producerRequestProcessor.close();
         consumerRequestProcessor.close();
         adminRequestProcessor.close();

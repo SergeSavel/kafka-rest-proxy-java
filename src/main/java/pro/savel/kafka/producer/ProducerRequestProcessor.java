@@ -19,13 +19,15 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.util.ReferenceCountUtil;
-import org.apache.kafka.clients.producer.Callback;
 import org.apache.kafka.clients.producer.ProducerRecord;
-import org.apache.kafka.clients.producer.RecordMetadata;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import pro.savel.kafka.common.*;
 import pro.savel.kafka.producer.requests.*;
+
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.function.Consumer;
 
 @ChannelHandler.Sharable
 public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter implements AutoCloseable {
@@ -33,6 +35,11 @@ public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter imple
     private static final Logger logger = LoggerFactory.getLogger(ProducerRequestProcessor.class);
 
     private final ProducerProvider provider = new ProducerProvider();
+    private final BlockingTaskExecutor blockingTaskExecutor;
+
+    public ProducerRequestProcessor(BlockingTaskExecutor blockingTaskExecutor) {
+        this.blockingTaskExecutor = blockingTaskExecutor;
+    }
 
 //region Overrides
 
@@ -97,17 +104,20 @@ public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter imple
     private void processCreate(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (ProducerCreateRequest) requestBearer.request();
         var owner = ctx.channel().attr(NettyAttributes.USERNAME).get();
-        var wrapper = provider.createProducer(request.getName(), request.getConfig(), request.getExpirationTimeout(), owner);
-        var response = ProducerResponseMapper.mapCreateResponse(wrapper);
-        var responseBearer = new ProducerResponseBearer(requestBearer, HttpResponseStatus.CREATED, response);
-        ctx.writeAndFlush(responseBearer);
+        execute(ctx, requestBearer,
+                () -> provider.createProducer(request.getName(), request.getConfig(), request.getExpirationTimeout(), owner),
+                wrapper -> {
+                    var response = ProducerResponseMapper.mapCreateResponse(wrapper);
+                    ctx.writeAndFlush(new ProducerResponseBearer(requestBearer, HttpResponseStatus.CREATED, response));
+                });
     }
 
     private void processRemove(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (ProducerRemoveRequest) requestBearer.request();
-        provider.removeProducer(request.getProducerId(), request.getToken());
-        var responseBearer = new ProducerResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null);
-        ctx.writeAndFlush(responseBearer);
+        execute(ctx, requestBearer, () -> {
+            provider.removeProducer(request.getProducerId(), request.getToken());
+            return null;
+        }, ignored -> ctx.writeAndFlush(new ProducerResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null)));
     }
 
     private void processTouch(ChannelHandlerContext ctx, RequestBearer requestBearer) {
@@ -126,21 +136,6 @@ public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter imple
         var request = (ProducerSendRequest) requestBearer.request();
         var wrapper = provider.getProducer(request.getProducerId(), request.getToken());
         wrapper.touch();
-        var callback = new Callback() {
-            @Override
-            public void onCompletion(RecordMetadata metadata, Exception exception) {
-                if (logger.isDebugEnabled()) {
-                    logger.debug("Produce request completed.");
-                }
-                if (exception == null) {
-                    var response = ProducerResponseMapper.mapSendResponse(metadata);
-                    ctx.writeAndFlush(new ProducerResponseBearer(requestBearer, HttpResponseStatus.CREATED, response));
-                } else if (!handleError(ctx, requestBearer, exception)) {
-                    logger.error("Unable to produce message.", exception);
-                    HttpUtils.writeInternalServerErrorAndClose(ctx, requestBearer.protocolVersion(), exception.getMessage());
-                }
-            }
-        };
         if (logger.isDebugEnabled()) {
             logger.debug("Starting produce request processing.");
         }
@@ -149,7 +144,13 @@ public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter imple
         var headers = request.getHeaders();
         if (headers != null)
             headers.forEach((key, value) -> record.headers().add(key, value));
-        producer.send(record, callback);
+        execute(ctx, requestBearer, () -> producer.send(record).get(), metadata -> {
+            if (logger.isDebugEnabled()) {
+                logger.debug("Produce request completed.");
+            }
+            var response = ProducerResponseMapper.mapSendResponse(metadata);
+            ctx.writeAndFlush(new ProducerResponseBearer(requestBearer, HttpResponseStatus.CREATED, response));
+        });
     }
 
     private void processGetPartitions(ChannelHandlerContext ctx, RequestBearer requestBearer) {
@@ -157,17 +158,33 @@ public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter imple
         var wrapper = provider.getProducer(request.getProducerId(), request.getToken());
         wrapper.touch();
         var producer = wrapper.getProducer();
-        var partitions = producer.partitionsFor(request.getTopic());
-        var response = ProducerResponseMapper.mapPartitionsResponse(partitions);
-        var responseBearer = new ProducerResponseBearer(requestBearer, HttpResponseStatus.OK, response);
-        ctx.writeAndFlush(responseBearer);
+        execute(ctx, requestBearer, () -> producer.partitionsFor(request.getTopic()), partitions -> {
+            var response = ProducerResponseMapper.mapPartitionsResponse(partitions);
+            ctx.writeAndFlush(new ProducerResponseBearer(requestBearer, HttpResponseStatus.OK, response));
+        });
     }
 
 //endregion
 
+    private <T> void execute(
+            ChannelHandlerContext ctx,
+            RequestBearer requestBearer,
+            Callable<T> operation,
+            Consumer<T> completion) {
+        blockingTaskExecutor.execute(ctx, operation, (result, error) -> {
+            if (error == null) {
+                completion.accept(result);
+            } else if (!handleError(ctx, requestBearer, error)) {
+                logger.error("An unexpected error occurred while processing producer request.", error);
+                HttpUtils.writeInternalServerErrorAndClose(ctx, requestBearer.protocolVersion(), Utils.combineErrorMessage(error));
+            }
+        });
+    }
+
     private static boolean handleError(ChannelHandlerContext ctx, RequestBearer requestBearer, Throwable error) {
         var handled = true;
-        if (error instanceof java.util.concurrent.CompletionException && error.getCause() != null)
+        if ((error instanceof java.util.concurrent.CompletionException || error instanceof ExecutionException)
+                && error.getCause() != null)
             handled = handleError(ctx, requestBearer, error.getCause());
         else if (error instanceof org.apache.kafka.common.errors.TimeoutException && error.getCause() != null)
             handled = handleError(ctx, requestBearer, error.getCause());
