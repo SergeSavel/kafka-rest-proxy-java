@@ -42,13 +42,13 @@ public class ProducerRequestDeserializer {
         request.setToken(readString(buf));
         request.setTopic(readString(buf));
         request.setPartition(readNullableInt(buf));
-        request.setHeaders(readHeders(buf));
+        request.setHeaders(readHeaders(buf));
         request.setKey(readNullableBytes(buf));
         request.setValue(readNullableBytesToTheEnd(buf));
         return request;
     }
 
-    private static Map<String, byte[]> readHeders(ByteBuf buf) throws BadRequestException {
+    private static Map<String, byte[]> readHeaders(ByteBuf buf) throws BadRequestException {
         var headersCount = readPositiveInt(buf);
         if (headersCount > MAX_HEADERS_COUNT)
             throw new BadRequestException("Too many headers: " + headersCount);
