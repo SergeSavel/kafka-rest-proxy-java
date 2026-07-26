@@ -6,7 +6,8 @@ Lightweight Kafka HTTP Gateway built on Netty — exposes Kafka Producer, Consum
 
 ```
 HTTP Request
-  → HttpServerCodec → HttpObjectAggregator(32MB)
+  → HttpServerCodec → HttpVersionHandler → ReadTimeoutHandler(300s) → WriteTimeoutHandler(300s)
+  → HttpObjectAggregator(32MB)
   → BasicAuthenticationHandler (optional, users.json)
   → ProducerRequestDecoder → ConsumerRequestDecoder → AdminRequestDecoder
   → VersionRequestDecoder → DefaultRequestDecoder (404 fallback)
@@ -29,7 +30,7 @@ HTTP Request
 ### Key patterns
 
 - **Decoders** parse JSON/binary requests into typed Request DTOs, pass via `RequestBearer`
-- **Processors** handle business logic; producer/consumer use `BlockingTaskExecutor` (virtual threads) for blocking Kafka calls; admin currently calls Kafka on the event loop
+- **Processors** handle business logic; producer/consumer use `BlockingTaskExecutor` (virtual threads) for blocking Kafka calls; admin uses `KafkaFuture.whenComplete()` callbacks (non-blocking)
 - **Encoders** serialize Response DTOs to JSON/binary HTTP responses
 - **`ClientProvider<T>`** manages instance lifecycle: creation, expiration (1s scheduled timer), removal. Shared by producer, consumer, admin
 - **`ClientWrapper`** wraps a Kafka client instance with id, token, owner, expiration timestamp
