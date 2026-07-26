@@ -1,3 +1,3 @@
-# kafka-http-proxy
+# Kafka HTTP Gateway
 
 Build requirements: Java 21.

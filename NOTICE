@@ -1,4 +1,4 @@
-Kafka HTTP-proxy (Java, netty)
+Kafka HTTP Gateway (Java, netty)
 Copyright (c) 2019-2026 Serge Savel
 
 This product is a Java/netty application that enables sending and

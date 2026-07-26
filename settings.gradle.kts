@@ -1,2 +1,2 @@
-rootProject.name = "kafka-proxy"
+rootProject.name = "kafka-gateway"
 
