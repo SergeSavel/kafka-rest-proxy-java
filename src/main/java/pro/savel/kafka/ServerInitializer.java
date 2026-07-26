@@ -53,6 +53,7 @@ class ServerInitializer extends ChannelInitializer<SocketChannel> implements Aut
             .buildValidatorFactory();
 
     private final BasicAuthenticationHandler basicAuthenticationHandler = new BasicAuthenticationHandler(objectMapper);
+    private final HttpVersionHandler httpVersionHandler = new HttpVersionHandler();
 
     private final ProducerRequestDecoder producerRequestDecoder = new ProducerRequestDecoder(objectMapper, validatorFactory);
     private final ConsumerRequestDecoder consumerRequestDecoder = new ConsumerRequestDecoder(objectMapper, validatorFactory);
@@ -80,6 +81,7 @@ class ServerInitializer extends ChannelInitializer<SocketChannel> implements Aut
 
         ChannelPipeline pipeline = channel.pipeline();
         pipeline.addLast(new HttpServerCodec());
+        pipeline.addLast(httpVersionHandler);
         pipeline.addLast(new ReadTimeoutHandler(300, TimeUnit.SECONDS));
         pipeline.addLast(new WriteTimeoutHandler(300, TimeUnit.SECONDS));
         pipeline.addLast(new HttpObjectAggregator(32 * 1024 * 1024));

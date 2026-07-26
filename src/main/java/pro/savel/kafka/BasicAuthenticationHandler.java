@@ -90,10 +90,10 @@ public class BasicAuthenticationHandler extends ChannelInboundHandlerAdapter {
             try {
                 authenticate(ctx, httpRequest);
             } catch (UnauthenticatedException e) {
-                HttpUtils.writeUnauthorizedAndClose(ctx, httpRequest.protocolVersion(), Utils.combineErrorMessage(e));
+                HttpUtils.writeUnauthorizedAndClose(ctx, Utils.combineErrorMessage(e));
             } catch (Exception e) {
                 logger.error("An unexpected error occurred while authenticating user.", e);
-                HttpUtils.writeInternalServerErrorAndClose(ctx, httpRequest.protocolVersion(), Utils.combineErrorMessage(e));
+                HttpUtils.writeInternalServerErrorAndClose(ctx, Utils.combineErrorMessage(e));
             } finally {
                 ReferenceCountUtil.release(msg);
             }

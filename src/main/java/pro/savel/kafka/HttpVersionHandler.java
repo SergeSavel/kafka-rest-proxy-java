@@ -1,4 +1,4 @@
-// Copyright 2025 Sergey Savelev (serge@savel.pro)
+// Copyright 2026 Sergey Savelev (serge@savel.pro)
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,27 +17,25 @@ package pro.savel.kafka;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.util.ReferenceCountUtil;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import pro.savel.kafka.common.HttpUtils;
 
 @ChannelHandler.Sharable
-public class DefaultRequestDecoder extends ChannelInboundHandlerAdapter {
-
-    private static final Logger logger = LoggerFactory.getLogger(DefaultRequestDecoder.class);
+public class HttpVersionHandler extends ChannelInboundHandlerAdapter {
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) {
-        if (msg instanceof FullHttpRequest) {
-            try {
-                HttpUtils.writeNotFoundAndClose(ctx);
-            } finally {
+        if (msg instanceof HttpRequest httpRequest) {
+            if (httpRequest.protocolVersion().majorVersion() != 1
+                    || httpRequest.protocolVersion().minorVersion() != 1) {
+                HttpUtils.writeHttpResponseAndClose(ctx,
+                        HttpResponseStatus.HTTP_VERSION_NOT_SUPPORTED, null);
                 ReferenceCountUtil.release(msg);
+                return;
             }
-        } else {
-            ctx.fireChannelRead(msg);
         }
+        ctx.fireChannelRead(msg);
     }
 }

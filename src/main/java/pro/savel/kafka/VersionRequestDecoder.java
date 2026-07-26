@@ -27,10 +27,10 @@ public class VersionRequestDecoder extends ChannelInboundHandlerAdapter {
             try {
                 decode(ctx, httpRequest);
             } catch (BadRequestException e) {
-                HttpUtils.writeBadRequestAndClose(ctx, httpRequest.protocolVersion(), Utils.combineErrorMessage(e));
+                HttpUtils.writeBadRequestAndClose(ctx, Utils.combineErrorMessage(e));
             } catch (Exception e) {
                 logger.error("An unexpected error occurred while decoding version request.", e);
-                HttpUtils.writeInternalServerErrorAndClose(ctx, httpRequest.protocolVersion(), Utils.combineErrorMessage(e));
+                HttpUtils.writeInternalServerErrorAndClose(ctx, Utils.combineErrorMessage(e));
             } finally {
                 ReferenceCountUtil.release(msg);
             }
@@ -45,14 +45,14 @@ public class VersionRequestDecoder extends ChannelInboundHandlerAdapter {
         if (pathMethod.isEmpty()) {
             decodeRoot(ctx, httpRequest);
         } else {
-            HttpUtils.writeNotFoundAndClose(ctx, httpRequest.protocolVersion());
+            HttpUtils.writeNotFoundAndClose(ctx);
         }
     }
 
     private void decodeRoot(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
         if (httpRequest.method() == HttpMethod.GET) {
             var pkg = VersionRequestDecoder.class.getPackage();
-            HttpUtils.writeOkAndClose(ctx, httpRequest.protocolVersion(), pkg.getImplementationVersion());
+            HttpUtils.writeOkAndClose(ctx, pkg.getImplementationVersion());
         } else {
             throw new BadRequestException("Unsupported HTTP method.");
         }

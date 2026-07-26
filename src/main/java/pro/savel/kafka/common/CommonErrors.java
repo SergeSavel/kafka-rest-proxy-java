@@ -19,66 +19,67 @@ import org.apache.kafka.common.errors.*;
 import pro.savel.kafka.common.exceptions.*;
 
 public abstract class CommonErrors {
-    public static boolean handle(ChannelHandlerContext ctx, RequestBearer requestBearer, Throwable error) {
+    public static boolean handle(ChannelHandlerContext ctx, Throwable error) {
         var handled = true;
-        if (error instanceof BadRequestException)
-            HttpUtils.writeBadRequestAndClose(ctx, requestBearer.protocolVersion(), Utils.combineErrorMessage(error));
-        else if (error instanceof NotFoundException)
-            HttpUtils.writeNotFoundAndClose(ctx, requestBearer.protocolVersion(), Utils.combineErrorMessage(error));
-        else if (error instanceof MethodNotAllowedException)
-            HttpUtils.writeMethodNotAllowedAndClose(ctx, requestBearer.protocolVersion(), Utils.combineErrorMessage(error));
-        else if (error instanceof UnauthenticatedException)
-            HttpUtils.writeUnauthorizedAndClose(ctx, requestBearer.protocolVersion(), Utils.combineErrorMessage(error));
-        else if (error instanceof UnauthorizedException)
-            HttpUtils.writeForbiddenAndClose(ctx, requestBearer.protocolVersion(), Utils.combineErrorMessage(error));
-        else if (error instanceof InterruptedException)
-            HttpUtils.writeInternalServerErrorAndClose(ctx, requestBearer.protocolVersion(), Utils.combineErrorMessage(error));
-        else if (error instanceof IllegalArgumentException)
-            HttpUtils.writeBadRequestAndClose(ctx, requestBearer.protocolVersion(), Utils.combineErrorMessage(error));
-        else if (error instanceof IllegalStateException)
-            HttpUtils.writeConflictAndClose(ctx, requestBearer.protocolVersion(), Utils.combineErrorMessage(error));
-        else if (error instanceof WakeupException)
-            HttpUtils.writeInternalServerErrorAndClose(ctx, requestBearer.protocolVersion(), Utils.combineErrorMessage(error));
-        else if (error instanceof TimeoutException)
-            HttpUtils.writeInternalServerErrorAndClose(ctx, requestBearer.protocolVersion(), Utils.combineErrorMessage(error));
-        else if (error instanceof AuthorizationException)
-            HttpUtils.writeForbiddenAndClose(ctx, requestBearer.protocolVersion(), Utils.combineErrorMessage(error));
-        else if (error instanceof AuthenticationException)
-            HttpUtils.writeUnauthorizedAndClose(ctx, requestBearer.protocolVersion(), Utils.combineErrorMessage(error));
-        else if (error instanceof InvalidRequestException)
-            HttpUtils.writeBadRequestAndClose(ctx, requestBearer.protocolVersion(), Utils.combineErrorMessage(error));
-        else if (error instanceof InvalidOffsetException)
-            HttpUtils.writeBadRequestAndClose(ctx, requestBearer.protocolVersion(), Utils.combineErrorMessage(error));
-        else if (error instanceof ResourceNotFoundException)
-            HttpUtils.writeBadRequestAndClose(ctx, requestBearer.protocolVersion(), Utils.combineErrorMessage(error));
-        else if (error instanceof DuplicateResourceException)
-            HttpUtils.writeBadRequestAndClose(ctx, requestBearer.protocolVersion(), Utils.combineErrorMessage(error));
-        else if (error instanceof NotControllerException)
-            HttpUtils.writeConflictAndClose(ctx, requestBearer.protocolVersion(), Utils.combineErrorMessage(error));
-        else if (error instanceof UnsupportedByAuthenticationException)
-            HttpUtils.writeUnauthorizedAndClose(ctx, requestBearer.protocolVersion(), Utils.combineErrorMessage(error));
-        else if (error instanceof UnacceptableCredentialException)
-            HttpUtils.writeBadRequestAndClose(ctx, requestBearer.protocolVersion(), Utils.combineErrorMessage(error));
-        else if (error instanceof UnknownTopicOrPartitionException)
-            HttpUtils.writeBadRequestAndClose(ctx, requestBearer.protocolVersion(), Utils.combineErrorMessage(error));
-        else if (error instanceof InvalidConfigurationException)
-            HttpUtils.writeBadRequestAndClose(ctx, requestBearer.protocolVersion(), Utils.combineErrorMessage(error));
-        else if (error instanceof GroupNotEmptyException)
-            HttpUtils.writeConflictAndClose(ctx, requestBearer.protocolVersion(), Utils.combineErrorMessage(error));
-        else if (error instanceof GroupSubscribedToTopicException)
-            HttpUtils.writeConflictAndClose(ctx, requestBearer.protocolVersion(), Utils.combineErrorMessage(error));
-        else if (error instanceof UnknownMemberIdException)
-            HttpUtils.writeConflictAndClose(ctx, requestBearer.protocolVersion(), Utils.combineErrorMessage(error));
-        else if (error instanceof TopicExistsException)
-            HttpUtils.writeConflictAndClose(ctx, requestBearer.protocolVersion(), Utils.combineErrorMessage(error));
-        else if (error instanceof ReassignmentInProgressException)
-            HttpUtils.writeConflictAndClose(ctx, requestBearer.protocolVersion(), Utils.combineErrorMessage(error));
-        else if (error instanceof BrokerNotAvailableException)
-            HttpUtils.writeConflictAndClose(ctx, requestBearer.protocolVersion(), Utils.combineErrorMessage(error));
-        else if (error instanceof FencedInstanceIdException)
-            HttpUtils.writeConflictAndClose(ctx, requestBearer.protocolVersion(), Utils.combineErrorMessage(error));
-        else
-            handled = false;
+        switch (error) {
+            case BadRequestException ignored ->
+                    HttpUtils.writeBadRequestAndClose(ctx, Utils.combineErrorMessage(error));
+            case NotFoundException ignored ->
+                    HttpUtils.writeNotFoundAndClose(ctx, Utils.combineErrorMessage(error));
+            case MethodNotAllowedException ignored ->
+                    HttpUtils.writeMethodNotAllowedAndClose(ctx, Utils.combineErrorMessage(error));
+            case UnauthenticatedException ignored ->
+                    HttpUtils.writeUnauthorizedAndClose(ctx, Utils.combineErrorMessage(error));
+            case UnauthorizedException ignored ->
+                    HttpUtils.writeForbiddenAndClose(ctx, Utils.combineErrorMessage(error));
+            case InterruptedException ignored ->
+                    HttpUtils.writeInternalServerErrorAndClose(ctx, Utils.combineErrorMessage(error));
+            case IllegalArgumentException ignored ->
+                    HttpUtils.writeBadRequestAndClose(ctx, Utils.combineErrorMessage(error));
+            case IllegalStateException ignored ->
+                    HttpUtils.writeConflictAndClose(ctx, Utils.combineErrorMessage(error));
+            case WakeupException ignored ->
+                    HttpUtils.writeInternalServerErrorAndClose(ctx, Utils.combineErrorMessage(error));
+            case TimeoutException ignored ->
+                    HttpUtils.writeInternalServerErrorAndClose(ctx, Utils.combineErrorMessage(error));
+            case AuthorizationException ignored ->
+                    HttpUtils.writeForbiddenAndClose(ctx, Utils.combineErrorMessage(error));
+            case AuthenticationException ignored ->
+                    HttpUtils.writeUnauthorizedAndClose(ctx, Utils.combineErrorMessage(error));
+            case InvalidRequestException ignored ->
+                    HttpUtils.writeBadRequestAndClose(ctx, Utils.combineErrorMessage(error));
+            case InvalidOffsetException ignored ->
+                    HttpUtils.writeBadRequestAndClose(ctx, Utils.combineErrorMessage(error));
+            case ResourceNotFoundException ignored ->
+                    HttpUtils.writeBadRequestAndClose(ctx, Utils.combineErrorMessage(error));
+            case DuplicateResourceException ignored ->
+                    HttpUtils.writeBadRequestAndClose(ctx, Utils.combineErrorMessage(error));
+            case NotControllerException ignored ->
+                    HttpUtils.writeConflictAndClose(ctx, Utils.combineErrorMessage(error));
+            case UnsupportedByAuthenticationException ignored ->
+                    HttpUtils.writeUnauthorizedAndClose(ctx, Utils.combineErrorMessage(error));
+            case UnacceptableCredentialException ignored ->
+                    HttpUtils.writeBadRequestAndClose(ctx, Utils.combineErrorMessage(error));
+            case UnknownTopicOrPartitionException ignored ->
+                    HttpUtils.writeBadRequestAndClose(ctx, Utils.combineErrorMessage(error));
+            case InvalidConfigurationException ignored ->
+                    HttpUtils.writeBadRequestAndClose(ctx, Utils.combineErrorMessage(error));
+            case GroupNotEmptyException ignored ->
+                    HttpUtils.writeConflictAndClose(ctx, Utils.combineErrorMessage(error));
+            case GroupSubscribedToTopicException ignored ->
+                    HttpUtils.writeConflictAndClose(ctx, Utils.combineErrorMessage(error));
+            case UnknownMemberIdException ignored ->
+                    HttpUtils.writeConflictAndClose(ctx, Utils.combineErrorMessage(error));
+            case TopicExistsException ignored ->
+                    HttpUtils.writeConflictAndClose(ctx, Utils.combineErrorMessage(error));
+            case ReassignmentInProgressException ignored ->
+                    HttpUtils.writeConflictAndClose(ctx, Utils.combineErrorMessage(error));
+            case BrokerNotAvailableException ignored ->
+                    HttpUtils.writeConflictAndClose(ctx, Utils.combineErrorMessage(error));
+            case FencedInstanceIdException ignored ->
+                    HttpUtils.writeConflictAndClose(ctx, Utils.combineErrorMessage(error));
+            case null, default -> handled = false;
+        }
         return handled;
     }
 }

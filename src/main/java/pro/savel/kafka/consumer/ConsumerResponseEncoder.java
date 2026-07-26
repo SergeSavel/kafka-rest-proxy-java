@@ -20,6 +20,7 @@ import io.netty.channel.*;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaderValues;
+import io.netty.handler.codec.http.HttpVersion;
 import io.netty.util.ReferenceCountUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -52,7 +53,7 @@ public class ConsumerResponseEncoder extends ChannelOutboundHandlerAdapter {
             } catch (Exception e) {
                 var message = "An error occurred during consumer response serialization.";
                 logger.error(message, e);
-                HttpUtils.writeInternalServerErrorAndClose(ctx, bearer.getProtocolVersion(), message);
+                HttpUtils.writeInternalServerErrorAndClose(ctx, message);
             } finally {
                 ReferenceCountUtil.release(msg);
             }
@@ -64,30 +65,23 @@ public class ConsumerResponseEncoder extends ChannelOutboundHandlerAdapter {
     private FullHttpResponse createHttpResponse(ConsumerResponseBearer bearer) throws JsonProcessingException {
         FullHttpResponse httpResponse;
         if (bearer.getResponse() == null) {
-            httpResponse = new DefaultFullHttpResponse(bearer.getProtocolVersion(), bearer.getStatus());
+            httpResponse = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, bearer.getStatus());
         } else {
             if (bearer.getSerializeTo() == Serde.JSON) {
                 var content = ConsumerResponseSerializer.serializeJson(objectMapper, bearer.getResponse());
-                httpResponse = new DefaultFullHttpResponse(bearer.getProtocolVersion(), bearer.getStatus(), content);
+                httpResponse = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, bearer.getStatus(), content);
                 httpResponse.headers().set(HttpUtils.ASCII_CONTENT_TYPE, HttpUtils.ASCII_APPLICATION_JSON_CHARSET_UTF8);
             } else if (bearer.getSerializeTo() == Serde.BINARY) {
                 var content = ConsumerResponseSerializer.serializeBinary(bearer.getResponse());
-                httpResponse = new DefaultFullHttpResponse(bearer.getProtocolVersion(), bearer.getStatus(), content);
+                httpResponse = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, bearer.getStatus(), content);
                 httpResponse.headers().set(HttpUtils.ASCII_CONTENT_TYPE, HttpUtils.ASCII_APPLICATION_OCTET_STREAM);
             } else {
                 throw new IllegalStateException("Unexpected serde: " + bearer.getSerializeTo());
             }
         }
         httpResponse.headers().setInt(HttpUtils.ASCII_CONTENT_LENGTH, httpResponse.content().readableBytes());
-        var isKeepAliveDefault = bearer.getProtocolVersion().isKeepAliveDefault();
-        if (bearer.isConnectionKeepAlive()) {
-            if (!isKeepAliveDefault) {
-                httpResponse.headers().set(HttpUtils.ASCII_CONNECTION, HttpHeaderValues.KEEP_ALIVE);
-            }
-        } else {
-            if (isKeepAliveDefault) {
-                httpResponse.headers().set(HttpUtils.ASCII_CONNECTION, HttpHeaderValues.CLOSE);
-            }
+        if (!bearer.isConnectionKeepAlive()) {
+            httpResponse.headers().set(HttpUtils.ASCII_CONNECTION, HttpHeaderValues.CLOSE);
         }
         return httpResponse;
     }

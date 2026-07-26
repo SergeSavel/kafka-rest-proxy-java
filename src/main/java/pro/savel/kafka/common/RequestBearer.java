@@ -17,15 +17,13 @@ package pro.savel.kafka.common;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpUtil;
-import io.netty.handler.codec.http.HttpVersion;
 import pro.savel.kafka.common.contract.Request;
 import pro.savel.kafka.common.contract.Serde;
 
-public record RequestBearer(Request request, Serde serializeTo, HttpVersion protocolVersion,
-                            boolean connectionKeepAlive) {
+public record RequestBearer(Request request, Serde serializeTo, boolean connectionKeepAlive) {
 
     public RequestBearer(HttpRequest httpRequest, Request request) {
-        this(request, getSerde(httpRequest), httpRequest.protocolVersion(), HttpUtil.isKeepAlive(httpRequest));
+        this(request, getSerde(httpRequest), HttpUtil.isKeepAlive(httpRequest));
     }
 
     private static Serde getSerde(HttpRequest httpRequest) {

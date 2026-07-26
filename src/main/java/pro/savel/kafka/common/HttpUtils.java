@@ -54,64 +54,64 @@ public abstract class HttpUtils {
         return APPLICATION_OCTET_STREAM.equalsIgnoreCase(contentType);
     }
 
-    public static void writeOkAndClose(ChannelHandlerContext ctx, HttpVersion version, String message) {
-        writeHttpResponseAndClose(ctx, version, HttpResponseStatus.OK, message);
+    public static void writeOkAndClose(ChannelHandlerContext ctx, String message) {
+        writeHttpResponseAndClose(ctx, HttpResponseStatus.OK, message);
     }
 
-    public static void writeBadRequestAndClose(ChannelHandlerContext ctx, HttpVersion version, String message) {
-        writeHttpResponseAndClose(ctx, version, HttpResponseStatus.BAD_REQUEST, message);
+    public static void writeBadRequestAndClose(ChannelHandlerContext ctx, String message) {
+        writeHttpResponseAndClose(ctx, HttpResponseStatus.BAD_REQUEST, message);
     }
 
-    public static void writeNotFoundAndClose(ChannelHandlerContext ctx, HttpVersion version) {
-        writeNotFoundAndClose(ctx, version, null);
+    public static void writeNotFoundAndClose(ChannelHandlerContext ctx) {
+        writeNotFoundAndClose(ctx, null);
     }
 
-    public static void writeNotFoundAndClose(ChannelHandlerContext ctx, HttpVersion version, String message) {
-        writeHttpResponseAndClose(ctx, version, HttpResponseStatus.NOT_FOUND, message);
+    public static void writeNotFoundAndClose(ChannelHandlerContext ctx, String message) {
+        writeHttpResponseAndClose(ctx, HttpResponseStatus.NOT_FOUND, message);
     }
 
-    public static void writeMethodNotAllowedAndClose(ChannelHandlerContext ctx, HttpVersion version) {
-        writeMethodNotAllowedAndClose(ctx, version, null);
+    public static void writeMethodNotAllowedAndClose(ChannelHandlerContext ctx) {
+        writeMethodNotAllowedAndClose(ctx, null);
     }
 
-    public static void writeMethodNotAllowedAndClose(ChannelHandlerContext ctx, HttpVersion version, String message) {
-        writeHttpResponseAndClose(ctx, version, HttpResponseStatus.METHOD_NOT_ALLOWED, message);
+    public static void writeMethodNotAllowedAndClose(ChannelHandlerContext ctx, String message) {
+        writeHttpResponseAndClose(ctx, HttpResponseStatus.METHOD_NOT_ALLOWED, message);
     }
 
-    public static void writeUnauthorizedAndClose(ChannelHandlerContext ctx, HttpVersion version) {
-        writeUnauthorizedAndClose(ctx, version, null);
+    public static void writeUnauthorizedAndClose(ChannelHandlerContext ctx) {
+        writeUnauthorizedAndClose(ctx, null);
     }
 
-    public static void writeUnauthorizedAndClose(ChannelHandlerContext ctx, HttpVersion version, String message) {
-        writeHttpResponseAndClose(ctx, version, HttpResponseStatus.UNAUTHORIZED, message);
+    public static void writeUnauthorizedAndClose(ChannelHandlerContext ctx, String message) {
+        writeHttpResponseAndClose(ctx, HttpResponseStatus.UNAUTHORIZED, message);
     }
 
-    public static void writeForbiddenAndClose(ChannelHandlerContext ctx, HttpVersion version) {
-        writeForbiddenAndClose(ctx, version, null);
+    public static void writeForbiddenAndClose(ChannelHandlerContext ctx) {
+        writeForbiddenAndClose(ctx, null);
     }
 
-    public static void writeForbiddenAndClose(ChannelHandlerContext ctx, HttpVersion version, String message) {
-        writeHttpResponseAndClose(ctx, version, HttpResponseStatus.FORBIDDEN, message);
+    public static void writeForbiddenAndClose(ChannelHandlerContext ctx, String message) {
+        writeHttpResponseAndClose(ctx, HttpResponseStatus.FORBIDDEN, message);
     }
 
-    public static void writeConflictAndClose(ChannelHandlerContext ctx, HttpVersion version) {
-        writeConflictAndClose(ctx, version, null);
+    public static void writeConflictAndClose(ChannelHandlerContext ctx) {
+        writeConflictAndClose(ctx, null);
     }
 
-    public static void writeConflictAndClose(ChannelHandlerContext ctx, HttpVersion version, String message) {
-        writeHttpResponseAndClose(ctx, version, HttpResponseStatus.CONFLICT, message);
+    public static void writeConflictAndClose(ChannelHandlerContext ctx, String message) {
+        writeHttpResponseAndClose(ctx, HttpResponseStatus.CONFLICT, message);
     }
 
-    public static void writeInternalServerErrorAndClose(ChannelHandlerContext ctx, HttpVersion version) {
-        writeInternalServerErrorAndClose(ctx, version, null);
+    public static void writeInternalServerErrorAndClose(ChannelHandlerContext ctx) {
+        writeInternalServerErrorAndClose(ctx, null);
     }
 
-    public static void writeInternalServerErrorAndClose(ChannelHandlerContext ctx, HttpVersion version, String message) {
-        writeHttpResponseAndClose(ctx, version, HttpResponseStatus.INTERNAL_SERVER_ERROR, message);
+    public static void writeInternalServerErrorAndClose(ChannelHandlerContext ctx, String message) {
+        writeHttpResponseAndClose(ctx, HttpResponseStatus.INTERNAL_SERVER_ERROR, message);
     }
 
-    public static void writeHttpResponseAndClose(ChannelHandlerContext ctx, HttpVersion version, HttpResponseStatus status, String message) {
-        var httpResponse = new DefaultFullHttpResponse(version, status);
+    public static void writeHttpResponseAndClose(ChannelHandlerContext ctx, HttpResponseStatus status, String message) {
+        var httpResponse = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, status);
         if (message != null) {
             httpResponse.headers().set(ASCII_CONTENT_TYPE, ASCII_TEXT_PLAIN_CHARSET_UTF8);
             httpResponse.content().writeCharSequence(message, StandardCharsets.UTF_8);

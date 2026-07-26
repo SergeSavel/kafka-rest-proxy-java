@@ -73,9 +73,9 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
             try {
                 processRequest(ctx, bearer);
             } catch (Exception e) {
-                if (!handleError(ctx, bearer, e)) {
+                if (!handleError(ctx, e)) {
                     logger.error("An unexpected error occurred while processing admin request.", e);
-                    HttpUtils.writeInternalServerErrorAndClose(ctx, bearer.protocolVersion(), Utils.combineErrorMessage(e));
+                    HttpUtils.writeInternalServerErrorAndClose(ctx, Utils.combineErrorMessage(e));
                 }
             } finally {
                 ReferenceCountUtil.release(msg);
@@ -277,9 +277,9 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
     }
 
     private static void processDescribeClusterError(ChannelHandlerContext ctx, RequestBearer requestBearer, Throwable error) {
-        if (!handleError(ctx, requestBearer, error)) {
+        if (!handleError(ctx, error)) {
             logger.error("Unable to get cluster description.", error);
-            HttpUtils.writeInternalServerErrorAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+            HttpUtils.writeInternalServerErrorAndClose(ctx, error.getMessage());
         }
     }
 
@@ -294,9 +294,9 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
             if (error == null) {
                 var response = AdminDescribeLogDirsResponse.of(descriptions);
                 ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
-            } else if (!handleError(ctx, requestBearer, error)) {
+            } else if (!handleError(ctx, error)) {
                 logger.error("Unable to get log dir descriptions.", error);
-                HttpUtils.writeInternalServerErrorAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+                HttpUtils.writeInternalServerErrorAndClose(ctx, error.getMessage());
             }
         });
     }
@@ -328,9 +328,9 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
                 }
                 var response = AdminListTopicsResponse.of(listings);
                 ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
-            } else if (!handleError(ctx, requestBearer, error)) {
+            } else if (!handleError(ctx, error)) {
                 logger.error("Unable to get topic listings.", error);
-                HttpUtils.writeInternalServerErrorAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+                HttpUtils.writeInternalServerErrorAndClose(ctx, error.getMessage());
             }
         });
     }
@@ -355,16 +355,16 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
         describeResult.allTopicNames().whenComplete((topicNames, error) -> {
             if (error == null) {
                 if (topicNames.isEmpty()) {
-                    HttpUtils.writeNotFoundAndClose(ctx, requestBearer.protocolVersion(), "Topic not found.");
+                    HttpUtils.writeNotFoundAndClose(ctx, "Topic not found.");
                     return;
                 }
                 for (TopicDescription topicDescription : topicNames.values()) {
                     var response = AdminResponseMapper.mapDescribeTopicResponse(topicDescription);
                     ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
                 }
-            } else if (!handleError(ctx, requestBearer, error)) {
+            } else if (!handleError(ctx, error)) {
                 logger.error("Unable to get topic description.", error);
-                HttpUtils.writeInternalServerErrorAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+                HttpUtils.writeInternalServerErrorAndClose(ctx, error.getMessage());
             }
         });
     }
@@ -379,9 +379,9 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
         createResult.all().whenComplete((topics, error) -> {
             if (error == null)
                 ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null));
-            else if (!handleError(ctx, requestBearer, error)) {
+            else if (!handleError(ctx, error)) {
                 logger.error("Unable to create topic.", error);
-                HttpUtils.writeInternalServerErrorAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+                HttpUtils.writeInternalServerErrorAndClose(ctx, error.getMessage());
             }
         });
     }
@@ -396,9 +396,9 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
         deleteResult.all().whenComplete((ignore, error) -> {
             if (error == null)
                 ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null));
-            else if (!handleError(ctx, requestBearer, error)) {
+            else if (!handleError(ctx, error)) {
                 logger.error("Unable to delete topic.", error);
-                HttpUtils.writeInternalServerErrorAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+                HttpUtils.writeInternalServerErrorAndClose(ctx, error.getMessage());
             }
         });
     }
@@ -413,9 +413,9 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
         deleteResult.all().whenComplete((ignore, error) -> {
             if (error == null)
                 ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null));
-            else if (!handleError(ctx, requestBearer, error)) {
+            else if (!handleError(ctx, error)) {
                 logger.error("Unable to delete topics.", error);
-                HttpUtils.writeInternalServerErrorAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+                HttpUtils.writeInternalServerErrorAndClose(ctx, error.getMessage());
             }
         });
     }
@@ -430,9 +430,9 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
         createResult.all().whenComplete((topics, error) -> {
             if (error == null)
                 ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null));
-            else if (!handleError(ctx, requestBearer, error)) {
+            else if (!handleError(ctx, error)) {
                 logger.error("Unable to create partitions.", error);
-                HttpUtils.writeInternalServerErrorAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+                HttpUtils.writeInternalServerErrorAndClose(ctx, error.getMessage());
             }
         });
     }
@@ -464,16 +464,16 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
         describeResult.all().whenComplete((configs, error) -> {
             if (error == null) {
                 if (configs.isEmpty()) {
-                    HttpUtils.writeNotFoundAndClose(ctx, requestBearer.protocolVersion(), "Broker not found.");
+                    HttpUtils.writeNotFoundAndClose(ctx, "Broker not found.");
                     return;
                 }
                 configs.values().forEach(config -> {
                     AdminConfigResponse response = AdminResponseMapper.mapConfigResponse(config);
                     ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
                 });
-            } else if (!handleError(ctx, requestBearer, error)) {
+            } else if (!handleError(ctx, error)) {
                 logger.error("Unable to get broker config description.", error);
-                HttpUtils.writeInternalServerErrorAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+                HttpUtils.writeInternalServerErrorAndClose(ctx, error.getMessage());
             }
         });
     }
@@ -510,9 +510,9 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
             if (error == null) {
                 var responseBearer = new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, null);
                 ctx.writeAndFlush(responseBearer);
-            } else if (!handleError(ctx, requestBearer, error)) {
+            } else if (!handleError(ctx, error)) {
                 logger.error("Unable to alter topic config.", error);
-                HttpUtils.writeInternalServerErrorAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+                HttpUtils.writeInternalServerErrorAndClose(ctx, error.getMessage());
             }
         });
     }
@@ -531,9 +531,9 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
             if (error == null) {
                 var response = AdminResponseMapper.mapDescribeUserScramCredentialsResponse(descriptions);
                 ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
-            } else if (!handleError(ctx, requestBearer, error)) {
+            } else if (!handleError(ctx, error)) {
                 logger.error("Unable to describe user SCRAM credentials.", error);
-                HttpUtils.writeInternalServerErrorAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+                HttpUtils.writeInternalServerErrorAndClose(ctx, error.getMessage());
             }
         });
     }
@@ -564,9 +564,9 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
             if (error == null) {
                 var responseBearer = new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, null);
                 ctx.writeAndFlush(responseBearer);
-            } else if (!handleError(ctx, requestBearer, error)) {
+            } else if (!handleError(ctx, error)) {
                 logger.error("Unable to alter user SCRAM credentials.", error);
-                HttpUtils.writeInternalServerErrorAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+                HttpUtils.writeInternalServerErrorAndClose(ctx, error.getMessage());
             }
         });
     }
@@ -586,9 +586,9 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
             if (error == null) {
                 var response = AdminResponseMapper.mapDescribeAclsResponse(aclBindings);
                 ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
-            } else if (!handleError(ctx, requestBearer, error)) {
+            } else if (!handleError(ctx, error)) {
                 logger.error("Unable to describe ACLs.", error);
-                HttpUtils.writeInternalServerErrorAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+                HttpUtils.writeInternalServerErrorAndClose(ctx, error.getMessage());
             }
         });
     }
@@ -603,9 +603,9 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
         createAclsResult.all().whenComplete((ignore, error) -> {
             if (error == null)
                 ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null));
-            else if (!handleError(ctx, requestBearer, error)) {
+            else if (!handleError(ctx, error)) {
                 logger.error("Unable to create ACLs.", error);
-                HttpUtils.writeInternalServerErrorAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+                HttpUtils.writeInternalServerErrorAndClose(ctx, error.getMessage());
             }
         });
     }
@@ -620,9 +620,9 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
         createAclsResult.all().whenComplete((ignore, error) -> {
             if (error == null)
                 ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null));
-            else if (!handleError(ctx, requestBearer, error)) {
+            else if (!handleError(ctx, error)) {
                 logger.error("Unable to delete ACLs.", error);
-                HttpUtils.writeInternalServerErrorAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+                HttpUtils.writeInternalServerErrorAndClose(ctx, error.getMessage());
             }
         });
     }
@@ -642,9 +642,9 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
             if (error == null) {
                 var response = AdminResponseMapper.mapDescribeProducerResponse(producerStates);
                 ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
-            } else if (!handleError(ctx, requestBearer, error)) {
+            } else if (!handleError(ctx, error)) {
                 logger.error("Unable to describe producers.", error);
-                HttpUtils.writeInternalServerErrorAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+                HttpUtils.writeInternalServerErrorAndClose(ctx, error.getMessage());
             }
         });
     }
@@ -664,7 +664,7 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
             for (String groupTypeName : request.getWithTypes()) {
                 var groupType = GroupType.parse(groupTypeName);
                 if (groupType == null || groupType == GroupType.UNKNOWN) {
-                    HttpUtils.writeBadRequestAndClose(ctx, requestBearer.protocolVersion(), "Invalid group type: '" + groupTypeName + "'.");
+                    HttpUtils.writeBadRequestAndClose(ctx, "Invalid group type: '" + groupTypeName + "'.");
                     return;
                 }
                 groupTypes.add(groupType);
@@ -680,7 +680,7 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
             for (String groupStateName : request.getInStates()) {
                 var groupState = GroupState.parse(groupStateName);
                 if (groupState == null || groupState == GroupState.UNKNOWN) {
-                    HttpUtils.writeBadRequestAndClose(ctx, requestBearer.protocolVersion(), "Invalid group state: '" + groupStateName + "'.");
+                    HttpUtils.writeBadRequestAndClose(ctx, "Invalid group state: '" + groupStateName + "'.");
                     return;
                 }
                 groupStates.add(groupState);
@@ -692,9 +692,9 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
             if (error == null) {
                 var response = AdminListGroupsResponse.of(groupListings);
                 ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
-            } else if (!handleError(ctx, requestBearer, error)) {
+            } else if (!handleError(ctx, error)) {
                 logger.error("Unable to get group listings.", error);
-                HttpUtils.writeInternalServerErrorAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+                HttpUtils.writeInternalServerErrorAndClose(ctx, error.getMessage());
             }
         });
     }
@@ -712,7 +712,7 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
         describeResult.all().whenComplete((classicGroupDescriptions, error) -> {
             if (error == null) {
                 if (classicGroupDescriptions.isEmpty()) {
-                    HttpUtils.writeNotFoundAndClose(ctx, requestBearer.protocolVersion(), "Classic group not found.");
+                    HttpUtils.writeNotFoundAndClose(ctx, "Classic group not found.");
                     return;
                 }
                 for (var classicGroupDescription : classicGroupDescriptions.values()) {
@@ -720,9 +720,9 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
                     ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
                     break;
                 }
-            } else if (!handleError(ctx, requestBearer, error)) {
+            } else if (!handleError(ctx, error)) {
                 logger.error("Unable to get classic group description.", error);
-                HttpUtils.writeInternalServerErrorAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+                HttpUtils.writeInternalServerErrorAndClose(ctx, error.getMessage());
             }
         });
     }
@@ -740,7 +740,7 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
         describeResult.all().whenComplete((consumerGroupDescriptions, error) -> {
             if (error == null) {
                 if (consumerGroupDescriptions.isEmpty()) {
-                    HttpUtils.writeNotFoundAndClose(ctx, requestBearer.protocolVersion(), "Consumer group not found.");
+                    HttpUtils.writeNotFoundAndClose(ctx, "Consumer group not found.");
                     return;
                 }
                 for (var consumerGroupDescription : consumerGroupDescriptions.values()) {
@@ -748,9 +748,9 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
                     ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
                     break;
                 }
-            } else if (!handleError(ctx, requestBearer, error)) {
+            } else if (!handleError(ctx, error)) {
                 logger.error("Unable to get consumer group description.", error);
-                HttpUtils.writeInternalServerErrorAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+                HttpUtils.writeInternalServerErrorAndClose(ctx, error.getMessage());
             }
         });
     }
@@ -768,7 +768,7 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
         describeResult.all().whenComplete((shareGroupDescriptions, error) -> {
             if (error == null) {
                 if (shareGroupDescriptions.isEmpty()) {
-                    HttpUtils.writeNotFoundAndClose(ctx, requestBearer.protocolVersion(), "Share group not found.");
+                    HttpUtils.writeNotFoundAndClose(ctx, "Share group not found.");
                     return;
                 }
                 for (var shareGroupDescription : shareGroupDescriptions.values()) {
@@ -776,9 +776,9 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
                     ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
                     break;
                 }
-            } else if (!handleError(ctx, requestBearer, error)) {
+            } else if (!handleError(ctx, error)) {
                 logger.error("Unable to get share group description.", error);
-                HttpUtils.writeInternalServerErrorAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+                HttpUtils.writeInternalServerErrorAndClose(ctx, error.getMessage());
             }
         });
     }
@@ -796,7 +796,7 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
         describeResult.all().whenComplete((streamsGroupDescriptions, error) -> {
             if (error == null) {
                 if (streamsGroupDescriptions.isEmpty()) {
-                    HttpUtils.writeNotFoundAndClose(ctx, requestBearer.protocolVersion(), "Streams group not found.");
+                    HttpUtils.writeNotFoundAndClose(ctx, "Streams group not found.");
                     return;
                 }
                 for (var streamsGroupDescription : streamsGroupDescriptions.values()) {
@@ -804,9 +804,9 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
                     ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
                     break;
                 }
-            } else if (!handleError(ctx, requestBearer, error)) {
+            } else if (!handleError(ctx, error)) {
                 logger.error("Unable to get streams group description.", error);
-                HttpUtils.writeInternalServerErrorAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+                HttpUtils.writeInternalServerErrorAndClose(ctx, error.getMessage());
             }
         });
     }
@@ -824,7 +824,7 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
         listResult.all().whenComplete((offsets, error) -> {
             if (error == null) {
                 if (offsets.isEmpty()) {
-                    HttpUtils.writeNotFoundAndClose(ctx, requestBearer.protocolVersion(), "Consumer group not found.");
+                    HttpUtils.writeNotFoundAndClose(ctx, "Consumer group not found.");
                     return;
                 }
                 for (var consumerGroupOffsets : offsets.values()) {
@@ -832,9 +832,9 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
                     ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
                     break;
                 }
-            } else if (!handleError(ctx, requestBearer, error)) {
+            } else if (!handleError(ctx, error)) {
                 logger.error("Unable to list consumer group offsets.", error);
-                HttpUtils.writeInternalServerErrorAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+                HttpUtils.writeInternalServerErrorAndClose(ctx, error.getMessage());
             }
         });
     }
@@ -850,9 +850,9 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
         alterResult.all().whenComplete((ignore, error) -> {
             if (error == null)
                 ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null));
-            else if (!handleError(ctx, requestBearer, error)) {
+            else if (!handleError(ctx, error)) {
                 logger.error("Unable to alter consumer group offsets.", error);
-                HttpUtils.writeInternalServerErrorAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+                HttpUtils.writeInternalServerErrorAndClose(ctx, error.getMessage());
             }
         });
     }
@@ -868,9 +868,9 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
         deleteResult.all().whenComplete((ignore, error) -> {
             if (error == null)
                 ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null));
-            else if (!handleError(ctx, requestBearer, error)) {
+            else if (!handleError(ctx, error)) {
                 logger.error("Unable to delete consumer group offsets.", error);
-                HttpUtils.writeInternalServerErrorAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+                HttpUtils.writeInternalServerErrorAndClose(ctx, error.getMessage());
             }
         });
     }
@@ -897,9 +897,9 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
         removeResult.all().whenComplete((ignore, error) -> {
             if (error == null)
                 ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null));
-            else if (!handleError(ctx, requestBearer, error)) {
+            else if (!handleError(ctx, error)) {
                 logger.error("Unable to remove members from consumer group.", error);
-                HttpUtils.writeInternalServerErrorAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+                HttpUtils.writeInternalServerErrorAndClose(ctx, error.getMessage());
             }
         });
     }
@@ -914,9 +914,9 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
         deleteResult.all().whenComplete((ignore, error) -> {
             if (error == null)
                 ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null));
-            else if (!handleError(ctx, requestBearer, error)) {
+            else if (!handleError(ctx, error)) {
                 logger.error("Unable to delete consumer group.", error);
-                HttpUtils.writeInternalServerErrorAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+                HttpUtils.writeInternalServerErrorAndClose(ctx, error.getMessage());
             }
         });
     }
@@ -931,9 +931,9 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
         deleteResult.all().whenComplete((ignore, error) -> {
             if (error == null)
                 ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null));
-            else if (!handleError(ctx, requestBearer, error)) {
+            else if (!handleError(ctx, error)) {
                 logger.error("Unable to delete consumer groups.", error);
-                HttpUtils.writeInternalServerErrorAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+                HttpUtils.writeInternalServerErrorAndClose(ctx, error.getMessage());
             }
         });
     }
@@ -948,9 +948,9 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
         deleteResult.all().whenComplete((ignore, error) -> {
             if (error == null)
                 ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null));
-            else if (!handleError(ctx, requestBearer, error)) {
+            else if (!handleError(ctx, error)) {
                 logger.error("Unable to delete share group.", error);
-                HttpUtils.writeInternalServerErrorAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+                HttpUtils.writeInternalServerErrorAndClose(ctx, error.getMessage());
             }
         });
     }
@@ -965,9 +965,9 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
         deleteResult.all().whenComplete((ignore, error) -> {
             if (error == null)
                 ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null));
-            else if (!handleError(ctx, requestBearer, error)) {
+            else if (!handleError(ctx, error)) {
                 logger.error("Unable to delete share groups.", error);
-                HttpUtils.writeInternalServerErrorAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+                HttpUtils.writeInternalServerErrorAndClose(ctx, error.getMessage());
             }
         });
     }
@@ -982,9 +982,9 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
         deleteResult.all().whenComplete((ignore, error) -> {
             if (error == null)
                 ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null));
-            else if (!handleError(ctx, requestBearer, error)) {
+            else if (!handleError(ctx, error)) {
                 logger.error("Unable to delete streams group.", error);
-                HttpUtils.writeInternalServerErrorAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+                HttpUtils.writeInternalServerErrorAndClose(ctx, error.getMessage());
             }
         });
     }
@@ -999,9 +999,9 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
         deleteResult.all().whenComplete((ignore, error) -> {
             if (error == null)
                 ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null));
-            else if (!handleError(ctx, requestBearer, error)) {
+            else if (!handleError(ctx, error)) {
                 logger.error("Unable to delete streams groups.", error);
-                HttpUtils.writeInternalServerErrorAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+                HttpUtils.writeInternalServerErrorAndClose(ctx, error.getMessage());
             }
         });
     }
@@ -1054,7 +1054,7 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
                 var isolationLevel = IsolationLevel.valueOf(request.getIsolationLevel());
                 options = new ListOffsetsOptions(isolationLevel);
             } catch (IllegalArgumentException e) {
-                HttpUtils.writeBadRequestAndClose(ctx, requestBearer.protocolVersion(), e.getMessage());
+                HttpUtils.writeBadRequestAndClose(ctx, e.getMessage());
                 return;
             }
         var listOffsetsResult = admin.listOffsets(topicPartitionOffsets, options);
@@ -1062,22 +1062,22 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
             if (error == null) {
                 var response = AdminListOffsetsResponse.of(offsets);
                 ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
-            } else if (!handleError(ctx, requestBearer, error)) {
+            } else if (!handleError(ctx, error)) {
                 logger.error("Unable to list offsets.", error);
-                HttpUtils.writeInternalServerErrorAndClose(ctx, requestBearer.protocolVersion(), error.getMessage());
+                HttpUtils.writeInternalServerErrorAndClose(ctx, error.getMessage());
             }
         });
     }
 
 // endregion
 
-    private static boolean handleError(ChannelHandlerContext ctx, RequestBearer requestBearer, Throwable error) {
+    private static boolean handleError(ChannelHandlerContext ctx, Throwable error) {
         var handled = true;
         if (error instanceof java.util.concurrent.CompletionException && error.getCause() != null)
-            handled = handleError(ctx, requestBearer, error.getCause());
+            handled = handleError(ctx, error.getCause());
         else if (error instanceof org.apache.kafka.common.errors.TimeoutException && error.getCause() != null)
-            handled = handleError(ctx, requestBearer, error.getCause());
-        else if (!CommonErrors.handle(ctx, requestBearer, error))
+            handled = handleError(ctx, error.getCause());
+        else if (!CommonErrors.handle(ctx, error))
             handled = false;
         return handled;
     }

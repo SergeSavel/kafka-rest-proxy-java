@@ -18,7 +18,6 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.timeout.ReadTimeoutException;
 import io.netty.handler.timeout.WriteTimeoutException;
 import io.netty.util.ReferenceCountUtil;
@@ -44,9 +43,9 @@ public class DefaultInboundHandler extends ChannelInboundHandlerAdapter {
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         if (cause instanceof ReadTimeoutException) {
-            HttpUtils.writeHttpResponseAndClose(ctx, HttpVersion.HTTP_1_1, HttpResponseStatus.REQUEST_TIMEOUT, null);
+            HttpUtils.writeHttpResponseAndClose(ctx, HttpResponseStatus.REQUEST_TIMEOUT, null);
         } else if (cause instanceof WriteTimeoutException) {
-            HttpUtils.writeHttpResponseAndClose(ctx, HttpVersion.HTTP_1_1, HttpResponseStatus.GATEWAY_TIMEOUT, null);
+            HttpUtils.writeHttpResponseAndClose(ctx, HttpResponseStatus.GATEWAY_TIMEOUT, null);
         } else {
             logger.error("Unhandled pipeline exception.", cause);
             ctx.close();

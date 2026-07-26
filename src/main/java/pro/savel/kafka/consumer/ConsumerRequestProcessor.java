@@ -53,9 +53,9 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
             try {
                 processRequest(ctx, bearer);
             } catch (Exception e) {
-                if (!handleError(ctx, bearer, e)) {
+                if (!handleError(ctx, e)) {
                     logger.error("An unexpected error occurred while processing consumer request.", e);
-                    HttpUtils.writeInternalServerErrorAndClose(ctx, bearer.protocolVersion(), Utils.combineErrorMessage(e));
+                    HttpUtils.writeInternalServerErrorAndClose(ctx, Utils.combineErrorMessage(e));
                 }
             } finally {
                 ReferenceCountUtil.release(msg);
@@ -303,22 +303,22 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
         blockingTaskExecutor.execute(ctx, operation::get, (response, error) -> {
             if (error == null) {
                 ctx.writeAndFlush(response);
-            } else if (!handleError(ctx, requestBearer, error)) {
+            } else if (!handleError(ctx, error)) {
                 logger.error("An unexpected error occurred while processing consumer request.", error);
-                HttpUtils.writeInternalServerErrorAndClose(ctx, requestBearer.protocolVersion(), Utils.combineErrorMessage(error));
+                HttpUtils.writeInternalServerErrorAndClose(ctx, Utils.combineErrorMessage(error));
             }
         });
     }
 
-    private static boolean handleError(ChannelHandlerContext ctx, RequestBearer requestBearer, Throwable error) {
+    private static boolean handleError(ChannelHandlerContext ctx, Throwable error) {
         var handled = true;
         if (error instanceof java.util.concurrent.CompletionException && error.getCause() != null)
-            handled = handleError(ctx, requestBearer, error.getCause());
+            handled = handleError(ctx, error.getCause());
         else if (error instanceof org.apache.kafka.common.errors.TimeoutException && error.getCause() != null)
-            handled = handleError(ctx, requestBearer, error.getCause());
+            handled = handleError(ctx, error.getCause());
         else if (error instanceof InvalidOffsetException e)
-            HttpUtils.writeConflictAndClose(ctx, requestBearer.protocolVersion(), Utils.combineErrorMessage(e));
-        else if (!CommonErrors.handle(ctx, requestBearer, error))
+            HttpUtils.writeConflictAndClose(ctx, Utils.combineErrorMessage(e));
+        else if (!CommonErrors.handle(ctx, error))
             handled = false;
         return handled;
     }

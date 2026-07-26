@@ -80,12 +80,12 @@ public class AdminRequestDecoder extends ChannelInboundHandlerAdapter {
             try {
                 decode(ctx, httpRequest);
             } catch (BadRequestException e) {
-                HttpUtils.writeBadRequestAndClose(ctx, httpRequest.protocolVersion(), Utils.combineErrorMessage(e));
+                HttpUtils.writeBadRequestAndClose(ctx, Utils.combineErrorMessage(e));
             } catch (MethodNotAllowedException e) {
-                HttpUtils.writeMethodNotAllowedAndClose(ctx, httpRequest.protocolVersion(), Utils.combineErrorMessage(e));
+                HttpUtils.writeMethodNotAllowedAndClose(ctx, Utils.combineErrorMessage(e));
             } catch (Exception e) {
                 logger.error("An unexpected error occurred while decoding admin request.", e);
-                HttpUtils.writeInternalServerErrorAndClose(ctx, httpRequest.protocolVersion(), Utils.combineErrorMessage(e));
+                HttpUtils.writeInternalServerErrorAndClose(ctx, Utils.combineErrorMessage(e));
             } finally {
                 ReferenceCountUtil.release(msg);
             }
@@ -142,7 +142,7 @@ public class AdminRequestDecoder extends ChannelInboundHandlerAdapter {
             case "/list-max-timestamp-offsets" -> decodeListMaxTimestampOffsets(ctx, httpRequest);
             case "/list-timestamp-offsets" -> decodeListTimestampOffsets(ctx, httpRequest);
             case "" -> decodeList(ctx, httpRequest);
-            default -> HttpUtils.writeNotFoundAndClose(ctx, httpRequest.protocolVersion());
+            default -> HttpUtils.writeNotFoundAndClose(ctx);
         }
     }
 
@@ -514,7 +514,7 @@ public class AdminRequestDecoder extends ChannelInboundHandlerAdapter {
         if (validator != null) {
             var violations = validator.validate(request);
             if (!violations.isEmpty()) {
-                HttpUtils.writeBadRequestAndClose(ctx, httpRequest.protocolVersion(), Utils.combineConstraintViolationMessage(violations));
+                HttpUtils.writeBadRequestAndClose(ctx, Utils.combineConstraintViolationMessage(violations));
                 return;
             }
         }
