@@ -24,6 +24,8 @@ import java.util.Map;
 
 public class ProducerRequestDeserializer {
 
+    private static final int MAX_HEADERS_COUNT = 900;
+
     public static ProducerSendRequest deserializeBinarySend(ByteBuf buf) throws BadRequestException {
         if (buf == null)
             return null;
@@ -48,6 +50,8 @@ public class ProducerRequestDeserializer {
 
     private static Map<String, byte[]> readHeders(ByteBuf buf) throws BadRequestException {
         var headersCount = readPositiveInt(buf);
+        if (headersCount > MAX_HEADERS_COUNT)
+            throw new BadRequestException("Too many headers: " + headersCount);
         var headers = new HashMap<String, byte[]>(headersCount);
         for (int i = 1; i <= headersCount; i++) {
             var headerKey = readString(buf);
@@ -57,13 +61,15 @@ public class ProducerRequestDeserializer {
         return headers;
     }
 
-    private static byte[] readBytes(ByteBuf buf, int length) {
+    private static byte[] readBytes(ByteBuf buf, int length) throws BadRequestException {
+        if (length > buf.readableBytes())
+            throw new BadRequestException("Binary content length exceeds available data");
         var bytes = new byte[length];
         buf.readBytes(bytes);
         return bytes;
     }
 
-    private static String readString(ByteBuf buf, int length) {
+    private static String readString(ByteBuf buf, int length) throws BadRequestException {
         var bytes = readBytes(buf, length);
         return new String(bytes, StandardCharsets.UTF_8);
     }
