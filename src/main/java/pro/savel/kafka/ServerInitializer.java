@@ -22,6 +22,8 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
+import io.netty.handler.timeout.ReadTimeoutHandler;
+import io.netty.handler.timeout.WriteTimeoutHandler;
 import jakarta.validation.Validation;
 import jakarta.validation.ValidatorFactory;
 import org.hibernate.validator.messageinterpolation.ParameterMessageInterpolator;
@@ -35,6 +37,8 @@ import pro.savel.kafka.consumer.ConsumerResponseEncoder;
 import pro.savel.kafka.producer.ProducerRequestDecoder;
 import pro.savel.kafka.producer.ProducerRequestProcessor;
 import pro.savel.kafka.producer.ProducerResponseEncoder;
+
+import java.util.concurrent.TimeUnit;
 
 class ServerInitializer extends ChannelInitializer<SocketChannel> implements AutoCloseable {
 
@@ -76,6 +80,8 @@ class ServerInitializer extends ChannelInitializer<SocketChannel> implements Aut
 
         ChannelPipeline pipeline = channel.pipeline();
         pipeline.addLast(new HttpServerCodec());
+        pipeline.addLast(new ReadTimeoutHandler(300, TimeUnit.SECONDS));
+        pipeline.addLast(new WriteTimeoutHandler(300, TimeUnit.SECONDS));
         pipeline.addLast(new HttpObjectAggregator(32 * 1024 * 1024));
         pipeline.addLast(basicAuthenticationHandler);
         pipeline.addLast(producerRequestDecoder);
