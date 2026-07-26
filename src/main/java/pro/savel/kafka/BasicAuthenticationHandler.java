@@ -32,6 +32,8 @@ import pro.savel.kafka.common.exceptions.UnauthenticatedException;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
@@ -46,7 +48,7 @@ public class BasicAuthenticationHandler extends ChannelInboundHandlerAdapter {
 
     private final ObjectMapper objectMapper;
 
-    private Map<String, UserWithPassword> users;
+    private Map<String, UserWithHash> users;
 
     public BasicAuthenticationHandler(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
@@ -73,8 +75,9 @@ public class BasicAuthenticationHandler extends ChannelInboundHandlerAdapter {
             throw new RuntimeException("Unable to read from users file.", e);
         }
 
-        var users_ = new HashMap<String, UserWithPassword>();
-        userList.forEach(user -> users_.put(user.username().toUpperCase(), user));
+        var users_ = new HashMap<String, UserWithHash>();
+        userList.forEach(user -> users_.put(user.username().toUpperCase(),
+                new UserWithHash(user.username(), hash(user.password()))));
         users = users_;
 
         logger.info("Users file loaded.");
@@ -112,7 +115,15 @@ public class BasicAuthenticationHandler extends ChannelInboundHandlerAdapter {
                 throw new UnauthenticatedException("Invalid Authorization header.");
 
             var base64Credentials = authHeader.substring(6);
-            var credentialsString = new String(Base64.getDecoder().decode(base64Credentials), StandardCharsets.UTF_8);
+
+            byte[] decoded;
+            try {
+                decoded = Base64.getDecoder().decode(base64Credentials);
+            } catch (IllegalArgumentException e) {
+                throw new UnauthenticatedException("Invalid Authorization header.");
+            }
+
+            var credentialsString = new String(decoded, StandardCharsets.UTF_8);
             var credentialsArray = credentialsString.split(":", 2);
 
             if (credentialsArray.length != 2)
@@ -123,7 +134,7 @@ public class BasicAuthenticationHandler extends ChannelInboundHandlerAdapter {
             if (user == null)
                 throw new UnauthenticatedException("Invalid username or password.");
 
-            if (!credentialsArray[1].equals(user.password()))
+            if (!MessageDigest.isEqual(hash(credentialsArray[1]), user.passwordHash()))
                 throw new UnauthenticatedException("Invalid username or password.");
 
             ctx.channel().attr(NettyAttributes.USERNAME).set(user.username);
@@ -132,6 +143,17 @@ public class BasicAuthenticationHandler extends ChannelInboundHandlerAdapter {
         ctx.fireChannelRead(request.retain());
     }
 
+    private static byte[] hash(String value) {
+        try {
+            return MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8));
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     private record UserWithPassword(String username, String password) {
+    }
+
+    private record UserWithHash(String username, byte[] passwordHash) {
     }
 }
