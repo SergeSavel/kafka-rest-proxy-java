@@ -244,7 +244,7 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
                 if (successCounter.decrementAndGet() == 0)
                     ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
             } else if (errorCounter.decrementAndGet() == 0) {
-                processDescribeClusterError(ctx, requestBearer, error);
+                processDescribeClusterError(ctx, error);
             }
         });
         describeResult.clusterId().whenComplete((clusterId, error) -> {
@@ -253,7 +253,7 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
                 if (successCounter.decrementAndGet() == 0)
                     ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
             } else if (errorCounter.decrementAndGet() == 0) {
-                processDescribeClusterError(ctx, requestBearer, error);
+                processDescribeClusterError(ctx, error);
             }
         });
         describeResult.controller().whenComplete((controllerSource, error) -> {
@@ -262,7 +262,7 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
                 if (successCounter.decrementAndGet() == 0)
                     ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
             } else if (errorCounter.decrementAndGet() == 0) {
-                processDescribeClusterError(ctx, requestBearer, error);
+                processDescribeClusterError(ctx, error);
             }
         });
         describeResult.authorizedOperations().whenComplete((aclOperationsSource, error) -> {
@@ -271,12 +271,12 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
                 if (successCounter.decrementAndGet() == 0)
                     ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
             } else if (errorCounter.decrementAndGet() == 0) {
-                processDescribeClusterError(ctx, requestBearer, error);
+                processDescribeClusterError(ctx, error);
             }
         });
     }
 
-    private static void processDescribeClusterError(ChannelHandlerContext ctx, RequestBearer requestBearer, Throwable error) {
+    private static void processDescribeClusterError(ChannelHandlerContext ctx, Throwable error) {
         if (!handleError(ctx, error)) {
             logger.error("Unable to get cluster description.", error);
             HttpUtils.writeInternalServerErrorAndClose(ctx, error.getMessage());
