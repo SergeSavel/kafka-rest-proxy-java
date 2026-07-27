@@ -33,7 +33,8 @@ public class ProducerRequestMapper {
         var headersSource = stringRequest.getHeaders();
         if (headersSource != null) {
             var headers = new HashMap<String, byte[]>(stringRequest.getHeaders().size());
-            headersSource.forEach((key, value) -> headers.put(key, value.getBytes(StandardCharsets.UTF_8)));
+            headersSource.forEach((key, value) ->
+                    headers.put(key, value != null ? value.getBytes(StandardCharsets.UTF_8) : null));
             request.setHeaders(headers);
         }
 
