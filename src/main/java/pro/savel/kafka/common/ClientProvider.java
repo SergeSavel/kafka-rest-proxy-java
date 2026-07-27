@@ -43,7 +43,13 @@ public abstract class ClientProvider<Wrapper extends ClientWrapper> implements A
 
     @Override
     public void close() {
-        wrappers.forEach((uuid, wrapper) -> wrapper.close());
+        wrappers.forEach((uuid, wrapper) -> {
+            try {
+                wrapper.close();
+            } catch (Exception e) {
+                logger.warn("Failed to close {} with id '{}'.", wrapper.getClass().getSimpleName(), uuid, e);
+            }
+        });
         wrappers.clear();
         retirer.shutdownNow();
         try {
