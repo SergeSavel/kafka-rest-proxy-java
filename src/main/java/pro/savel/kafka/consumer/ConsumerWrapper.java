@@ -38,6 +38,7 @@ public class ConsumerWrapper extends ClientWrapper {
 
     @Override
     public void close() {
+        consumer.wakeup();
         consumer.close();
     }
 }
