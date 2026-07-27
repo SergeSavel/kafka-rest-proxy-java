@@ -27,7 +27,7 @@ public abstract class ClientWrapper implements AutoCloseable {
     private final int expirationTimeout;
     private final String owner;
 
-    private long expiresAt;
+    private volatile long expiresAt;
 
     protected ClientWrapper(String id, String name, Properties config, int expirationTimeout, String owner) {
         this.id = id;
