@@ -14,11 +14,13 @@
 
 package pro.savel.kafka.admin.requests.offset;
 
+import jakarta.validation.constraints.Positive;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 @EqualsAndHashCode(callSuper = true)
 @Data
 public class AdminListTimestampOffsetsRequest extends AdminListOffsetsRequest {
+    @Positive
     private long timestamp;
 }
