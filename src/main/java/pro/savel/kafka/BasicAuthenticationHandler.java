@@ -77,8 +77,12 @@ public class BasicAuthenticationHandler extends ChannelInboundHandlerAdapter {
         }
 
         var users_ = new HashMap<String, UserWithHash>();
-        userList.forEach(user -> users_.put(user.username().toUpperCase(),
-                new UserWithHash(user.username(), hash(user.password()))));
+        userList.forEach(user -> {
+            var key = user.username().toUpperCase();
+            if (users_.containsKey(key))
+                logger.warn("Duplicate username '{}' (case-insensitive) in users.json — overwriting.", user.username());
+            users_.put(key, new UserWithHash(user.username(), hash(user.password())));
+        });
         users = users_;
 
         logger.info("Users file loaded.");
