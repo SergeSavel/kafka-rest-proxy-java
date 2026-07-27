@@ -32,8 +32,10 @@ public abstract class CommonErrors {
                     HttpUtils.writeUnauthorizedAndClose(ctx, Utils.combineErrorMessage(error));
             case UnauthorizedException ignored ->
                     HttpUtils.writeForbiddenAndClose(ctx, Utils.combineErrorMessage(error));
-            case InterruptedException ignored ->
+            case InterruptedException ignored -> {
+                    Thread.currentThread().interrupt();
                     HttpUtils.writeInternalServerErrorAndClose(ctx, Utils.combineErrorMessage(error));
+            }
             case IllegalArgumentException ignored ->
                     HttpUtils.writeBadRequestAndClose(ctx, Utils.combineErrorMessage(error));
             case IllegalStateException ignored ->
