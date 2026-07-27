@@ -43,7 +43,7 @@ public class AdminResponseEncoder extends ChannelOutboundHandlerAdapter {
         if (msg instanceof AdminResponseBearer bearer) {
             try {
                 if (logger.isDebugEnabled()) {
-                    logger.debug("Encoding consumer response.");
+                    logger.debug("Encoding admin response.");
                 }
                 var httpResponse = createHttpResponse(bearer);
                 var future = ctx.write(httpResponse, promise);

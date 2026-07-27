@@ -43,7 +43,7 @@ public class ConsumerResponseEncoder extends ChannelOutboundHandlerAdapter {
         if (msg instanceof ConsumerResponseBearer bearer) {
             try {
                 if (logger.isDebugEnabled()) {
-                    logger.debug("Decoding consumer response.");
+                    logger.debug("Encoding consumer response.");
                 }
                 var httpResponse = createHttpResponse(bearer);
                 var future = ctx.write(httpResponse, promise);

@@ -43,7 +43,7 @@ public class ProducerResponseEncoder extends ChannelOutboundHandlerAdapter {
         if (msg instanceof ProducerResponseBearer bearer) {
             try {
                 if (logger.isDebugEnabled()) {
-                    logger.debug("Decoding producer response.");
+                    logger.debug("Encoding producer response.");
                 }
                 var httpResponse = createHttpResponse(bearer);
                 var future = ctx.write(httpResponse, promise);
