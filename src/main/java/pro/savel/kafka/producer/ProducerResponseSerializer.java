@@ -44,14 +44,19 @@ public class ProducerResponseSerializer {
 
     private static ByteBuf serializeSend(ProducerSendResponse response) {
         var buf = Unpooled.buffer();
-        buf.writeShort(1); //version
-        writeString(buf, response.getTopic());
-        buf.writeInt(response.getPartition());
-        buf.writeLong(response.getOffset());
-        buf.writeLong(response.getTimestamp());
-        buf.writeInt(response.getSerializedKeySize());
-        buf.writeInt(response.getSerializedValueSize());
-        return buf;
+        try {
+            buf.writeShort(1); //version
+            writeString(buf, response.getTopic());
+            buf.writeInt(response.getPartition());
+            buf.writeLong(response.getOffset());
+            buf.writeLong(response.getTimestamp());
+            buf.writeInt(response.getSerializedKeySize());
+            buf.writeInt(response.getSerializedValueSize());
+            return buf;
+        } catch (Exception e) {
+            buf.release();
+            throw e;
+        }
     }
 
     private static void writeString(ByteBuf buf, String value) {

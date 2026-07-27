@@ -92,37 +92,42 @@ public class ConsumerResponseSerializer {
 
     private static ByteBuf toPollBinaryResponse(ConsumerPollResponse response) {
         var buf = Unpooled.buffer();
-        buf.writeShort(1); //version
-        buf.writeInt(response.size());
-        for (ConsumerMessage message : response) {
-            writeBytes(buf, message.getTopic());
-            buf.writeInt(message.getPartition());
-            buf.writeLong(message.getOffset());
-            buf.writeLong(message.getTimestamp());
-            buf.writeInt(message.getHeaders().size());
-            for (ConsumerMessage.Header header : message.getHeaders()) {
-                writeBytes(buf, header.getKey());
-                if (header.getValue() == null)
+        try {
+            buf.writeShort(1); //version
+            buf.writeInt(response.size());
+            for (ConsumerMessage message : response) {
+                writeBytes(buf, message.getTopic());
+                buf.writeInt(message.getPartition());
+                buf.writeLong(message.getOffset());
+                buf.writeLong(message.getTimestamp());
+                buf.writeInt(message.getHeaders().size());
+                for (ConsumerMessage.Header header : message.getHeaders()) {
+                    writeBytes(buf, header.getKey());
+                    if (header.getValue() == null)
+                        buf.writeByte(1); // is null
+                    else {
+                        buf.writeByte(0); // is not null
+                        writeBytes(buf, header.getValue());
+                    }
+                }
+                if (message.getKey() == null)
                     buf.writeByte(1); // is null
                 else {
                     buf.writeByte(0); // is not null
-                    writeBytes(buf, header.getValue());
+                    writeBytes(buf, message.getKey());
+                }
+                if (message.getValue() == null)
+                    buf.writeByte(1); // is null
+                else {
+                    buf.writeByte(0); // is not null
+                    writeBytes(buf, message.getValue());
                 }
             }
-            if (message.getKey() == null)
-                buf.writeByte(1); // is null
-            else {
-                buf.writeByte(0); // is not null
-                writeBytes(buf, message.getKey());
-            }
-            if (message.getValue() == null)
-                buf.writeByte(1); // is null
-            else {
-                buf.writeByte(0); // is not null
-                writeBytes(buf, message.getValue());
-            }
+            return buf;
+        } catch (Exception e) {
+            buf.release();
+            throw e;
         }
-        return buf;
     }
 
     private static void writeBytes(ByteBuf buf, String value) {
