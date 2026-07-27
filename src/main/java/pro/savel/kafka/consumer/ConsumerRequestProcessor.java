@@ -29,6 +29,7 @@ import pro.savel.kafka.common.exceptions.BadRequestException;
 import pro.savel.kafka.consumer.requests.*;
 
 import java.time.Duration;
+import java.util.Collections;
 import java.util.Map;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
@@ -88,6 +89,10 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
             processCommit(ctx, requestBearer);
         else if (requestClass == ConsumerSeekRequest.class)
             processSeek(ctx, requestBearer);
+        else if (requestClass == ConsumerSeekToBeginningRequest.class)
+            processSeekToBeginning(ctx, requestBearer);
+        else if (requestClass == ConsumerSeekToEndRequest.class)
+            processSeekToEnd(ctx, requestBearer);
         else if (requestClass == ConsumerListPartitionsRequest.class)
             processListPartitions(ctx, requestBearer);
         else if (requestClass == ConsumerAssignRequest.class)
@@ -202,6 +207,26 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
         var wrapper = getConsumer(request.getConsumerId(), request.getToken());
         execute(ctx, () -> {
             wrapper.getConsumer().seek(topicPartition, request.getOffset());
+            return new ConsumerResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null);
+        });
+    }
+
+    private void processSeekToBeginning(ChannelHandlerContext ctx, RequestBearer requestBearer) {
+        var request = (ConsumerSeekToBeginningRequest) requestBearer.request();
+        var topicPartition = new TopicPartition(request.getTopic(), request.getPartition());
+        var wrapper = getConsumer(request.getConsumerId(), request.getToken());
+        execute(ctx, () -> {
+            wrapper.getConsumer().seekToBeginning(Collections.singleton(topicPartition));
+            return new ConsumerResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null);
+        });
+    }
+
+    private void processSeekToEnd(ChannelHandlerContext ctx, RequestBearer requestBearer) {
+        var request = (ConsumerSeekToEndRequest) requestBearer.request();
+        var topicPartition = new TopicPartition(request.getTopic(), request.getPartition());
+        var wrapper = getConsumer(request.getConsumerId(), request.getToken());
+        execute(ctx, () -> {
+            wrapper.getConsumer().seekToEnd(Collections.singleton(topicPartition));
             return new ConsumerResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null);
         });
     }

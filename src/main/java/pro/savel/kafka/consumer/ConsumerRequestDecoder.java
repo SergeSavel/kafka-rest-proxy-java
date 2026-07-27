@@ -82,6 +82,8 @@ public class ConsumerRequestDecoder extends ChannelInboundHandlerAdapter {
             case "/poll" -> decodePoll(ctx, httpRequest);
             case "/commit" -> decodeCommit(ctx, httpRequest);
             case "/seek" -> decodeSeek(ctx, httpRequest);
+            case "/seek-to-beginning" -> decodeSeekToBeginning(ctx, httpRequest);
+            case "/seek-to-end" -> decodeSeekToEnd(ctx, httpRequest);
             case "/get-position" -> decodeGetPosition(ctx, httpRequest);
             case "/assign" -> decodeAssign(ctx, httpRequest);
             case "/get-assignment" -> decodeGetAssignment(ctx, httpRequest);
@@ -144,6 +146,20 @@ public class ConsumerRequestDecoder extends ChannelInboundHandlerAdapter {
     private void decodeSeek(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
         if (httpRequest.method() == HttpMethod.POST)
             decodeRequest(ctx, httpRequest, ConsumerSeekRequest.class);
+        else
+            throw new MethodNotAllowedException("Unsupported HTTP method.");
+    }
+
+    private void decodeSeekToBeginning(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
+        if (httpRequest.method() == HttpMethod.POST)
+            decodeRequest(ctx, httpRequest, ConsumerSeekToBeginningRequest.class);
+        else
+            throw new MethodNotAllowedException("Unsupported HTTP method.");
+    }
+
+    private void decodeSeekToEnd(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
+        if (httpRequest.method() == HttpMethod.POST)
+            decodeRequest(ctx, httpRequest, ConsumerSeekToEndRequest.class);
         else
             throw new MethodNotAllowedException("Unsupported HTTP method.");
     }
