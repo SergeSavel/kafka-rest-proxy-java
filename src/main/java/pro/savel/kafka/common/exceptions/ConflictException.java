@@ -16,18 +16,18 @@ package pro.savel.kafka.common.exceptions;
 
 import io.netty.handler.codec.http.HttpResponseStatus;
 
-public class NotFoundException extends HttpStatusException {
+public class ConflictException extends HttpStatusException {
 
-    public NotFoundException(String message, Throwable cause) {
+    public ConflictException(String message, Throwable cause) {
         super(message, cause);
     }
 
-    public NotFoundException(String message) {
+    public ConflictException(String message) {
         super(message);
     }
 
     @Override
     public HttpResponseStatus status() {
-        return HttpResponseStatus.NOT_FOUND;
+        return HttpResponseStatus.CONFLICT;
     }
 }

@@ -1,4 +1,4 @@
-// Copyright 2025 Sergey Savelev (serge@savel.pro)
+// Copyright 2026 Sergey Savelev (serge@savel.pro)
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,18 +16,15 @@ package pro.savel.kafka.common.exceptions;
 
 import io.netty.handler.codec.http.HttpResponseStatus;
 
-public class NotFoundException extends HttpStatusException {
+public abstract class HttpStatusException extends RuntimeException {
 
-    public NotFoundException(String message, Throwable cause) {
+    public HttpStatusException(String message, Throwable cause) {
         super(message, cause);
     }
 
-    public NotFoundException(String message) {
+    public HttpStatusException(String message) {
         super(message);
     }
 
-    @Override
-    public HttpResponseStatus status() {
-        return HttpResponseStatus.NOT_FOUND;
-    }
+    public abstract HttpResponseStatus status();
 }

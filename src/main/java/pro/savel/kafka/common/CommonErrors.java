@@ -16,22 +16,14 @@ package pro.savel.kafka.common;
 
 import io.netty.channel.ChannelHandlerContext;
 import org.apache.kafka.common.errors.*;
-import pro.savel.kafka.common.exceptions.*;
+import pro.savel.kafka.common.exceptions.HttpStatusException;
 
 public abstract class CommonErrors {
     public static boolean handle(ChannelHandlerContext ctx, Throwable error) {
         var handled = true;
         switch (error) {
-            case BadRequestException ignored ->
-                    HttpUtils.writeBadRequestAndClose(ctx, Utils.combineErrorMessage(error));
-            case NotFoundException ignored ->
-                    HttpUtils.writeNotFoundAndClose(ctx, Utils.combineErrorMessage(error));
-            case MethodNotAllowedException ignored ->
-                    HttpUtils.writeMethodNotAllowedAndClose(ctx, Utils.combineErrorMessage(error));
-            case UnauthenticatedException ignored ->
-                    HttpUtils.writeUnauthorizedAndClose(ctx, Utils.combineErrorMessage(error));
-            case UnauthorizedException ignored ->
-                    HttpUtils.writeForbiddenAndClose(ctx, Utils.combineErrorMessage(error));
+            case HttpStatusException ge ->
+                    HttpUtils.writeHttpResponseAndClose(ctx, ge.status(), Utils.combineErrorMessage(error));
             case InterruptedException ignored -> {
                     Thread.currentThread().interrupt();
                     HttpUtils.writeInternalServerErrorAndClose(ctx, Utils.combineErrorMessage(error));
