@@ -14,7 +14,7 @@
 
 package pro.savel.kafka.admin.requests.producer;
 
-import pro.savel.kafka.admin.requests.acls.AdminAclsRequest;
+import pro.savel.kafka.admin.requests.AdminRequest;
 
-public interface AdminProducerRequest extends AdminAclsRequest {
+public interface AdminProducerRequest extends AdminRequest {
 }
