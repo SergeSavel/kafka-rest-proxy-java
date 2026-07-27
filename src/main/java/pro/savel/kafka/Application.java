@@ -30,6 +30,7 @@ public class Application
 
     public static void main(String[] args) throws InterruptedException
     {
+        final var host = System.getProperty("host", "0.0.0.0");
         final var port = Integer.parseInt(System.getProperty("port", "8086"));
         var bossGroup = new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory());
         var workerGroup = new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory());
@@ -43,8 +44,8 @@ public class Application
                     .channel(NioServerSocketChannel.class)
                     .childHandler(initializer);
 
-            var channel = bootstrap.bind(port).sync().channel();
-            logger.info("Server started on port {}", port);
+            var channel = bootstrap.bind(host, port).sync().channel();
+            logger.info("Server started on {}:{}", host, port);
 
             var latch = new CountDownLatch(1);
             Runtime.getRuntime().addShutdownHook(new Thread(() ->

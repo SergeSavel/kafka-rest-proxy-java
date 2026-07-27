@@ -7,7 +7,7 @@ After=network.target
 Type=simple
 User=kafka-gateway
 Environment=JAVA_OPTS="-Xms256M -Xmx2G"
-Environment=KAFKA_GATEWAY_OPTS="-Dport=8086"
+Environment=KAFKA_GATEWAY_OPTS="-Dhost=127.0.0.1 -Dport=8086"
 ExecStart=/bin/sh -c '/opt/kafka-gateway/bin/kafka-gateway > /var/log/kafka-gateway/kafka-gateway.log 2>&1'
 ExecStop=/bin/kill -15 $MAINPID
 Restart=on-failure
