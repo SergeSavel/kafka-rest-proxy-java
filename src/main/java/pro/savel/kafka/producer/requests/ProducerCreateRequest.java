@@ -14,8 +14,9 @@
 
 package pro.savel.kafka.producer.requests;
 
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotEmpty;
-import jakarta.validation.constraints.Positive;
 import lombok.Data;
 
 import java.util.Properties;
@@ -26,6 +27,7 @@ public class ProducerCreateRequest implements ProducerRequest {
     private String name;
     @NotEmpty
     private Properties config;
-    @Positive
+    @Min(1000)
+    @Max(86_400_000)
     private int expirationTimeout;
 }
