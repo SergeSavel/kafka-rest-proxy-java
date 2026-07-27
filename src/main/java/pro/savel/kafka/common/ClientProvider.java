@@ -29,7 +29,11 @@ public abstract class ClientProvider<Wrapper extends ClientWrapper> implements A
     private static final Logger logger = LoggerFactory.getLogger(ClientProvider.class);
 
     protected final ConcurrentHashMap<String, Wrapper> wrappers = new ConcurrentHashMap<>();
-    private final ScheduledExecutorService retirer = Executors.newSingleThreadScheduledExecutor();
+    private final ScheduledExecutorService retirer = Executors.newSingleThreadScheduledExecutor(r -> {
+        var t = new Thread(r, "client-retirer");
+        t.setDaemon(true);
+        return t;
+    });
 
     public ClientProvider() {
         final var task = new Runnable() {
