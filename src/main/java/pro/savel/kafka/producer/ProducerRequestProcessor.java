@@ -19,7 +19,9 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.util.ReferenceCountUtil;
+import org.apache.kafka.clients.producer.Callback;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.clients.producer.RecordMetadata;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import pro.savel.kafka.common.*;
@@ -136,21 +138,23 @@ public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter imple
         var request = (ProducerSendRequest) requestBearer.request();
         var wrapper = provider.getProducer(request.getProducerId(), request.getToken());
         wrapper.touch();
-        if (logger.isDebugEnabled()) {
-            logger.debug("Starting produce request processing.");
-        }
         var producer = wrapper.getProducer();
         var record = new ProducerRecord<>(request.getTopic(), request.getPartition(), request.getKey(), request.getValue());
         var headers = request.getHeaders();
         if (headers != null)
             headers.forEach((key, value) -> record.headers().add(key, value));
-        execute(ctx, requestBearer, () -> producer.send(record).get(), metadata -> {
-            if (logger.isDebugEnabled()) {
-                logger.debug("Produce request completed.");
+        Callback callback = (RecordMetadata metadata, Exception exception) -> {
+            if (exception != null) {
+                if (!handleError(ctx, exception)) {
+                    logger.error("An unexpected error occurred while processing producer send.", exception);
+                    HttpUtils.writeInternalServerErrorAndClose(ctx, Utils.combineErrorMessage(exception));
+                }
+            } else {
+                var response = ProducerResponseMapper.mapSendResponse(metadata);
+                ctx.writeAndFlush(new ProducerResponseBearer(requestBearer, HttpResponseStatus.CREATED, response));
             }
-            var response = ProducerResponseMapper.mapSendResponse(metadata);
-            ctx.writeAndFlush(new ProducerResponseBearer(requestBearer, HttpResponseStatus.CREATED, response));
-        });
+        };
+        producer.send(record, callback);
     }
 
     private void processGetPartitions(ChannelHandlerContext ctx, RequestBearer requestBearer) {
