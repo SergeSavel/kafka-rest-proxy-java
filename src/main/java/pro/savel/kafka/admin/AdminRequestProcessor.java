@@ -53,7 +53,7 @@ import pro.savel.kafka.common.contract.Node;
 import pro.savel.kafka.common.exceptions.BadRequestException;
 
 import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.CompletableFuture;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 import java.util.stream.Collectors;
@@ -235,52 +235,24 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
         wrapper.touch();
         var admin = wrapper.getAdmin();
         var describeResult = admin.describeCluster();
-        var response = new AdminDescribeClusterResponse();
-        var successCounter = new AtomicInteger(4);
-        var errorCounter = new AtomicInteger(1);
-        describeResult.nodes().whenComplete((nodesSource, error) -> {
-            if (error == null) {
-                response.setNodes(Node.of(nodesSource));
-                if (successCounter.decrementAndGet() == 0)
+        var nodesFuture = describeResult.nodes().toCompletionStage().toCompletableFuture();
+        var clusterIdFuture = describeResult.clusterId().toCompletionStage().toCompletableFuture();
+        var controllerFuture = describeResult.controller().toCompletionStage().toCompletableFuture();
+        var aclFuture = describeResult.authorizedOperations().toCompletionStage().toCompletableFuture();
+        CompletableFuture.allOf(nodesFuture, clusterIdFuture, controllerFuture, aclFuture)
+            .whenComplete((ignored, error) -> {
+                if (error == null) {
+                    var response = new AdminDescribeClusterResponse();
+                    response.setNodes(Node.of(nodesFuture.join()));
+                    response.setClusterId(clusterIdFuture.join());
+                    response.setController(Node.of(controllerFuture.join()));
+                    response.setAuthorizedOperations(AdminResponseMapper.mapAclOperations(aclFuture.join()));
                     ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
-            } else if (errorCounter.decrementAndGet() == 0) {
-                processDescribeClusterError(ctx, error);
-            }
-        });
-        describeResult.clusterId().whenComplete((clusterId, error) -> {
-            if (error == null) {
-                response.setClusterId(clusterId);
-                if (successCounter.decrementAndGet() == 0)
-                    ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
-            } else if (errorCounter.decrementAndGet() == 0) {
-                processDescribeClusterError(ctx, error);
-            }
-        });
-        describeResult.controller().whenComplete((controllerSource, error) -> {
-            if (error == null) {
-                response.setController(Node.of(controllerSource));
-                if (successCounter.decrementAndGet() == 0)
-                    ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
-            } else if (errorCounter.decrementAndGet() == 0) {
-                processDescribeClusterError(ctx, error);
-            }
-        });
-        describeResult.authorizedOperations().whenComplete((aclOperationsSource, error) -> {
-            if (error == null) {
-                response.setAuthorizedOperations(AdminResponseMapper.mapAclOperations(aclOperationsSource));
-                if (successCounter.decrementAndGet() == 0)
-                    ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
-            } else if (errorCounter.decrementAndGet() == 0) {
-                processDescribeClusterError(ctx, error);
-            }
-        });
-    }
-
-    private static void processDescribeClusterError(ChannelHandlerContext ctx, Throwable error) {
-        if (!handleError(ctx, error)) {
-            logger.error("Unable to get cluster description.", error);
-            HttpUtils.writeInternalServerErrorAndClose(ctx, error.getMessage());
-        }
+                } else if (!handleError(ctx, error)) {
+                    logger.error("Unable to get cluster description.", error);
+                    HttpUtils.writeInternalServerErrorAndClose(ctx, error.getMessage());
+                }
+            });
     }
 
     private void processDescribeLogDirs(ChannelHandlerContext ctx, RequestBearer requestBearer) {
