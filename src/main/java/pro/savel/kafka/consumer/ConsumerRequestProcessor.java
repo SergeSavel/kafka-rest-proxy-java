@@ -29,7 +29,6 @@ import pro.savel.kafka.common.exceptions.BadRequestException;
 import pro.savel.kafka.consumer.requests.*;
 
 import java.time.Duration;
-import java.util.Collections;
 import java.util.Map;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
@@ -213,20 +212,20 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
 
     private void processSeekToBeginning(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (ConsumerSeekToBeginningRequest) requestBearer.request();
-        var topicPartition = new TopicPartition(request.getTopic(), request.getPartition());
+        var partitions = CommonRequestMapper.mapPartitions(request.getPartitions());
         var wrapper = getConsumer(request.getConsumerId(), request.getToken());
         execute(ctx, () -> {
-            wrapper.getConsumer().seekToBeginning(Collections.singleton(topicPartition));
+            wrapper.getConsumer().seekToBeginning(partitions);
             return new ConsumerResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null);
         });
     }
 
     private void processSeekToEnd(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (ConsumerSeekToEndRequest) requestBearer.request();
-        var topicPartition = new TopicPartition(request.getTopic(), request.getPartition());
+        var partitions = CommonRequestMapper.mapPartitions(request.getPartitions());
         var wrapper = getConsumer(request.getConsumerId(), request.getToken());
         execute(ctx, () -> {
-            wrapper.getConsumer().seekToEnd(Collections.singleton(topicPartition));
+            wrapper.getConsumer().seekToEnd(partitions);
             return new ConsumerResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null);
         });
     }

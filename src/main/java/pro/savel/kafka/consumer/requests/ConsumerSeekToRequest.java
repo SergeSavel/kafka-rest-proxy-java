@@ -14,9 +14,13 @@
 
 package pro.savel.kafka.consumer.requests;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
-import jakarta.validation.constraints.PositiveOrZero;
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
+import pro.savel.kafka.common.contract.TopicPartition;
+
+import java.util.Collection;
 
 @Data
 public abstract class ConsumerSeekToRequest implements ConsumerRequest {
@@ -25,7 +29,5 @@ public abstract class ConsumerSeekToRequest implements ConsumerRequest {
     @NotEmpty
     private String token;
     @NotEmpty
-    private String topic;
-    @PositiveOrZero
-    private int partition;
+    private Collection<@NotNull @Valid TopicPartition> partitions;
 }
