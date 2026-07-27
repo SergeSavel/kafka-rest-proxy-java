@@ -53,6 +53,7 @@ public class ProducerResponseEncoder extends ChannelOutboundHandlerAdapter {
             } catch (Exception e) {
                 var message = "An error occurred during producer response serialization.";
                 logger.error(message, e);
+                promise.setFailure(e);
                 HttpUtils.writeInternalServerErrorAndClose(ctx, message);
             } finally {
                 ReferenceCountUtil.release(msg);

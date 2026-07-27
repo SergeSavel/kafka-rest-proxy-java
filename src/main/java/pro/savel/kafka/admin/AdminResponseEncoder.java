@@ -53,6 +53,7 @@ public class AdminResponseEncoder extends ChannelOutboundHandlerAdapter {
             } catch (Exception e) {
                 var message = "An error occurred during admin response serialization.";
                 logger.error(message, e);
+                promise.setFailure(e);
                 HttpUtils.writeInternalServerErrorAndClose(ctx, message);
             } finally {
                 ReferenceCountUtil.release(msg);
