@@ -52,6 +52,7 @@ class ServerInitializer extends ChannelInitializer<SocketChannel> implements Aut
             .messageInterpolator(new ParameterMessageInterpolator())
             .buildValidatorFactory();
 
+    private final HealthRequestDecoder healthRequestDecoder = new HealthRequestDecoder();
     private final BasicAuthenticationHandler basicAuthenticationHandler = new BasicAuthenticationHandler(objectMapper);
     private final HttpVersionHandler httpVersionHandler = new HttpVersionHandler();
 
@@ -85,6 +86,7 @@ class ServerInitializer extends ChannelInitializer<SocketChannel> implements Aut
         pipeline.addLast(new ReadTimeoutHandler(300, TimeUnit.SECONDS));
         pipeline.addLast(new WriteTimeoutHandler(300, TimeUnit.SECONDS));
         pipeline.addLast(new HttpObjectAggregator(32 * 1024 * 1024));
+        pipeline.addLast(healthRequestDecoder);
         pipeline.addLast(basicAuthenticationHandler);
         pipeline.addLast(producerRequestDecoder);
         pipeline.addLast(consumerRequestDecoder);
