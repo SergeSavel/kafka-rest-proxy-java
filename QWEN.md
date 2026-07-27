@@ -8,6 +8,7 @@ Lightweight Kafka HTTP Gateway built on Netty — exposes Kafka Producer, Consum
 HTTP Request
   → HttpServerCodec → HttpVersionHandler → ReadTimeoutHandler(300s) → WriteTimeoutHandler(300s)
   → HttpObjectAggregator(32MB)
+  → HealthRequestDecoder
   → BasicAuthenticationHandler (optional, users.json)
   → ProducerRequestDecoder → ConsumerRequestDecoder → AdminRequestDecoder
   → VersionRequestDecoder → DefaultRequestDecoder (404 fallback)
@@ -16,7 +17,7 @@ HTTP Request
   → DefaultInboundHandler
 ```
 
-**Entry point:** `pro.savel.kafka.Application` — Netty NIO server, default port `8086` (`-Dport=`).
+**Entry point:** `pro.savel.kafka.Application` — Netty NIO server, default `0.0.0.0:8086` (`-Dhost=`, `-Dport=`).
 
 ### Modules
 
@@ -30,10 +31,11 @@ HTTP Request
 ### Key patterns
 
 - **Decoders** parse JSON/binary requests into typed Request DTOs, pass via `RequestBearer`
-- **Processors** handle business logic; producer/consumer use `BlockingTaskExecutor` (virtual threads) for blocking Kafka calls; admin uses `KafkaFuture.whenComplete()` callbacks (non-blocking)
+- **Processors** handle business logic; producer/consumer use `BlockingTaskExecutor` (virtual threads) for blocking Kafka calls; producer `send()` uses Kafka callback (non-blocking); admin uses `KafkaFuture.whenComplete()` callbacks (non-blocking)
 - **Encoders** serialize Response DTOs to JSON/binary HTTP responses
 - **`ClientProvider<T>`** manages instance lifecycle: creation, expiration (1s scheduled timer), removal. Shared by producer, consumer, admin
 - **`ClientWrapper`** wraps a Kafka client instance with id, token, owner, expiration timestamp
+- **`HttpStatusException`** — base class for gateway-specific exceptions; each subclass defines its own HTTP status code, handled uniformly in `CommonErrors`
 
 ## Build & Run
 
@@ -58,7 +60,7 @@ HTTP Request
 
 ## Deployment
 
-- **systemd:** `kafka-gateway.service` — runs as `kafka-http-gateway` user, installed to `/opt/kafka-gateway/`
+- **systemd:** `kafka-gateway.service` — runs as `kafka-http-gateway` user, installed to `/opt/kafka-gateway/`, `WorkingDirectory=/opt/kafka-gateway`, `LimitNOFILE=65536`, `TimeoutStopSec=120`
 - **TLS:** NOT implemented in the app — handled by NGINX reverse proxy (LAN-only deployment)
 - **Auth:** Optional HTTP Basic Auth via `users.json` in working directory; if file is missing, auth is disabled
 
