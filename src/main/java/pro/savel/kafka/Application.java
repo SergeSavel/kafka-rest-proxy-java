@@ -34,6 +34,8 @@ public class Application
         final var port = Integer.parseInt(System.getProperty("port", "8086"));
         var bossGroup = new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory());
         var workerGroup = new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory());
+        var shutdownLatch = new CountDownLatch(1);
+
         try (var initializer = new ServerInitializer())
         {
             initializer.initialize();
@@ -47,19 +49,19 @@ public class Application
             var channel = bootstrap.bind(host, port).sync().channel();
             logger.info("Server started on {}:{}", host, port);
 
-            var latch = new CountDownLatch(1);
             Runtime.getRuntime().addShutdownHook(new Thread(() ->
             {
                 logger.info("Server is shutting down...");
                 bossGroup.shutdownGracefully();
                 workerGroup.shutdownGracefully();
+                bossGroup.terminationFuture().syncUninterruptibly();
+                workerGroup.terminationFuture().syncUninterruptibly();
                 logger.info("Shutdown completed.");
-                latch.countDown();
+                shutdownLatch.countDown();
             }));
 
             channel.closeFuture().sync();
-
-            latch.await();
+            shutdownLatch.await();
         }
         finally
         {
