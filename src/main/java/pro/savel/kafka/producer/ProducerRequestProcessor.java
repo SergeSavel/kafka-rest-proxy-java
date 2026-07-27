@@ -106,7 +106,7 @@ public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter imple
     private void processCreate(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (ProducerCreateRequest) requestBearer.request();
         var owner = ctx.channel().attr(NettyAttributes.USERNAME).get();
-        execute(ctx, requestBearer,
+        execute(ctx,
                 () -> provider.createProducer(request.getName(), request.getConfig(), request.getExpirationTimeout(), owner),
                 wrapper -> {
                     var response = ProducerResponseMapper.mapCreateResponse(wrapper);
@@ -116,7 +116,7 @@ public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter imple
 
     private void processRemove(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (ProducerRemoveRequest) requestBearer.request();
-        execute(ctx, requestBearer, () -> {
+        execute(ctx, () -> {
             provider.removeProducer(request.getProducerId(), request.getToken());
             return null;
         }, ignored -> ctx.writeAndFlush(new ProducerResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null)));
@@ -162,7 +162,7 @@ public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter imple
         var wrapper = provider.getProducer(request.getProducerId(), request.getToken());
         wrapper.touch();
         var producer = wrapper.getProducer();
-        execute(ctx, requestBearer, () -> producer.partitionsFor(request.getTopic()), partitions -> {
+        execute(ctx, () -> producer.partitionsFor(request.getTopic()), partitions -> {
             var response = ProducerResponseMapper.mapPartitionsResponse(partitions);
             ctx.writeAndFlush(new ProducerResponseBearer(requestBearer, HttpResponseStatus.OK, response));
         });
@@ -172,7 +172,6 @@ public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter imple
 
     private <T> void execute(
             ChannelHandlerContext ctx,
-            RequestBearer requestBearer,
             Callable<T> operation,
             Consumer<T> completion) {
         blockingTaskExecutor.execute(ctx, operation, (result, error) -> {
