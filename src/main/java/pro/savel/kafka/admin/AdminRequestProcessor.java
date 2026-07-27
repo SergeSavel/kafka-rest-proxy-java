@@ -289,6 +289,7 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
         var topicsResult = admin.listTopics(options);
         topicsResult.listings().whenComplete((listings, error) -> {
             if (error == null) {
+                var filtered = listings;
                 if (request.getPattern() != null) {
                     Pattern pattern;
                     try {
@@ -296,9 +297,11 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
                     } catch (PatternSyntaxException e) {
                         throw new BadRequestException("Invalid pattern.", e);
                     }
-                    listings.removeIf(topicListing -> !pattern.matcher(topicListing.name()).matches());
+                    filtered = listings.stream()
+                            .filter(t -> pattern.matcher(t.name()).matches())
+                            .toList();
                 }
-                var response = AdminListTopicsResponse.of(listings);
+                var response = AdminListTopicsResponse.of(filtered);
                 ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
             } else if (!handleError(ctx, error)) {
                 logger.error("Unable to get topic listings.", error);

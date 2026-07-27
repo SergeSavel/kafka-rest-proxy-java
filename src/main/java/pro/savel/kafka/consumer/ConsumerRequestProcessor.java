@@ -29,9 +29,11 @@ import pro.savel.kafka.common.exceptions.BadRequestException;
 import pro.savel.kafka.consumer.requests.*;
 
 import java.time.Duration;
+import java.util.Map;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
+import java.util.stream.Collectors;
 
 @ChannelHandler.Sharable
 public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter implements AutoCloseable {
@@ -284,7 +286,9 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
                 } catch (PatternSyntaxException e) {
                     throw new BadRequestException("Invalid pattern.", e);
                 }
-                topics.keySet().removeIf(topic -> !pattern.matcher(topic).matches());
+                topics = topics.entrySet().stream()
+                        .filter(e -> pattern.matcher(e.getKey()).matches())
+                        .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
             }
             var response = ConsumerResponseMapper.mapTopicsResponse(topics);
             return new ConsumerResponseBearer(requestBearer, HttpResponseStatus.OK, response);
