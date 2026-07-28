@@ -231,9 +231,7 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
 
     private void processDescribeCluster(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (AdminDescribeClusterRequest) requestBearer.request();
-        var wrapper = provider.getAdmin(request.getAdminId(), request.getToken());
-        wrapper.touch();
-        var admin = wrapper.getAdmin();
+        var admin = getAdmin(request.getAdminId(), request.getToken());
         var describeResult = admin.describeCluster();
         var nodesFuture = describeResult.nodes().toCompletionStage().toCompletableFuture();
         var clusterIdFuture = describeResult.clusterId().toCompletionStage().toCompletableFuture();
@@ -257,9 +255,7 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
 
     private void processDescribeLogDirs(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (AdminDescribeLogDirsRequest) requestBearer.request();
-        var wrapper = provider.getAdmin(request.getAdminId(), request.getToken());
-        wrapper.touch();
-        var admin = wrapper.getAdmin();
+        var admin = getAdmin(request.getAdminId(), request.getToken());
         var brokers = request.getBrokerIds();
         var describeResult = admin.describeLogDirs(brokers);
         describeResult.allDescriptions().whenComplete((descriptions, error) -> {
@@ -279,9 +275,7 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
 
     private void processListTopics(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (AdminListTopicsRequest) requestBearer.request();
-        var wrapper = provider.getAdmin(request.getAdminId(), request.getToken());
-        wrapper.touch();
-        var admin = wrapper.getAdmin();
+        var admin = getAdmin(request.getAdminId(), request.getToken());
         var options = new ListTopicsOptions();
         var includeInternal = request.getIncludeInternal();
         if (includeInternal != null)
@@ -312,9 +306,7 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
 
     private void processDescribeTopic(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (AdminDescribeTopicRequest) requestBearer.request();
-        var wrapper = provider.getAdmin(request.getAdminId(), request.getToken());
-        wrapper.touch();
-        var admin = wrapper.getAdmin();
+        var admin = getAdmin(request.getAdminId(), request.getToken());
         var options = new DescribeTopicsOptions();
         var includeAuthorizedOperations = request.getIncludeAuthorizedOperations();
         if (includeAuthorizedOperations != null)
@@ -346,9 +338,7 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
 
     private void processCreateTopic(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (AdminCreateTopicRequest) requestBearer.request();
-        var wrapper = provider.getAdmin(request.getAdminId(), request.getToken());
-        wrapper.touch();
-        var admin = wrapper.getAdmin();
+        var admin = getAdmin(request.getAdminId(), request.getToken());
         var newTopic = new NewTopic(request.getTopicName(), Optional.ofNullable(request.getNumPartitions()), Optional.ofNullable(request.getReplicationFactor()));
         var createResult = admin.createTopics(Collections.singleton(newTopic));
         createResult.all().whenComplete((topics, error) -> {
@@ -363,9 +353,7 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
 
     private void processDeleteTopic(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (AdminDeleteTopicRequest) requestBearer.request();
-        var wrapper = provider.getAdmin(request.getAdminId(), request.getToken());
-        wrapper.touch();
-        var admin = wrapper.getAdmin();
+        var admin = getAdmin(request.getAdminId(), request.getToken());
         var topics = Collections.singleton(request.getTopicName());
         var deleteResult = admin.deleteTopics(topics);
         deleteResult.all().whenComplete((ignore, error) -> {
@@ -380,9 +368,7 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
 
     private void processDeleteTopics(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (AdminDeleteTopicsRequest) requestBearer.request();
-        var wrapper = provider.getAdmin(request.getAdminId(), request.getToken());
-        wrapper.touch();
-        var admin = wrapper.getAdmin();
+        var admin = getAdmin(request.getAdminId(), request.getToken());
         var topics = request.getTopicNames();
         var deleteResult = admin.deleteTopics(topics);
         deleteResult.all().whenComplete((ignore, error) -> {
@@ -397,9 +383,7 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
 
     private void processCreatePartitions(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (AdminCreatePartitionsRequest) requestBearer.request();
-        var wrapper = provider.getAdmin(request.getAdminId(), request.getToken());
-        wrapper.touch();
-        var admin = wrapper.getAdmin();
+        var admin = getAdmin(request.getAdminId(), request.getToken());
         var newPartitions = NewPartitions.increaseTo(request.getIncreaseTo());
         var createResult = admin.createPartitions(Collections.singletonMap(request.getTopicName(), newPartitions));
         createResult.all().whenComplete((topics, error) -> {
@@ -418,18 +402,14 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
 
     private void processDescribeBrokerConfigs(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (AdminDescribeBrokerConfigsRequest) requestBearer.request();
-        var wrapper = provider.getAdmin(request.getAdminId(), request.getToken());
-        wrapper.touch();
-        var admin = wrapper.getAdmin();
+        var admin = getAdmin(request.getAdminId(), request.getToken());
         var resource = new ConfigResource(ConfigResource.Type.BROKER, String.valueOf(request.getBrokerId()));
         processDescribeConfigs(ctx, requestBearer, admin, resource);
     }
 
     private void processDescribeTopicConfigs(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (AdminDescribeTopicConfigsRequest) requestBearer.request();
-        var wrapper = provider.getAdmin(request.getAdminId(), request.getToken());
-        wrapper.touch();
-        var admin = wrapper.getAdmin();
+        var admin = getAdmin(request.getAdminId(), request.getToken());
         var resource = new ConfigResource(ConfigResource.Type.TOPIC, request.getTopicName());
         processDescribeConfigs(ctx, requestBearer, admin, resource);
     }
@@ -455,9 +435,7 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
 
     private void processSetTopicConfig(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (AdminSetTopicConfigRequest) requestBearer.request();
-        var wrapper = provider.getAdmin(request.getAdminId(), request.getToken());
-        wrapper.touch();
-        var admin = wrapper.getAdmin();
+        var admin = getAdmin(request.getAdminId(), request.getToken());
         var configResource = new ConfigResource(ConfigResource.Type.TOPIC, request.getTopicName());
         var configEntry = new ConfigEntry(request.getConfigName(), request.getNewValue());
         var alterConfigOp = new AlterConfigOp(configEntry, AlterConfigOp.OpType.SET);
@@ -468,9 +446,7 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
 
     private void processDeleteTopicConfig(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (AdminDeleteTopicConfigRequest) requestBearer.request();
-        var wrapper = provider.getAdmin(request.getAdminId(), request.getToken());
-        wrapper.touch();
-        var admin = wrapper.getAdmin();
+        var admin = getAdmin(request.getAdminId(), request.getToken());
         var configResource = new ConfigResource(ConfigResource.Type.TOPIC, request.getTopicName());
         var configEntry = new ConfigEntry(request.getConfigName(), null);
         var alterConfigOp = new AlterConfigOp(configEntry, AlterConfigOp.OpType.DELETE);
@@ -498,9 +474,7 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
 
     private void processDescribeUserScramCredentials(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (AdminDescribeUserScramCredentialsRequest) requestBearer.request();
-        var wrapper = provider.getAdmin(request.getAdminId(), request.getToken());
-        wrapper.touch();
-        var admin = wrapper.getAdmin();
+        var admin = getAdmin(request.getAdminId(), request.getToken());
         var describeResult = admin.describeUserScramCredentials(request.getUsers());
         describeResult.all().whenComplete((descriptions, error) -> {
             if (error == null) {
@@ -515,9 +489,7 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
 
     private void processUpsertUserScramCredentials(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (AdminUpsertUserScramCredentialsRequest) requestBearer.request();
-        var wrapper = provider.getAdmin(request.getAdminId(), request.getToken());
-        wrapper.touch();
-        var admin = wrapper.getAdmin();
+        var admin = getAdmin(request.getAdminId(), request.getToken());
         var iterations = request.getIterations() == null ? 4096 : request.getIterations();
         var credentialInfo = new ScramCredentialInfo(ScramMechanism.fromMechanismName(request.getMechanism()), iterations);
         var alteration = new UserScramCredentialUpsertion(request.getUser(), credentialInfo, request.getPassword());
@@ -526,9 +498,7 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
 
     private void processDeleteUserScramCredentials(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (AdminDeleteUserScramCredentialsRequest) requestBearer.request();
-        var wrapper = provider.getAdmin(request.getAdminId(), request.getToken());
-        wrapper.touch();
-        var admin = wrapper.getAdmin();
+        var admin = getAdmin(request.getAdminId(), request.getToken());
         var alteration = new UserScramCredentialDeletion(request.getUser(), ScramMechanism.fromMechanismName(request.getMechanism()));
         processAlterUserScramCredentials(ctx, requestBearer, admin, alteration);
     }
@@ -552,9 +522,7 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
 
     private void processDescribeAcls(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (AdminDescribeAclsRequest) requestBearer.request();
-        var wrapper = provider.getAdmin(request.getAdminId(), request.getToken());
-        wrapper.touch();
-        var admin = wrapper.getAdmin();
+        var admin = getAdmin(request.getAdminId(), request.getToken());
         var filter = AdminRequestMapper.mapAclBindingFilter(request.getFilter());
         var describeResult = admin.describeAcls(filter);
         describeResult.values().whenComplete((aclBindings, error) -> {
@@ -570,9 +538,7 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
 
     private void processCreateAcls(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (AdminCreateAclsRequest) requestBearer.request();
-        var wrapper = provider.getAdmin(request.getAdminId(), request.getToken());
-        wrapper.touch();
-        var admin = wrapper.getAdmin();
+        var admin = getAdmin(request.getAdminId(), request.getToken());
         var acls = AdminRequestMapper.mapAclBindings(request.getAcls());
         var createAclsResult = admin.createAcls(acls);
         createAclsResult.all().whenComplete((ignore, error) -> {
@@ -587,9 +553,7 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
 
     private void processDeleteAcls(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (AdminDeleteAclsRequest) requestBearer.request();
-        var wrapper = provider.getAdmin(request.getAdminId(), request.getToken());
-        wrapper.touch();
-        var admin = wrapper.getAdmin();
+        var admin = getAdmin(request.getAdminId(), request.getToken());
         var filters = AdminRequestMapper.mapAclBindingFilters(request.getFilters());
         var createAclsResult = admin.deleteAcls(filters);
         createAclsResult.all().whenComplete((ignore, error) -> {
@@ -608,9 +572,7 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
 
     private void processDescribeProducers(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (AdminDescribeProducersRequest) requestBearer.request();
-        var wrapper = provider.getAdmin(request.getAdminId(), request.getToken());
-        wrapper.touch();
-        var admin = wrapper.getAdmin();
+        var admin = getAdmin(request.getAdminId(), request.getToken());
         var partitions = CommonRequestMapper.mapPartitions(request.getPartitions());
         var describeResult = admin.describeProducers(partitions);
         describeResult.all().whenComplete((producerStates, error) -> {
@@ -630,9 +592,7 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
 
     private void processListGroups(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (AdminListGroupsRequest) requestBearer.request();
-        var wrapper = provider.getAdmin(request.getAdminId(), request.getToken());
-        wrapper.touch();
-        var admin = wrapper.getAdmin();
+        var admin = getAdmin(request.getAdminId(), request.getToken());
         var options = new ListGroupsOptions();
         if (request.getWithTypes() != null) {
             var groupTypes = new HashSet<GroupType>();
@@ -676,9 +636,7 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
 
     private void processDescribeClassicGroup(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (AdminDescribeClassicGroupRequest) requestBearer.request();
-        var wrapper = provider.getAdmin(request.getAdminId(), request.getToken());
-        wrapper.touch();
-        var admin = wrapper.getAdmin();
+        var admin = getAdmin(request.getAdminId(), request.getToken());
         var options = new DescribeClassicGroupsOptions();
         if (request.getIncludeAuthorizedOperations() != null)
             options = options.includeAuthorizedOperations(request.getIncludeAuthorizedOperations());
@@ -704,9 +662,7 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
 
     private void processDescribeConsumerGroup(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (AdminDescribeConsumerGroupRequest) requestBearer.request();
-        var wrapper = provider.getAdmin(request.getAdminId(), request.getToken());
-        wrapper.touch();
-        var admin = wrapper.getAdmin();
+        var admin = getAdmin(request.getAdminId(), request.getToken());
         var options = new DescribeConsumerGroupsOptions();
         if (request.getIncludeAuthorizedOperations() != null)
             options = options.includeAuthorizedOperations(request.getIncludeAuthorizedOperations());
@@ -732,9 +688,7 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
 
     private void processDescribeShareGroup(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (AdminDescribeShareGroupRequest) requestBearer.request();
-        var wrapper = provider.getAdmin(request.getAdminId(), request.getToken());
-        wrapper.touch();
-        var admin = wrapper.getAdmin();
+        var admin = getAdmin(request.getAdminId(), request.getToken());
         var options = new DescribeShareGroupsOptions();
         if (request.getIncludeAuthorizedOperations() != null)
             options = options.includeAuthorizedOperations(request.getIncludeAuthorizedOperations());
@@ -760,9 +714,7 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
 
     private void processDescribeStreamsGroup(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (AdminDescribeStreamsGroupRequest) requestBearer.request();
-        var wrapper = provider.getAdmin(request.getAdminId(), request.getToken());
-        wrapper.touch();
-        var admin = wrapper.getAdmin();
+        var admin = getAdmin(request.getAdminId(), request.getToken());
         var options = new DescribeStreamsGroupsOptions();
         if (request.getIncludeAuthorizedOperations() != null)
             options = options.includeAuthorizedOperations(request.getIncludeAuthorizedOperations());
@@ -788,9 +740,7 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
 
     private void processListConsumerGroupOffsets(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (AdminListConsumerGroupOffsetsRequest) requestBearer.request();
-        var wrapper = provider.getAdmin(request.getAdminId(), request.getToken());
-        wrapper.touch();
-        var admin = wrapper.getAdmin();
+        var admin = getAdmin(request.getAdminId(), request.getToken());
         var groupId = request.getGroupId();
         var options = new ListConsumerGroupOffsetsOptions();
         if (request.getRequireStable() != null)
@@ -816,9 +766,7 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
 
     private void processAlterConsumerGroupOffsets(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (AdminAlterConsumerGroupOffsetsRequest) requestBearer.request();
-        var wrapper = provider.getAdmin(request.getAdminId(), request.getToken());
-        wrapper.touch();
-        var admin = wrapper.getAdmin();
+        var admin = getAdmin(request.getAdminId(), request.getToken());
         var groupId = request.getGroupId();
         var offsets = AdminRequestMapper.mapTopicPartitionOffsetMetadata(request.getOffsets());
         var alterResult = admin.alterConsumerGroupOffsets(groupId, offsets);
@@ -834,9 +782,7 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
 
     private void processDeleteConsumerGroupOffsets(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (AdminDeleteConsumerGroupOffsetsRequest) requestBearer.request();
-        var wrapper = provider.getAdmin(request.getAdminId(), request.getToken());
-        wrapper.touch();
-        var admin = wrapper.getAdmin();
+        var admin = getAdmin(request.getAdminId(), request.getToken());
         var groupId = request.getGroupId();
         var partitions = CommonRequestMapper.mapPartitions(request.getPartitions());
         var deleteResult = admin.deleteConsumerGroupOffsets(groupId, partitions);
@@ -852,9 +798,7 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
 
     private void processRemoveMembersFromConsumerGroup(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (AdminRemoveMembersFromConsumerGroupRequest) requestBearer.request();
-        var wrapper = provider.getAdmin(request.getAdminId(), request.getToken());
-        wrapper.touch();
-        var admin = wrapper.getAdmin();
+        var admin = getAdmin(request.getAdminId(), request.getToken());
         var groupId = request.getGroupId();
         RemoveMembersFromConsumerGroupOptions options;
         if (request.getMembers() == null)
@@ -881,9 +825,7 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
 
     private void processDeleteConsumerGroup(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (AdminDeleteConsumerGroupRequest) requestBearer.request();
-        var wrapper = provider.getAdmin(request.getAdminId(), request.getToken());
-        wrapper.touch();
-        var admin = wrapper.getAdmin();
+        var admin = getAdmin(request.getAdminId(), request.getToken());
         var groupIds = Collections.singleton(request.getGroupId());
         var deleteResult = admin.deleteConsumerGroups(groupIds);
         deleteResult.all().whenComplete((ignore, error) -> {
@@ -898,9 +840,7 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
 
     private void processDeleteConsumerGroups(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (AdminDeleteConsumerGroupsRequest) requestBearer.request();
-        var wrapper = provider.getAdmin(request.getAdminId(), request.getToken());
-        wrapper.touch();
-        var admin = wrapper.getAdmin();
+        var admin = getAdmin(request.getAdminId(), request.getToken());
         var groupIds = request.getGroupIds();
         var deleteResult = admin.deleteConsumerGroups(groupIds);
         deleteResult.all().whenComplete((ignore, error) -> {
@@ -915,9 +855,7 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
 
     private void processDeleteShareGroup(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (AdminDeleteShareGroupRequest) requestBearer.request();
-        var wrapper = provider.getAdmin(request.getAdminId(), request.getToken());
-        wrapper.touch();
-        var admin = wrapper.getAdmin();
+        var admin = getAdmin(request.getAdminId(), request.getToken());
         var groupIds = Collections.singleton(request.getGroupId());
         var deleteResult = admin.deleteShareGroups(groupIds);
         deleteResult.all().whenComplete((ignore, error) -> {
@@ -932,9 +870,7 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
 
     private void processDeleteShareGroups(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (AdminDeleteShareGroupsRequest) requestBearer.request();
-        var wrapper = provider.getAdmin(request.getAdminId(), request.getToken());
-        wrapper.touch();
-        var admin = wrapper.getAdmin();
+        var admin = getAdmin(request.getAdminId(), request.getToken());
         var groupIds = request.getGroupIds();
         var deleteResult = admin.deleteShareGroups(groupIds);
         deleteResult.all().whenComplete((ignore, error) -> {
@@ -949,9 +885,7 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
 
     private void processDeleteStreamsGroup(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (AdminDeleteStreamsGroupRequest) requestBearer.request();
-        var wrapper = provider.getAdmin(request.getAdminId(), request.getToken());
-        wrapper.touch();
-        var admin = wrapper.getAdmin();
+        var admin = getAdmin(request.getAdminId(), request.getToken());
         var groupIds = Collections.singleton(request.getGroupId());
         var deleteResult = admin.deleteStreamsGroups(groupIds);
         deleteResult.all().whenComplete((ignore, error) -> {
@@ -966,9 +900,7 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
 
     private void processDeleteStreamsGroups(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (AdminDeleteStreamsGroupsRequest) requestBearer.request();
-        var wrapper = provider.getAdmin(request.getAdminId(), request.getToken());
-        wrapper.touch();
-        var admin = wrapper.getAdmin();
+        var admin = getAdmin(request.getAdminId(), request.getToken());
         var groupIds = request.getGroupIds();
         var deleteResult = admin.deleteStreamsGroups(groupIds);
         deleteResult.all().whenComplete((ignore, error) -> {
@@ -1018,9 +950,7 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
 
     private void processListOffsetsRequest(ChannelHandlerContext ctx, RequestBearer requestBearer, OffsetSpec offsetSpec) {
         var request = (AdminListOffsetsRequest) requestBearer.request();
-        var wrapper = provider.getAdmin(request.getAdminId(), request.getToken());
-        wrapper.touch();
-        var admin = wrapper.getAdmin();
+        var admin = getAdmin(request.getAdminId(), request.getToken());
         var topicPartitionOffsets = request.getPartitions().stream()
                 .collect(Collectors.toMap(CommonRequestMapper::mapTopicPartition, topicPartition -> offsetSpec));
         var options = new ListOffsetsOptions();
@@ -1045,6 +975,12 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
     }
 
 // endregion
+
+    private Admin getAdmin(String id, String token) {
+        var wrapper = provider.getAdmin(id, token);
+        wrapper.touch();
+        return wrapper.getAdmin();
+    }
 
     private static boolean handleError(ChannelHandlerContext ctx, Throwable error) {
         var handled = true;
