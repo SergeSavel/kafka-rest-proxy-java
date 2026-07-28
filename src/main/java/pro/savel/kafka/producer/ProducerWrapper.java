@@ -17,6 +17,7 @@ package pro.savel.kafka.producer;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.common.serialization.ByteArraySerializer;
 import pro.savel.kafka.common.ClientWrapper;
 
@@ -27,7 +28,7 @@ import java.util.UUID;
 @EqualsAndHashCode(callSuper = false)
 public class ProducerWrapper extends ClientWrapper {
 
-    private final KafkaProducer<byte[], byte[]> producer;
+    private final Producer<byte[], byte[]> producer;
     private final String token = UUID.randomUUID().toString();
 
     protected ProducerWrapper(String id, String name, Properties config, int expirationTimeout, String owner) {

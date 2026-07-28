@@ -20,7 +20,7 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.util.ReferenceCountUtil;
 import org.apache.kafka.clients.producer.Callback;
-import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.slf4j.Logger;
@@ -167,7 +167,7 @@ public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter imple
 
 //endregion
 
-    private KafkaProducer<byte[], byte[]> getProducer(String id, String token) {
+    private Producer<byte[], byte[]> getProducer(String id, String token) {
         var wrapper = provider.getProducer(id, token);
         wrapper.touch();
         return wrapper.getProducer();
