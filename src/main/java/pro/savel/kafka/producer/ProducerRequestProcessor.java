@@ -27,6 +27,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import pro.savel.kafka.common.*;
 import pro.savel.kafka.producer.requests.*;
+import pro.savel.kafka.producer.responses.ProducerCreateResponse;
+import pro.savel.kafka.producer.responses.ProducerListResponse;
+import pro.savel.kafka.producer.responses.ProducerPartitionsResponse;
+import pro.savel.kafka.producer.responses.ProducerSendResponse;
 
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
@@ -99,7 +103,7 @@ public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter imple
 
     private void processList(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var wrappers = provider.getItems();
-        var response = ProducerResponseMapper.mapListResponse(wrappers);
+        var response = ProducerListResponse.of(wrappers);
         var responseBearer = new ProducerResponseBearer(requestBearer, HttpResponseStatus.OK, response);
         ctx.writeAndFlush(responseBearer);
     }
@@ -110,7 +114,7 @@ public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter imple
         execute(ctx,
                 () -> provider.createProducer(request.getName(), request.getConfig(), request.getExpirationTimeout(), owner),
                 wrapper -> {
-                    var response = ProducerResponseMapper.mapCreateResponse(wrapper);
+                    var response = ProducerCreateResponse.of(wrapper);
                     ctx.writeAndFlush(new ProducerResponseBearer(requestBearer, HttpResponseStatus.CREATED, response));
                 });
     }
@@ -149,7 +153,7 @@ public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter imple
                     HttpUtils.writeInternalServerErrorAndClose(ctx, Utils.combineErrorMessage(exception));
                 }
             } else {
-                var response = ProducerResponseMapper.mapSendResponse(metadata);
+                var response = ProducerSendResponse.of(metadata);
                 ctx.writeAndFlush(new ProducerResponseBearer(requestBearer, HttpResponseStatus.CREATED, response));
             }
         };
@@ -160,7 +164,7 @@ public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter imple
         var request = (ProducerGetPartitionsRequest) requestBearer.request();
         var producer = getProducer(request.getProducerId(), request.getToken());
         execute(ctx, () -> producer.partitionsFor(request.getTopic()), partitions -> {
-            var response = ProducerResponseMapper.mapPartitionsResponse(partitions);
+            var response = ProducerPartitionsResponse.of(partitions);
             ctx.writeAndFlush(new ProducerResponseBearer(requestBearer, HttpResponseStatus.OK, response));
         });
     }

@@ -15,7 +15,10 @@
 package pro.savel.kafka.producer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.kafka.clients.producer.RecordMetadata;
+import org.apache.kafka.common.TopicPartition;
 import org.junit.jupiter.api.Test;
+import pro.savel.kafka.producer.responses.ProducerResponse;
 import pro.savel.kafka.producer.responses.ProducerSendResponse;
 
 import java.nio.charset.StandardCharsets;
@@ -26,6 +29,14 @@ class ProducerResponseSerializerTest {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
+    private static ProducerSendResponse createSendResponse(String topic, int partition, long offset,
+                                                           long timestamp, int keySize, int valueSize)
+    {
+        var metadata = new RecordMetadata(new TopicPartition(topic, partition), offset, 0,
+                timestamp, keySize, valueSize);
+        return ProducerSendResponse.of(metadata);
+    }
+
 //region JSON
 
     @Test
@@ -35,13 +46,7 @@ class ProducerResponseSerializerTest {
 
     @Test
     void serializeJson_sendResponse_returnsValidJson() throws Exception {
-        var response = new ProducerSendResponse();
-        response.setTopic("test-topic");
-        response.setPartition(2);
-        response.setOffset(100L);
-        response.setTimestamp(1234567890L);
-        response.setSerializedKeySize(10);
-        response.setSerializedValueSize(200);
+        var response = createSendResponse("test-topic", 2, 100L, 1234567890L, 10, 200);
 
         var buf = ProducerResponseSerializer.serializeJson(objectMapper, response);
         assertNotNull(buf);
@@ -64,13 +69,7 @@ class ProducerResponseSerializerTest {
 
     @Test
     void serializeBinary_sendResponse_returnsValidBinary() {
-        var response = new ProducerSendResponse();
-        response.setTopic("my-topic");
-        response.setPartition(5);
-        response.setOffset(42L);
-        response.setTimestamp(9999L);
-        response.setSerializedKeySize(8);
-        response.setSerializedValueSize(64);
+        var response = createSendResponse("my-topic", 5, 42L, 9999L, 8, 64);
 
         var buf = ProducerResponseSerializer.serializeBinary(response);
         assertNotNull(buf);
@@ -91,10 +90,9 @@ class ProducerResponseSerializerTest {
 
     @Test
     void serializeBinary_unsupportedType_throwsException() {
+        ProducerResponse unsupported = new ProducerResponse() {};
         assertThrows(IllegalArgumentException.class,
-                () -> ProducerResponseSerializer.serializeBinary(new ProducerSendResponse() {
-                    // anonymous subclass — not ProducerSendResponse.class
-                }));
+                () -> ProducerResponseSerializer.serializeBinary(unsupported));
     }
 
 //endregion

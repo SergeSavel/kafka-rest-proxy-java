@@ -14,14 +14,31 @@
 
 package pro.savel.kafka.producer.responses;
 
-import lombok.Data;
+import lombok.Getter;
 
-@Data
+@Getter
 public class ProducerSendResponse implements ProducerResponse {
+
     private String topic;
     private int partition;
     private long offset;
     private long timestamp;
     private int serializedKeySize;
     private int serializedValueSize;
+
+    private ProducerSendResponse() {
+    }
+
+    public static ProducerSendResponse of(org.apache.kafka.clients.producer.RecordMetadata source) {
+        if (source == null)
+            return null;
+        var result = new ProducerSendResponse();
+        result.topic = source.topic();
+        result.partition = source.partition();
+        result.offset = source.offset();
+        result.timestamp = source.timestamp();
+        result.serializedKeySize = source.serializedKeySize();
+        result.serializedValueSize = source.serializedValueSize();
+        return result;
+    }
 }

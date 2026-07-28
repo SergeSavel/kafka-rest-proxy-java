@@ -14,10 +14,24 @@
 
 package pro.savel.kafka.producer.responses;
 
-import lombok.Data;
+import lombok.Getter;
+import pro.savel.kafka.producer.ProducerWrapper;
 
-@Data
+@Getter
 public class ProducerCreateResponse implements ProducerResponse {
+
     private String id;
     private String token;
+
+    private ProducerCreateResponse() {
+    }
+
+    public static ProducerCreateResponse of(ProducerWrapper source) {
+        if (source == null)
+            return null;
+        var result = new ProducerCreateResponse();
+        result.id = source.getId();
+        result.token = source.getToken();
+        return result;
+    }
 }

@@ -1,4 +1,4 @@
-// Copyright 2025 Sergey Savelev (serge@savel.pro)
+// Copyright 2026 Sergey Savelev (serge@savel.pro)
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,22 +14,30 @@
 
 package pro.savel.kafka.producer.responses;
 
+import lombok.Getter;
 import pro.savel.kafka.producer.ProducerWrapper;
 
-import java.util.ArrayList;
-import java.util.Collection;
+@Getter
+public class ProducerListing {
 
-public class ProducerListResponse extends ArrayList<ProducerListing> implements ProducerResponse {
+    private String id;
+    private String name;
+    private String owner;
+    private String username;
+    private long expiresAt;
 
-    private ProducerListResponse(int initialCapacity) {
-        super(initialCapacity);
+    private ProducerListing() {
     }
 
-    public static ProducerListResponse of(Collection<ProducerWrapper> source) {
+    public static ProducerListing of(ProducerWrapper source) {
         if (source == null)
             return null;
-        var result = new ProducerListResponse(source.size());
-        source.forEach(wrapper -> result.add(ProducerListing.of(wrapper)));
+        var result = new ProducerListing();
+        result.id = source.getId();
+        result.name = source.getName();
+        result.owner = source.getOwner();
+        result.username = source.getUsername();
+        result.expiresAt = source.getExpiresAt();
         return result;
     }
 }

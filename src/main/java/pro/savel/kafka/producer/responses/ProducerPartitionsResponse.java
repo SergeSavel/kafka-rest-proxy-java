@@ -14,17 +14,39 @@
 
 package pro.savel.kafka.producer.responses;
 
-import lombok.Data;
+import lombok.Getter;
 
+import java.util.ArrayList;
 import java.util.Collection;
 
-@Data
-public class ProducerPartitionsResponse implements ProducerResponse {
-    private String topic;
-    private Collection<ProducerPartitionsResponse.PartitionInfo> partitions;
+public class ProducerPartitionsResponse extends ArrayList<ProducerPartitionsResponse.PartitionInfo> implements ProducerResponse {
 
-    @Data
+    private ProducerPartitionsResponse(int initialCapacity) {
+        super(initialCapacity);
+    }
+
+    public static ProducerPartitionsResponse of(Collection<org.apache.kafka.common.PartitionInfo> source) {
+        if (source == null)
+            return null;
+        var result =  new ProducerPartitionsResponse(source.size());
+        source.forEach(partitionInfoSource -> result.add(PartitionInfo.of(partitionInfoSource)));
+        return result;
+    }
+
+    @Getter
     public static class PartitionInfo {
+
         private int partition;
+
+        private PartitionInfo() {
+        }
+
+        private static PartitionInfo of(org.apache.kafka.common.PartitionInfo source) {
+            if (source == null)
+                return null;
+            var result = new PartitionInfo();
+            result.partition = source.partition();
+            return result;
+        }
     }
 }
