@@ -9,9 +9,10 @@ HTTP Request
   → HttpServerCodec → HttpVersionHandler → ReadTimeoutHandler(300s) → WriteTimeoutHandler(300s)
   → HttpObjectAggregator(32MB)
   → HealthRequestDecoder
+  → VersionRequestDecoder
   → BasicAuthenticationHandler (optional, users.json)
   → ProducerRequestDecoder → ConsumerRequestDecoder → AdminRequestDecoder
-  → VersionRequestDecoder → DefaultRequestDecoder (404 fallback)
+  → DefaultRequestDecoder (404 fallback)
   → ProducerResponseEncoder → ConsumerResponseEncoder → AdminResponseEncoder
   → ProducerRequestProcessor → ConsumerRequestProcessor → AdminRequestProcessor
   → DefaultInboundHandler
@@ -21,12 +22,12 @@ HTTP Request
 
 ### Modules
 
-| Package | Purpose |
-|---|---|
-| `producer` | Producer lifecycle, send, partitions |
-| `consumer` | Consumer lifecycle, poll, commit, seek, subscribe, assign |
-| `admin` | Topics, configs, ACLs, groups, offsets, SCRAM, cluster |
-| `common` | Shared contracts, exceptions, HTTP utils, client lifecycle (`ClientProvider`, `ClientWrapper`, `BlockingTaskExecutor`) |
+| Package    | Purpose                                                                                                                |
+|------------|------------------------------------------------------------------------------------------------------------------------|
+| `producer` | Producer lifecycle, send, partitions                                                                                   |
+| `consumer` | Consumer lifecycle, poll, commit, seek, seek-to-beginning, seek-to-end, subscribe, assign, position, offsets, topics   |
+| `admin`    | Topics, configs, ACLs, groups, offsets, SCRAM, cluster                                                                 |
+| `common`   | Shared contracts, exceptions, HTTP utils, client lifecycle (`ClientProvider`, `ClientWrapper`, `BlockingTaskExecutor`) |
 
 ### Key patterns
 
@@ -60,7 +61,8 @@ HTTP Request
 
 ## Deployment
 
-- **systemd:** `kafka-gateway.service` — runs as `kafka-http-gateway` user, installed to `/opt/kafka-gateway/`, `WorkingDirectory=/opt/kafka-gateway`, `LimitNOFILE=65536`, `TimeoutStopSec=120`
+- **systemd:** `kafka-gateway.service` — runs as `kafka-gateway` user, installed to `/opt/kafka-gateway/`,
+  `WorkingDirectory=/opt/kafka-gateway`, `LimitNOFILE=65536`, `TimeoutStopSec=120`
 - **TLS:** NOT implemented in the app — handled by NGINX reverse proxy (LAN-only deployment)
 - **Auth:** Optional HTTP Basic Auth via `users.json` in working directory; if file is missing, auth is disabled
 
@@ -72,7 +74,9 @@ These are intentional design choices — do not flag as issues:
 - **Arbitrary Kafka Properties** — create requests accept any `Properties` map; clients must be able to configure Kafka instances freely. Security boundary is at the network/broker level
 - **Token-based ownership** — UUID token returned on create = proof of ownership. Only the creator knows the token. No RBAC or role separation at the gateway level
 - **Basic Auth is optional** — rarely used; gateway is a transparent transport layer. Client rights are determined by Kafka broker ACLs/SASL per instance
-- **Sequential access guaranteed externally** — each KafkaConsumer/KafkaAdmin instance is called strictly sequentially by clients; server does not enforce per-instance synchronization
+- **Sequential access guaranteed externally** — each KafkaConsumer instance must be called strictly sequentially by
+  clients; server does not enforce per-instance synchronization. KafkaAdmin and KafkaProducer are thread-safe and may be
+  called concurrently
 
 ## Code Conventions
 
