@@ -25,26 +25,6 @@ import java.util.*;
 
 public class ConsumerResponseMapper {
 
-    public static ConsumerListResponse mapListResponse(Collection<ConsumerWrapper> source) {
-        if (source == null)
-            return null;
-        var result = new ConsumerListResponse(source.size());
-        source.forEach(wrapper -> result.add(mapConsumer(wrapper)));
-        return result;
-    }
-
-    private static ConsumerListResponse.Consumer mapConsumer(ConsumerWrapper source) {
-        if (source == null)
-            return null;
-        var result = new ConsumerListResponse.Consumer();
-        result.setId(source.getId());
-        result.setName(source.getName());
-        result.setOwner(source.getOwner());
-        result.setUsername(source.getUsername());
-        result.setExpiresAt(source.getExpiresAt());
-        return result;
-    }
-
     public static ConsumerCreateResponse mapCreateResponse(ConsumerWrapper source) {
         if (source == null)
             return null;

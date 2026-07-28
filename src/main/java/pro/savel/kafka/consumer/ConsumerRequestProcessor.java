@@ -27,6 +27,7 @@ import org.slf4j.LoggerFactory;
 import pro.savel.kafka.common.*;
 import pro.savel.kafka.common.exceptions.BadRequestException;
 import pro.savel.kafka.consumer.requests.*;
+import pro.savel.kafka.consumer.responses.ConsumerListResponse;
 
 import java.time.Duration;
 import java.util.Map;
@@ -126,7 +127,7 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
 
     private void processList(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var wrappers = provider.getItems();
-        var response = ConsumerResponseMapper.mapListResponse(wrappers);
+        var response = ConsumerListResponse.of(wrappers);
         var responseBearer = new ConsumerResponseBearer(requestBearer, HttpResponseStatus.OK, response);
         ctx.writeAndFlush(responseBearer);
     }

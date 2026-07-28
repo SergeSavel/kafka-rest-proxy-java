@@ -14,22 +14,48 @@
 
 package pro.savel.kafka.consumer.responses;
 
-import lombok.Data;
+import lombok.Getter;
+import pro.savel.kafka.consumer.ConsumerWrapper;
 
 import java.util.ArrayList;
+import java.util.Collection;
 
-public class ConsumerListResponse extends ArrayList<ConsumerListResponse.Consumer> implements ConsumerResponse {
+public class ConsumerListResponse extends ArrayList<ConsumerListResponse.ConsumerListing> implements ConsumerResponse {
 
-    public ConsumerListResponse(int initialCapacity) {
+    private ConsumerListResponse(int initialCapacity) {
         super(initialCapacity);
     }
 
-    @Data
-    public static class Consumer {
+    public static ConsumerListResponse of(Collection<ConsumerWrapper> source) {
+        if (source == null)
+            return null;
+        var result = new ConsumerListResponse(source.size());
+        source.forEach(wrapper -> result.add(ConsumerListing.of(wrapper)));
+        return result;
+    }
+
+    @Getter
+    public static class ConsumerListing {
+
         private String id;
         private String name;
         private String owner;
         private String username;
         private long expiresAt;
+
+        private ConsumerListing() {
+        }
+
+        private static ConsumerListing of(ConsumerWrapper source) {
+            if (source == null)
+                return null;
+            var result = new ConsumerListing();
+            result.id = source.getId();
+            result.name = source.getName();
+            result.owner = source.getOwner();
+            result.username = source.getUsername();
+            result.expiresAt = source.getExpiresAt();
+            return result;
+        }
     }
 }
