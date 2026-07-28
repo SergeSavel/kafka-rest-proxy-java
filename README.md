@@ -5,9 +5,9 @@ Spring, no heavy frameworks.
 
 ## Features
 
-- **Producer** — create, send (JSON & binary), partitions, lifecycle
+- **Producer** — create, send (JSON & binary), partitions, transactions, lifecycle
 - **Consumer** — create, poll, commit, seek, seek-to-beginning, seek-to-end, subscribe, assign, position, offsets,
-  topics, lifecycle
+  partitions, topics, lifecycle
 - **Admin** — topics, configs, ACLs, consumer groups, offsets, SCRAM credentials, cluster info
 - **Health check** — `GET /health` for liveness probes (no auth required)
 - **Version** — `GET /version`
@@ -121,7 +121,8 @@ scenarios.
 | POST   | `/consumer/get-assignment`        | Get current assignment      |
 | POST   | `/consumer/subscribe`             | Subscribe to topics/pattern |
 | POST   | `/consumer/get-subscription`      | Get current subscription    |
-| POST   | `/consumer/list-partitions`       | List partitions for a topic |
+| POST   | `/consumer/get-partitions`        | Get partitions for a topic  |
+| POST   | ~~`/consumer/list-partitions`~~   | ~~List partitions~~ *(deprecated)* |
 | POST   | `/consumer/list-topics`           | List topics                 |
 | POST   | `/consumer/get-beginning-offsets` | Get beginning offsets       |
 | POST   | `/consumer/get-end-offsets`       | Get end offsets             |

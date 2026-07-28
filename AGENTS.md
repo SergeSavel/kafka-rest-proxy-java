@@ -24,8 +24,8 @@ HTTP Request
 
 | Package    | Purpose                                                                                                                |
 |------------|------------------------------------------------------------------------------------------------------------------------|
-| `producer` | Producer lifecycle, send, partitions                                                                                   |
-| `consumer` | Consumer lifecycle, poll, commit, seek, seek-to-beginning, seek-to-end, subscribe, assign, position, offsets, topics   |
+| `producer` | Producer lifecycle, send, partitions, transactions                                                                     |
+| `consumer` | Consumer lifecycle, poll, commit, seek, seek-to-beginning, seek-to-end, subscribe, assign, position, offsets, partitions, topics |
 | `admin`    | Topics, configs, ACLs, groups, offsets, SCRAM, cluster                                                                 |
 | `common`   | Shared contracts, exceptions, HTTP utils, client lifecycle (`ClientProvider`, `ClientWrapper`, `BlockingTaskExecutor`) |
 
@@ -34,6 +34,7 @@ HTTP Request
 - **Decoders** parse JSON/binary requests into typed Request DTOs, pass via `RequestBearer`
 - **Processors** handle business logic; producer/consumer use `BlockingTaskExecutor` (virtual threads) for blocking Kafka calls; producer `send()` uses Kafka callback (non-blocking); admin uses `KafkaFuture.whenComplete()` callbacks (non-blocking)
 - **Encoders** serialize Response DTOs to JSON/binary HTTP responses
+- **Response classes** use static factory methods `of()` for mapping from Kafka types (replacing Mapper classes)
 - **`ClientProvider<T>`** manages instance lifecycle: creation, expiration (1s scheduled timer), removal. Shared by producer, consumer, admin
 - **`ClientWrapper`** wraps a Kafka client instance with id, token, owner, expiration timestamp
 - **`HttpStatusException`** — base class for gateway-specific exceptions; each subclass defines its own HTTP status code, handled uniformly in `CommonErrors`
