@@ -30,6 +30,7 @@ import pro.savel.kafka.consumer.requests.*;
 import pro.savel.kafka.consumer.responses.ConsumerAssignmentResponse;
 import pro.savel.kafka.consumer.responses.ConsumerCreateResponse;
 import pro.savel.kafka.consumer.responses.ConsumerListResponse;
+import pro.savel.kafka.consumer.responses.ConsumerOffsetsResponse;
 
 import java.time.Duration;
 import java.util.Map;
@@ -284,7 +285,7 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
         var consumer = getConsumer(request.getConsumerId(), request.getToken());
         execute(ctx, () -> {
             var offsets = consumer.beginningOffsets(partitions);
-            var response = ConsumerResponseMapper.mapOffsetsResponse(offsets);
+            var response = ConsumerOffsetsResponse.of(offsets);
             return new ConsumerResponseBearer(requestBearer, HttpResponseStatus.OK, response);
         });
     }
@@ -295,7 +296,7 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
         var consumer = getConsumer(request.getConsumerId(), request.getToken());
         execute(ctx, () -> {
             var offsets = consumer.endOffsets(partitions);
-            var response = ConsumerResponseMapper.mapOffsetsResponse(offsets);
+            var response = ConsumerOffsetsResponse.of(offsets);
             return new ConsumerResponseBearer(requestBearer, HttpResponseStatus.OK, response);
         });
     }

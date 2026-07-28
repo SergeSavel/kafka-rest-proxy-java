@@ -89,17 +89,6 @@ public class ConsumerResponseMapper {
         return result;
     }
 
-    public static ConsumerOffsetsResponse mapOffsetsResponse(Map<org.apache.kafka.common.TopicPartition, Long> source) {
-        if (source == null)
-            return null;
-        var map = new HashMap<String, ConsumerOffsetsResponse.TopicOffsets>();
-        source.forEach((topicPartition, offset) -> {
-            var topicOffsets = map.computeIfAbsent(topicPartition.topic(), ConsumerOffsetsResponse.TopicOffsets::new);
-            topicOffsets.getOffsets().add(new PartitionOffset(topicPartition.partition(), offset));
-        });
-        return new ConsumerOffsetsResponse(map.values());
-    }
-
     public static ConsumerTopicsResponse mapTopicsResponse(Map<String, List<org.apache.kafka.common.PartitionInfo>> source) {
         if (source == null)
             return null;

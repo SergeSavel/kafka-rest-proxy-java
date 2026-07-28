@@ -14,33 +14,43 @@
 
 package pro.savel.kafka.consumer.responses;
 
-import lombok.Data;
+import lombok.Getter;
 
 import java.util.ArrayList;
-import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 
 public class ConsumerOffsetsResponse extends ArrayList<ConsumerOffsetsResponse.TopicOffsets> implements ConsumerResponse {
 
-    public ConsumerOffsetsResponse() {
-        super();
-    }
-
-    public ConsumerOffsetsResponse(int size) {
+    private ConsumerOffsetsResponse(int size) {
         super(size);
     }
 
-    public ConsumerOffsetsResponse(Collection<ConsumerOffsetsResponse.TopicOffsets> source) {
-        super(source);
+    public static ConsumerOffsetsResponse of(Map<org.apache.kafka.common.TopicPartition, Long> source) {
+        if (source == null)
+            return null;
+        var map = new HashMap<String, TopicOffsets>();
+        source.forEach((topicPartition, offset) -> {
+            var topicOffsets = map.computeIfAbsent(topicPartition.topic(), TopicOffsets::new);
+            topicOffsets.offsets.add(new TopicOffsets.PartitionOffset(topicPartition.partition(), offset));
+        });
+        var result = new ConsumerOffsetsResponse(map.size());
+        result.addAll(map.values());
+        return result;
     }
 
-    @Data
+    @Getter
     public static class TopicOffsets {
+
         private final String topic;
         private final ArrayList<PartitionOffset> offsets;
 
-        public TopicOffsets(String topic) {
+        private TopicOffsets(String topic) {
             this.topic = topic;
-            offsets = new ArrayList<>();
+            this.offsets = new ArrayList<>();
+        }
+
+        public record PartitionOffset(int partition, Long offset) {
         }
     }
 }
