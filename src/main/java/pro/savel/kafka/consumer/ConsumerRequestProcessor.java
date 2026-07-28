@@ -20,6 +20,7 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.util.ReferenceCountUtil;
 import org.apache.kafka.clients.consumer.InvalidOffsetException;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.consumer.SubscriptionPattern;
 import org.apache.kafka.common.TopicPartition;
 import org.slf4j.Logger;
@@ -163,9 +164,9 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
 
     private void processPoll(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (ConsumerPollRequest) requestBearer.request();
-        var wrapper = getConsumer(request.getConsumerId(), request.getToken());
+        var consumer = getConsumer(request.getConsumerId(), request.getToken());
         execute(ctx, () -> {
-            var records = wrapper.getConsumer().poll(Duration.ofMillis(request.getTimeout()));
+            var records = consumer.poll(Duration.ofMillis(request.getTimeout()));
             var response = ConsumerResponseMapper.mapPollResponse(records);
             return new ConsumerResponseBearer(requestBearer, HttpResponseStatus.OK, response);
         });
@@ -173,9 +174,9 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
 
     private void processCommit(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (ConsumerCommitRequest) requestBearer.request();
-        var wrapper = getConsumer(request.getConsumerId(), request.getToken());
+        var consumer = getConsumer(request.getConsumerId(), request.getToken());
         execute(ctx, () -> {
-            wrapper.getConsumer().commitSync();
+            consumer.commitSync();
             return new ConsumerResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null);
         });
     }
@@ -183,18 +184,18 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
     private void processAssign(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (ConsumerAssignRequest) requestBearer.request();
         var assignment = CommonRequestMapper.mapPartitions(request.getPartitions());
-        var wrapper = getConsumer(request.getConsumerId(), request.getToken());
+        var consumer = getConsumer(request.getConsumerId(), request.getToken());
         execute(ctx, () -> {
-            wrapper.getConsumer().assign(assignment);
+            consumer.assign(assignment);
             return new ConsumerResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null);
         });
     }
 
     private void processGetAssignment(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (ConsumerGetAssignmentRequest) requestBearer.request();
-        var wrapper = getConsumer(request.getConsumerId(), request.getToken());
+        var consumer = getConsumer(request.getConsumerId(), request.getToken());
         execute(ctx, () -> {
-            var assignment = wrapper.getConsumer().assignment();
+            var assignment = consumer.assignment();
             var response = ConsumerResponseMapper.mapAssignmentResponse(assignment);
             return new ConsumerResponseBearer(requestBearer, HttpResponseStatus.OK, response);
         });
@@ -203,9 +204,9 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
     private void processSeek(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (ConsumerSeekRequest) requestBearer.request();
         var topicPartition = new TopicPartition(request.getTopic(), request.getPartition());
-        var wrapper = getConsumer(request.getConsumerId(), request.getToken());
+        var consumer = getConsumer(request.getConsumerId(), request.getToken());
         execute(ctx, () -> {
-            wrapper.getConsumer().seek(topicPartition, request.getOffset());
+            consumer.seek(topicPartition, request.getOffset());
             return new ConsumerResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null);
         });
     }
@@ -213,9 +214,9 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
     private void processSeekToBeginning(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (ConsumerSeekToBeginningRequest) requestBearer.request();
         var partitions = CommonRequestMapper.mapPartitions(request.getPartitions());
-        var wrapper = getConsumer(request.getConsumerId(), request.getToken());
+        var consumer = getConsumer(request.getConsumerId(), request.getToken());
         execute(ctx, () -> {
-            wrapper.getConsumer().seekToBeginning(partitions);
+            consumer.seekToBeginning(partitions);
             return new ConsumerResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null);
         });
     }
@@ -223,18 +224,17 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
     private void processSeekToEnd(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (ConsumerSeekToEndRequest) requestBearer.request();
         var partitions = CommonRequestMapper.mapPartitions(request.getPartitions());
-        var wrapper = getConsumer(request.getConsumerId(), request.getToken());
+        var consumer = getConsumer(request.getConsumerId(), request.getToken());
         execute(ctx, () -> {
-            wrapper.getConsumer().seekToEnd(partitions);
+            consumer.seekToEnd(partitions);
             return new ConsumerResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null);
         });
     }
 
     private void processSubscribe(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (ConsumerSubscribeRequest) requestBearer.request();
-        var wrapper = getConsumer(request.getConsumerId(), request.getToken());
+        var consumer = getConsumer(request.getConsumerId(), request.getToken());
         execute(ctx, () -> {
-            var consumer = wrapper.getConsumer();
             if (request.getTopics() != null)
                 consumer.subscribe(request.getTopics());
             else if (request.getPattern() != null)
@@ -247,9 +247,9 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
 
     private void processGetSubscription(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (ConsumerGetSubscriptionRequest) requestBearer.request();
-        var wrapper = getConsumer(request.getConsumerId(), request.getToken());
+        var consumer = getConsumer(request.getConsumerId(), request.getToken());
         execute(ctx, () -> {
-            var subscription = wrapper.getConsumer().subscription();
+            var subscription = consumer.subscription();
             var response = ConsumerResponseMapper.mapSubscriptionResponse(subscription);
             return new ConsumerResponseBearer(requestBearer, HttpResponseStatus.OK, response);
         });
@@ -258,9 +258,9 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
     private void processGetPosition(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (ConsumerGetPositionRequest) requestBearer.request();
         var topicPartition = new TopicPartition(request.getTopic(), request.getPartition());
-        var wrapper = getConsumer(request.getConsumerId(), request.getToken());
+        var consumer = getConsumer(request.getConsumerId(), request.getToken());
         execute(ctx, () -> {
-            var position = wrapper.getConsumer().position(topicPartition);
+            var position = consumer.position(topicPartition);
             var response = ConsumerResponseMapper.mapPositionResponse(position);
             return new ConsumerResponseBearer(requestBearer, HttpResponseStatus.OK, response);
         });
@@ -268,9 +268,9 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
 
     private void processListPartitions(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (ConsumerListPartitionsRequest) requestBearer.request();
-        var wrapper = getConsumer(request.getConsumerId(), request.getToken());
+        var consumer = getConsumer(request.getConsumerId(), request.getToken());
         execute(ctx, () -> {
-            var partitions = wrapper.getConsumer().partitionsFor(request.getTopic());
+            var partitions = consumer.partitionsFor(request.getTopic());
             var response = ConsumerResponseMapper.mapPartitionsResponse(partitions);
             return new ConsumerResponseBearer(requestBearer, HttpResponseStatus.OK, response);
         });
@@ -279,9 +279,9 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
     private void processGetBeginningOffsets(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (ConsumerGetBeginningOffsetsRequest) requestBearer.request();
         var partitions = CommonRequestMapper.mapPartitions(request.getPartitions());
-        var wrapper = getConsumer(request.getConsumerId(), request.getToken());
+        var consumer = getConsumer(request.getConsumerId(), request.getToken());
         execute(ctx, () -> {
-            var offsets = wrapper.getConsumer().beginningOffsets(partitions);
+            var offsets = consumer.beginningOffsets(partitions);
             var response = ConsumerResponseMapper.mapOffsetsResponse(offsets);
             return new ConsumerResponseBearer(requestBearer, HttpResponseStatus.OK, response);
         });
@@ -290,9 +290,9 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
     private void processGetEndOffsets(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (ConsumerGetEndOffsetsRequest) requestBearer.request();
         var partitions = CommonRequestMapper.mapPartitions(request.getPartitions());
-        var wrapper = getConsumer(request.getConsumerId(), request.getToken());
+        var consumer = getConsumer(request.getConsumerId(), request.getToken());
         execute(ctx, () -> {
-            var offsets = wrapper.getConsumer().endOffsets(partitions);
+            var offsets = consumer.endOffsets(partitions);
             var response = ConsumerResponseMapper.mapOffsetsResponse(offsets);
             return new ConsumerResponseBearer(requestBearer, HttpResponseStatus.OK, response);
         });
@@ -300,9 +300,9 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
 
     private void processListTopics(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (ConsumerListTopicsRequest) requestBearer.request();
-        var wrapper = getConsumer(request.getConsumerId(), request.getToken());
+        var consumer = getConsumer(request.getConsumerId(), request.getToken());
         execute(ctx, () -> {
-            var topics = wrapper.getConsumer().listTopics();
+            var topics = consumer.listTopics();
             if (request.getPattern() != null) {
                 Pattern pattern;
                 try {
@@ -321,10 +321,10 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
 
 //endregion
 
-    private ConsumerWrapper getConsumer(String id, String token) {
+    private KafkaConsumer<byte[], byte[]> getConsumer(String id, String token) {
         var wrapper = provider.getConsumer(id, token);
         wrapper.touch();
-        return wrapper;
+        return wrapper.getConsumer();
     }
 
     private void execute(ChannelHandlerContext ctx, Supplier<ConsumerResponseBearer> operation) {
