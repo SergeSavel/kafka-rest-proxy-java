@@ -27,10 +27,7 @@ import org.slf4j.LoggerFactory;
 import pro.savel.kafka.common.*;
 import pro.savel.kafka.common.exceptions.BadRequestException;
 import pro.savel.kafka.consumer.requests.*;
-import pro.savel.kafka.consumer.responses.ConsumerAssignmentResponse;
-import pro.savel.kafka.consumer.responses.ConsumerCreateResponse;
-import pro.savel.kafka.consumer.responses.ConsumerListResponse;
-import pro.savel.kafka.consumer.responses.ConsumerOffsetsResponse;
+import pro.savel.kafka.consumer.responses.*;
 
 import java.time.Duration;
 import java.util.Map;
@@ -96,6 +93,8 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
             processSeekToBeginning(ctx, requestBearer);
         else if (requestClass == ConsumerSeekToEndRequest.class)
             processSeekToEnd(ctx, requestBearer);
+        else if (requestClass == ConsumerGetPartitionsRequest.class)
+            processGetPartitions(ctx, requestBearer);
         else if (requestClass == ConsumerListPartitionsRequest.class)
             processListPartitions(ctx, requestBearer);
         else if (requestClass == ConsumerAssignRequest.class)
@@ -269,6 +268,17 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
         });
     }
 
+    private void processGetPartitions(ChannelHandlerContext ctx, RequestBearer requestBearer) {
+        var request = (ConsumerGetPartitionsRequest) requestBearer.request();
+        var consumer = getConsumer(request.getConsumerId(), request.getToken());
+        execute(ctx, () -> {
+            var partitions = consumer.partitionsFor(request.getTopic());
+            var response = ConsumerPartitionsResponse.of(partitions);
+            return new ConsumerResponseBearer(requestBearer, HttpResponseStatus.OK, response);
+        });
+    }
+
+    @Deprecated
     private void processListPartitions(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (ConsumerListPartitionsRequest) requestBearer.request();
         var consumer = getConsumer(request.getConsumerId(), request.getToken());

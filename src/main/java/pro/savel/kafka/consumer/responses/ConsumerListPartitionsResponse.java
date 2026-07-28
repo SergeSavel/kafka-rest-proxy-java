@@ -12,18 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package pro.savel.kafka.consumer.requests;
+package pro.savel.kafka.consumer.responses;
 
-import jakarta.validation.constraints.NotEmpty;
 import lombok.Data;
+
+import java.util.Collection;
 
 @Deprecated
 @Data
-public class ConsumerListPartitionsRequest implements ConsumerRequest {
-    @NotEmpty
-    private String consumerId;
-    @NotEmpty
-    private String token;
-    @NotEmpty
+public class ConsumerListPartitionsResponse implements ConsumerResponse {
     private String topic;
+    private Collection<ConsumerListPartitionsResponse.PartitionInfo> partitions;
+
+    @Data
+    public static class PartitionInfo {
+        private int partition;
+    }
 }

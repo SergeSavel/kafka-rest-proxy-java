@@ -89,6 +89,7 @@ public class ConsumerRequestDecoder extends ChannelInboundHandlerAdapter {
             case "/get-assignment" -> decodeGetAssignment(ctx, httpRequest);
             case "/subscribe" -> decodeSubscribe(ctx, httpRequest);
             case "/get-subscription" -> decodeGetSubscription(ctx, httpRequest);
+            case "/get-partitions" -> decodeGetPartitions(ctx, httpRequest);
             case "/list-partitions" -> decodeListPartitions(ctx, httpRequest);
             case "/list-topics" -> decodeListTopics(ctx, httpRequest);
             case "/get-beginning-offsets" -> decodeGetBeginningOffsets(ctx, httpRequest);
@@ -192,6 +193,14 @@ public class ConsumerRequestDecoder extends ChannelInboundHandlerAdapter {
             throw new MethodNotAllowedException("Unsupported HTTP method.");
     }
 
+    private void decodeGetPartitions(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
+        if (httpRequest.method() == HttpMethod.POST)
+            decodeRequest(ctx, httpRequest, ConsumerGetPartitionsRequest.class);
+        else
+            throw new MethodNotAllowedException("Unsupported HTTP method.");
+    }
+
+    @Deprecated
     private void decodeListPartitions(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
         if (httpRequest.method() == HttpMethod.POST)
             decodeRequest(ctx, httpRequest, ConsumerListPartitionsRequest.class);

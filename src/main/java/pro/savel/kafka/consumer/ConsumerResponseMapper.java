@@ -75,14 +75,15 @@ public class ConsumerResponseMapper {
         return new ConsumerSubscriptionResponse(source);
     }
 
-    public static ConsumerPartitionsResponse mapPartitionsResponse(Collection<org.apache.kafka.common.PartitionInfo> source) {
+    @Deprecated
+    public static ConsumerListPartitionsResponse mapPartitionsResponse(Collection<org.apache.kafka.common.PartitionInfo> source) {
         if (source == null)
             return null;
-        var result = new ConsumerPartitionsResponse();
+        var result = new ConsumerListPartitionsResponse();
         result.setPartitions(new ArrayList<>(source.size()));
         source.forEach(partitionInfoSource -> {
             result.setTopic(partitionInfoSource.topic());
-            var partitionInfo = new ConsumerPartitionsResponse.PartitionInfo();
+            var partitionInfo = new ConsumerListPartitionsResponse.PartitionInfo();
             partitionInfo.setPartition(partitionInfoSource.partition());
             result.getPartitions().add(partitionInfo);
         });
