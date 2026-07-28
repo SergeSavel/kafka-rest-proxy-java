@@ -28,6 +28,7 @@ import pro.savel.kafka.common.*;
 import pro.savel.kafka.common.exceptions.BadRequestException;
 import pro.savel.kafka.consumer.requests.*;
 import pro.savel.kafka.consumer.responses.ConsumerAssignmentResponse;
+import pro.savel.kafka.consumer.responses.ConsumerCreateResponse;
 import pro.savel.kafka.consumer.responses.ConsumerListResponse;
 
 import java.time.Duration;
@@ -138,7 +139,7 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
         var owner = ctx.channel().attr(NettyAttributes.USERNAME).get();
         execute(ctx, () -> {
             var wrapper = provider.createConsumer(request.getName(), request.getConfig(), request.getExpirationTimeout(), owner);
-            var response = ConsumerResponseMapper.mapCreateResponse(wrapper);
+            var response = ConsumerCreateResponse.of(wrapper);
             return new ConsumerResponseBearer(requestBearer, HttpResponseStatus.CREATED, response);
         });
     }

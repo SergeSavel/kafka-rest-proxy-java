@@ -14,10 +14,24 @@
 
 package pro.savel.kafka.consumer.responses;
 
-import lombok.Data;
+import lombok.Getter;
+import pro.savel.kafka.consumer.ConsumerWrapper;
 
-@Data
+@Getter
 public class ConsumerCreateResponse implements ConsumerResponse {
+
     private String id;
     private String token;
+
+    private ConsumerCreateResponse() {
+    }
+
+    public static ConsumerCreateResponse of(ConsumerWrapper source) {
+        if (source == null)
+            return null;
+        var result = new ConsumerCreateResponse();
+        result.id = source.getId();
+        result.token = source.getToken();
+        return result;
+    }
 }

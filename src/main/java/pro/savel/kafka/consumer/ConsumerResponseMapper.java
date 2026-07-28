@@ -24,15 +24,6 @@ import java.util.*;
 
 public class ConsumerResponseMapper {
 
-    public static ConsumerCreateResponse mapCreateResponse(ConsumerWrapper source) {
-        if (source == null)
-            return null;
-        var result = new ConsumerCreateResponse();
-        result.setId(source.getId());
-        result.setToken(source.getToken());
-        return result;
-    }
-
     public static ConsumerPollResponse mapPollResponse(ConsumerRecords<byte[], byte[]> source) {
         if (source == null)
             return null;
