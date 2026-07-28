@@ -64,4 +64,5 @@ tasks.jar {
 
 tasks.test {
     useJUnitPlatform()
+    jvmArgs("-Xshare:off")
 }
