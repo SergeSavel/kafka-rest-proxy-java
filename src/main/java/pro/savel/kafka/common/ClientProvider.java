@@ -66,7 +66,7 @@ public abstract class ClientProvider<Wrapper extends ClientWrapper> implements A
         }
     }
 
-    private void retireClients() {
+    void retireClients() {
         var currentTimestamp = System.currentTimeMillis();
         var clients = getItems();
         for (var client : clients) {
