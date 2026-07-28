@@ -94,14 +94,17 @@ scenarios.
 
 ### Producer
 
-| Method | Endpoint                   | Description               |
-|--------|----------------------------|---------------------------|
-| POST   | `/producer/create`         | Create producer instance  |
-| POST   | `/producer/send`           | Send record (JSON/binary) |
-| POST   | `/producer/get-partitions` | Get topic partitions      |
-| POST   | `/producer/touch`          | Reset expiration timer    |
-| POST   | `/producer/release`        | Destroy producer instance |
-| GET    | `/producer`                | List all producers        |
+| Method | Endpoint                       | Description               |
+|--------|--------------------------------|---------------------------|
+| POST   | `/producer/create`             | Create producer instance  |
+| POST   | `/producer/send`               | Send record (JSON/binary) |
+| POST   | `/producer/get-partitions`     | Get topic partitions      |
+| POST   | `/producer/begin-transaction`  | Begin transaction         |
+| POST   | `/producer/commit-transaction` | Commit transaction        |
+| POST   | `/producer/abort-transaction`  | Abort transaction         |
+| POST   | `/producer/touch`              | Reset expiration timer    |
+| POST   | `/producer/release`            | Destroy producer instance |
+| GET    | `/producer`                    | List all producers        |
 
 ### Consumer
 

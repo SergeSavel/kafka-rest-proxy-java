@@ -93,6 +93,12 @@ public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter imple
             processRemove(ctx, requestBearer);
         else if (requestClass == ProducerTouchRequest.class)
             processTouch(ctx, requestBearer);
+        else if (requestClass == ProducerBeginTransactionRequest.class)
+            processBeginTransaction(ctx, requestBearer);
+        else if (requestClass == ProducerCommitTransactionRequest.class)
+            processCommitTransaction(ctx, requestBearer);
+        else if (requestClass == ProducerAbortTransactionRequest.class)
+            processAbortTransaction(ctx, requestBearer);
         else if (requestClass == ProducerListRequest.class)
             processList(ctx, requestBearer);
         else
@@ -167,6 +173,33 @@ public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter imple
             var response = ProducerPartitionsResponse.of(partitions);
             ctx.writeAndFlush(new ProducerResponseBearer(requestBearer, HttpResponseStatus.OK, response));
         });
+    }
+
+    private void processBeginTransaction(ChannelHandlerContext ctx, RequestBearer requestBearer) {
+        var request = (ProducerBeginTransactionRequest) requestBearer.request();
+        var producer = getProducer(request.getProducerId(), request.getToken());
+        execute(ctx, () -> {
+            producer.beginTransaction();
+            return null;
+        }, ignored -> ctx.writeAndFlush(new ProducerResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null)));
+    }
+
+    private void processCommitTransaction(ChannelHandlerContext ctx, RequestBearer requestBearer) {
+        var request = (ProducerCommitTransactionRequest) requestBearer.request();
+        var producer = getProducer(request.getProducerId(), request.getToken());
+        execute(ctx, () -> {
+            producer.commitTransaction();
+            return null;
+        }, ignored -> ctx.writeAndFlush(new ProducerResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null)));
+    }
+
+    private void processAbortTransaction(ChannelHandlerContext ctx, RequestBearer requestBearer) {
+        var request = (ProducerAbortTransactionRequest) requestBearer.request();
+        var producer = getProducer(request.getProducerId(), request.getToken());
+        execute(ctx, () -> {
+            producer.abortTransaction();
+            return null;
+        }, ignored -> ctx.writeAndFlush(new ProducerResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null)));
     }
 
 //endregion

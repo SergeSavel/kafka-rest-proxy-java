@@ -82,6 +82,9 @@ public class ProducerRequestDecoder extends ChannelInboundHandlerAdapter {
         switch (pathMethod) {
             case "/send" -> decodeSend(ctx, httpRequest);
             case "/get-partitions" -> decodeGetPartitions(ctx, httpRequest);
+            case "/begin-transaction" -> decodeBeginTransaction(ctx, httpRequest);
+            case "/commit-transaction" -> decodeCommitTransaction(ctx, httpRequest);
+            case "/abort-transaction" -> decodeAbortTransaction(ctx, httpRequest);
             case "/touch" -> decodeTouch(ctx, httpRequest);
             case "/create" -> decodeCreate(ctx, httpRequest);
             case "/release" -> decodeRemove(ctx, httpRequest);
@@ -133,6 +136,27 @@ public class ProducerRequestDecoder extends ChannelInboundHandlerAdapter {
     private void decodeGetPartitions(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
         if (httpRequest.method() == HttpMethod.POST)
             decodeRequest(ctx, httpRequest, ProducerGetPartitionsRequest.class);
+        else
+            throw new MethodNotAllowedException("Unsupported HTTP method.");
+    }
+
+    private void decodeBeginTransaction(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
+        if (httpRequest.method() == HttpMethod.POST)
+            decodeRequest(ctx, httpRequest, ProducerBeginTransactionRequest.class);
+        else
+            throw new MethodNotAllowedException("Unsupported HTTP method.");
+    }
+
+    private void decodeCommitTransaction(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
+        if (httpRequest.method() == HttpMethod.POST)
+            decodeRequest(ctx, httpRequest, ProducerCommitTransactionRequest.class);
+        else
+            throw new MethodNotAllowedException("Unsupported HTTP method.");
+    }
+
+    private void decodeAbortTransaction(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
+        if (httpRequest.method() == HttpMethod.POST)
+            decodeRequest(ctx, httpRequest, ProducerAbortTransactionRequest.class);
         else
             throw new MethodNotAllowedException("Unsupported HTTP method.");
     }
