@@ -20,6 +20,7 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.util.ReferenceCountUtil;
 import org.apache.kafka.clients.producer.Callback;
+import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.slf4j.Logger;
@@ -136,9 +137,7 @@ public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter imple
 
     private void processSend(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (ProducerSendRequest) requestBearer.request();
-        var wrapper = provider.getProducer(request.getProducerId(), request.getToken());
-        wrapper.touch();
-        var producer = wrapper.getProducer();
+        var producer = getProducer(request.getProducerId(), request.getToken());
         var record = new ProducerRecord<>(request.getTopic(), request.getPartition(), request.getKey(), request.getValue());
         var headers = request.getHeaders();
         if (headers != null)
@@ -159,9 +158,7 @@ public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter imple
 
     private void processGetPartitions(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (ProducerGetPartitionsRequest) requestBearer.request();
-        var wrapper = provider.getProducer(request.getProducerId(), request.getToken());
-        wrapper.touch();
-        var producer = wrapper.getProducer();
+        var producer = getProducer(request.getProducerId(), request.getToken());
         execute(ctx, () -> producer.partitionsFor(request.getTopic()), partitions -> {
             var response = ProducerResponseMapper.mapPartitionsResponse(partitions);
             ctx.writeAndFlush(new ProducerResponseBearer(requestBearer, HttpResponseStatus.OK, response));
@@ -169,6 +166,12 @@ public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter imple
     }
 
 //endregion
+
+    private KafkaProducer<byte[], byte[]> getProducer(String id, String token) {
+        var wrapper = provider.getProducer(id, token);
+        wrapper.touch();
+        return wrapper.getProducer();
+    }
 
     private <T> void execute(
             ChannelHandlerContext ctx,
