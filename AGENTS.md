@@ -86,4 +86,4 @@ These are intentional design choices — do not flag as issues:
 - **Validation:** Jakarta Validation (`@NotEmpty`, `@NotNull`, `@Positive`) enforced via Hibernate Validator
 - **Logging:** SLF4J + Log4j2; root level WARN, `pro.savel` at INFO
 - **License:** Apache 2.0 header on all source files
-- **Tests:** JUnit 5 (declared, no tests written yet)
+- **Tests:** JUnit 5 + Mockito; covers common (Utils, CommonErrors, RequestBearer, ClientProvider, mappers), serializers, exceptions, auth handler
