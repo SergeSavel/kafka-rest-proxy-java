@@ -16,6 +16,7 @@ package pro.savel.kafka.consumer;
 
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
+import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 import pro.savel.kafka.common.ClientWrapper;
@@ -27,7 +28,7 @@ import java.util.UUID;
 @EqualsAndHashCode(callSuper = false)
 public class ConsumerWrapper extends ClientWrapper {
 
-    private final KafkaConsumer<byte[], byte[]> consumer;
+    private final Consumer<byte[], byte[]> consumer;
     private final String token = UUID.randomUUID().toString();
 
     protected ConsumerWrapper(String name, Properties config, int expirationTimeout, String owner) {

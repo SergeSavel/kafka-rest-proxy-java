@@ -20,7 +20,6 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.util.ReferenceCountUtil;
 import org.apache.kafka.clients.consumer.InvalidOffsetException;
-import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.consumer.SubscriptionPattern;
 import org.apache.kafka.common.TopicPartition;
 import org.slf4j.Logger;
@@ -321,7 +320,7 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
 
 //endregion
 
-    private KafkaConsumer<byte[], byte[]> getConsumer(String id, String token) {
+    private org.apache.kafka.clients.consumer.Consumer<byte[], byte[]> getConsumer(String id, String token) {
         var wrapper = provider.getConsumer(id, token);
         wrapper.touch();
         return wrapper.getConsumer();
