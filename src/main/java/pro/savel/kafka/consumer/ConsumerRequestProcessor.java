@@ -27,6 +27,7 @@ import org.slf4j.LoggerFactory;
 import pro.savel.kafka.common.*;
 import pro.savel.kafka.common.exceptions.BadRequestException;
 import pro.savel.kafka.consumer.requests.*;
+import pro.savel.kafka.consumer.responses.ConsumerAssignmentResponse;
 import pro.savel.kafka.consumer.responses.ConsumerListResponse;
 
 import java.time.Duration;
@@ -196,7 +197,7 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
         var consumer = getConsumer(request.getConsumerId(), request.getToken());
         execute(ctx, () -> {
             var assignment = consumer.assignment();
-            var response = ConsumerResponseMapper.mapAssignmentResponse(assignment);
+            var response = ConsumerAssignmentResponse.of(assignment);
             return new ConsumerResponseBearer(requestBearer, HttpResponseStatus.OK, response);
         });
     }
