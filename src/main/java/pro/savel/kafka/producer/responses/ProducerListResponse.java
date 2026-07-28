@@ -14,12 +14,13 @@
 
 package pro.savel.kafka.producer.responses;
 
+import lombok.Getter;
 import pro.savel.kafka.producer.ProducerWrapper;
 
 import java.util.ArrayList;
 import java.util.Collection;
 
-public class ProducerListResponse extends ArrayList<ProducerListing> implements ProducerResponse {
+public class ProducerListResponse extends ArrayList<ProducerListResponse.ProducerListing> implements ProducerResponse {
 
     private ProducerListResponse(int initialCapacity) {
         super(initialCapacity);
@@ -31,5 +32,30 @@ public class ProducerListResponse extends ArrayList<ProducerListing> implements 
         var result = new ProducerListResponse(source.size());
         source.forEach(wrapper -> result.add(ProducerListing.of(wrapper)));
         return result;
+    }
+
+    @Getter
+    public static class ProducerListing {
+
+        private String id;
+        private String name;
+        private String owner;
+        private String username;
+        private long expiresAt;
+
+        private ProducerListing() {
+        }
+
+        private static ProducerListing of(ProducerWrapper source) {
+            if (source == null)
+                return null;
+            var result = new ProducerListing();
+            result.id = source.getId();
+            result.name = source.getName();
+            result.owner = source.getOwner();
+            result.username = source.getUsername();
+            result.expiresAt = source.getExpiresAt();
+            return result;
+        }
     }
 }
