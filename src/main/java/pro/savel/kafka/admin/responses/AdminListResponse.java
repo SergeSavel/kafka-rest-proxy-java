@@ -14,22 +14,48 @@
 
 package pro.savel.kafka.admin.responses;
 
-import lombok.Data;
+import lombok.Getter;
+import pro.savel.kafka.admin.AdminWrapper;
 
 import java.util.ArrayList;
+import java.util.Collection;
 
-public class AdminListResponse extends ArrayList<AdminListResponse.Admin> implements AdminResponse {
+public class AdminListResponse extends ArrayList<AdminListResponse.AdminListing> implements AdminResponse {
 
-    public AdminListResponse(int initialCapacity) {
+    private AdminListResponse(int initialCapacity) {
         super(initialCapacity);
     }
 
-    @Data
-    public static class Admin {
+    public static AdminListResponse of(Collection<AdminWrapper> source) {
+        if (source == null)
+            return null;
+        var result = new AdminListResponse(source.size());
+        source.forEach(wrapper -> result.add(AdminListing.of(wrapper)));
+        return result;
+    }
+
+    @Getter
+    public static class AdminListing {
+
         private String id;
         private String name;
         private String owner;
         private String username;
         private long expiresAt;
+
+        private AdminListing() {
+        }
+
+        private static AdminListing of(AdminWrapper source) {
+            if (source == null)
+                return null;
+            var result = new AdminListing();
+            result.id = source.getId();
+            result.name = source.getName();
+            result.owner = source.getOwner();
+            result.username = source.getUsername();
+            result.expiresAt = source.getExpiresAt();
+            return result;
+        }
     }
 }

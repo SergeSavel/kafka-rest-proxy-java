@@ -196,7 +196,7 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
 
     private void processList(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var wrappers = provider.getItems();
-        var response = AdminResponseMapper.mapListResponse(wrappers);
+        var response = AdminListResponse.of(wrappers);
         var responseBearer = new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response);
         ctx.writeAndFlush(responseBearer);
     }

@@ -32,26 +32,6 @@ import java.util.*;
 
 public class AdminResponseMapper {
 
-    public static AdminListResponse mapListResponse(Collection<AdminWrapper> source) {
-        if (source == null)
-            return null;
-        var result = new AdminListResponse(source.size());
-        source.forEach(wrapper -> result.add(mapAdmin(wrapper)));
-        return result;
-    }
-
-    private static AdminListResponse.Admin mapAdmin(AdminWrapper source) {
-        if (source == null)
-            return null;
-        var result = new AdminListResponse.Admin();
-        result.setId(source.getId());
-        result.setName(source.getName());
-        result.setOwner(source.getOwner());
-        result.setUsername(source.getUsername());
-        result.setExpiresAt(source.getExpiresAt());
-        return result;
-    }
-
     public static Set<String> mapAclOperations(Set<AclOperation> source) {
         if (source == null)
             return null;
