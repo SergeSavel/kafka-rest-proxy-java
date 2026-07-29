@@ -62,6 +62,7 @@ HTTP Request
 
 ## Deployment
 
+- **High-load environment:** hundreds of active producer and consumer instances simultaneously; avoid allocations, copies, and unnecessary object creation on hot paths
 - **systemd:** `kafka-gateway.service` — runs as `kafka-gateway` user, installed to `/opt/kafka-gateway/`,
   `WorkingDirectory=/opt/kafka-gateway`, `LimitNOFILE=65536`, `TimeoutStopSec=120`
 - **TLS:** NOT implemented in the app — handled by NGINX reverse proxy (LAN-only deployment)
