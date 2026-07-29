@@ -49,11 +49,11 @@ class ConsumerResponseSerializerTest {
 
     private static ConsumerRecords<byte[], byte[]> createRecords(List<ConsumerRecord<byte[], byte[]>> records) {
         var tp = new TopicPartition(records.get(0).topic(), records.get(0).partition());
-        return new ConsumerRecords<>(Map.of(tp, records));
+        return new ConsumerRecords<>(Map.of(tp, records), Map.of());
     }
 
     private static ConsumerRecords<byte[], byte[]> emptyRecords() {
-        return new ConsumerRecords<>(Collections.emptyMap());
+        return new ConsumerRecords<>(Collections.emptyMap(), Collections.emptyMap());
     }
 
 //region JSON
