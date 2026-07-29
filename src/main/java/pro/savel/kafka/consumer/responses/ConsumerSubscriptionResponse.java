@@ -19,11 +19,15 @@ import java.util.Collection;
 
 public class ConsumerSubscriptionResponse extends ArrayList<String> implements ConsumerResponse {
 
-    public ConsumerSubscriptionResponse(int initialCapacity) {
+    private ConsumerSubscriptionResponse(int initialCapacity) {
         super(initialCapacity);
     }
 
-    public ConsumerSubscriptionResponse(Collection<? extends String> c) {
-        super(c);
+    public static ConsumerSubscriptionResponse of(Collection<String> source) {
+        if (source == null)
+            return null;
+        var result = new ConsumerSubscriptionResponse(source.size());
+        result.addAll(source);
+        return result;
     }
 }

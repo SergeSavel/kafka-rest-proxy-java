@@ -252,7 +252,7 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
         var consumer = getConsumer(request.getConsumerId(), request.getToken());
         execute(ctx, () -> {
             var subscription = consumer.subscription();
-            var response = ConsumerResponseMapper.mapSubscriptionResponse(subscription);
+            var response = ConsumerSubscriptionResponse.of(subscription);
             return new ConsumerResponseBearer(requestBearer, HttpResponseStatus.OK, response);
         });
     }

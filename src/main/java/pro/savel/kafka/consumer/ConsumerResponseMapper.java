@@ -69,12 +69,6 @@ public class ConsumerResponseMapper {
         return result;
     }
 
-    public static ConsumerSubscriptionResponse mapSubscriptionResponse(Collection<String> source) {
-        if (source == null)
-            return null;
-        return new ConsumerSubscriptionResponse(source);
-    }
-
     @Deprecated
     public static ConsumerListPartitionsResponse mapPartitionsResponse(Collection<org.apache.kafka.common.PartitionInfo> source) {
         if (source == null)
