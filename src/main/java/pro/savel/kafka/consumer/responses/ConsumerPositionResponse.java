@@ -14,9 +14,19 @@
 
 package pro.savel.kafka.consumer.responses;
 
-import lombok.Data;
+import lombok.Getter;
 
-@Data
+@Getter
 public class ConsumerPositionResponse implements ConsumerResponse {
+
     private long offset;
+
+    private ConsumerPositionResponse() {
+    }
+
+    public static ConsumerPositionResponse of(long source) {
+        var result = new ConsumerPositionResponse();
+        result.offset = source;
+        return result;
+    }
 }

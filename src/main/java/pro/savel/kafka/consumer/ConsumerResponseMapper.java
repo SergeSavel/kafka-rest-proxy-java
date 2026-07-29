@@ -63,12 +63,6 @@ public class ConsumerResponseMapper {
         return result;
     }
 
-    public static ConsumerPositionResponse mapPositionResponse(long source) {
-        var result = new ConsumerPositionResponse();
-        result.setOffset(source);
-        return result;
-    }
-
     @Deprecated
     public static ConsumerListPartitionsResponse mapPartitionsResponse(Collection<org.apache.kafka.common.PartitionInfo> source) {
         if (source == null)
