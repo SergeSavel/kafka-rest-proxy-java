@@ -132,8 +132,7 @@ public class ConsumerResponseSerializer {
 
     private static void writeBytes(ByteBuf buf, String value) {
         var bytes = value.getBytes(StandardCharsets.UTF_8);
-        buf.writeInt(bytes.length);
-        buf.writeBytes(bytes);
+        writeBytes(buf, bytes);
     }
 
     private static void writeBytes(ByteBuf buf, byte[] bytes) {
