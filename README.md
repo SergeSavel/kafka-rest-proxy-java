@@ -120,6 +120,7 @@ scenarios.
 | POST   | `/consumer/assign`                | Manual partition assignment |
 | POST   | `/consumer/get-assignment`        | Get current assignment      |
 | POST   | `/consumer/subscribe`             | Subscribe to topics/pattern |
+| POST   | `/consumer/unsubscribe`           | Unsubscribe from all topics |
 | POST   | `/consumer/get-subscription`      | Get current subscription    |
 | POST   | `/consumer/get-partitions`        | Get partitions for a topic  |
 | POST   | ~~`/consumer/list-partitions`~~   | ~~List partitions~~ *(deprecated)* |

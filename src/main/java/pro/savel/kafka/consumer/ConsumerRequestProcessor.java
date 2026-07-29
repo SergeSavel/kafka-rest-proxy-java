@@ -101,6 +101,8 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
             processAssign(ctx, requestBearer);
         else if (requestClass == ConsumerSubscribeRequest.class)
             processSubscribe(ctx, requestBearer);
+        else if (requestClass == ConsumerUnsubscribeRequest.class)
+            processUnsubscribe(ctx, requestBearer);
         else if (requestClass == ConsumerGetGroupMetadataRequest.class)
             processGetGroupMetadata(ctx, requestBearer);
         else if (requestClass == ConsumerGetCommittedRequest.class)
@@ -247,6 +249,15 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
                 consumer.subscribe(new SubscriptionPattern(request.getPattern()));
             else
                 throw new IllegalArgumentException("Topic list or pattern must be specified");
+            return new ConsumerResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null);
+        });
+    }
+
+    private void processUnsubscribe(ChannelHandlerContext ctx, RequestBearer requestBearer) {
+        var request = (ConsumerUnsubscribeRequest) requestBearer.request();
+        var consumer = getConsumer(request.getConsumerId(), request.getToken());
+        execute(ctx, () -> {
+            consumer.unsubscribe();
             return new ConsumerResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null);
         });
     }
