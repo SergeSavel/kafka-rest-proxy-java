@@ -21,8 +21,6 @@ import io.netty.buffer.Unpooled;
 import pro.savel.kafka.consumer.responses.*;
 
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Collection;
 
 public class ConsumerResponseSerializer {
 
@@ -31,7 +29,7 @@ public class ConsumerResponseSerializer {
             return null;
         var responseClass = response.getClass();
         if (responseClass == ConsumerPollResponse.class)
-            response = toPollStringResponse((ConsumerPollResponse) response);
+            response = ConsumerPollStringResponse.of((ConsumerPollResponse) response);
         var bytes = objectMapper.writeValueAsBytes(response);
         return Unpooled.wrappedBuffer(bytes);
     }
@@ -43,51 +41,6 @@ public class ConsumerResponseSerializer {
         if (responseClass == ConsumerPollResponse.class)
             return toPollBinaryResponse((ConsumerPollResponse) response);
         throw new IllegalArgumentException("Binary serialization of response class " + responseClass + " not supported");
-    }
-
-    private static ConsumerPollStringResponse toPollStringResponse(ConsumerPollResponse source) {
-        if (source == null)
-            return null;
-        var result = new ConsumerPollStringResponse(source.size());
-        source.forEach(item -> result.add(toStringMessage(item)));
-        return result;
-    }
-
-    private static ConsumerStringMessage toStringMessage(ConsumerPollResponse.Message source) {
-        if (source == null)
-            return null;
-        var result = new ConsumerStringMessage();
-        result.setTimestamp(source.getTimestamp());
-        result.setTopic(source.getTopic());
-        result.setPartition(source.getPartition());
-        result.setOffset(source.getOffset());
-        result.setHeaders(toStringMessageHeaders(source.getHeaders()));
-        result.setKey(toStringUtf8(source.getKey()));
-        result.setValue(toStringUtf8(source.getValue()));
-        return result;
-    }
-
-    private static Collection<ConsumerStringMessage.Header> toStringMessageHeaders(Collection<ConsumerPollResponse.Message.Header> source) {
-        if (source == null)
-            return null;
-        var result = new ArrayList<ConsumerStringMessage.Header>(source.size());
-        source.forEach(item -> result.add(toStringMessageHeader(item)));
-        return result;
-    }
-
-    private static ConsumerStringMessage.Header toStringMessageHeader(ConsumerPollResponse.Message.Header source) {
-        if (source == null)
-            return null;
-        var result = new ConsumerStringMessage.Header();
-        result.setKey(source.getKey());
-        result.setValue(toStringUtf8(source.getValue()));
-        return result;
-    }
-
-    private static String toStringUtf8(byte[] source) {
-        if (source == null)
-            return null;
-        return new String(source, StandardCharsets.UTF_8);
     }
 
     private static ByteBuf toPollBinaryResponse(ConsumerPollResponse response) {

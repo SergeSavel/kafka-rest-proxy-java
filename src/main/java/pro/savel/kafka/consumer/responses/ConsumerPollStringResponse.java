@@ -14,15 +14,85 @@
 
 package pro.savel.kafka.consumer.responses;
 
+import lombok.Getter;
+
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Collection;
 
-public class ConsumerPollStringResponse extends ArrayList<ConsumerStringMessage> implements ConsumerResponse{
+public class ConsumerPollStringResponse extends ArrayList<ConsumerPollStringResponse.Message> implements ConsumerResponse {
 
-    public ConsumerPollStringResponse() {
-        super();
+    private ConsumerPollStringResponse(int initialCapacity) {
+        super(initialCapacity);
     }
 
-    public ConsumerPollStringResponse(int initialCapacity) {
-        super(initialCapacity);
+    public static ConsumerPollStringResponse of(ConsumerPollResponse source) {
+        if (source == null)
+            return null;
+        var result = new ConsumerPollStringResponse(source.size());
+        source.forEach(item -> result.add(Message.of(item)));
+        return result;
+    }
+
+    @Getter
+    public static class Message {
+
+        private long timestamp;
+        private String topic;
+        private int partition;
+        private long offset;
+        private Collection<Header> headers;
+        private String key;
+        private String value;
+
+        private Message() {
+        }
+
+        private static Message of(ConsumerPollResponse.Message source) {
+            if (source == null)
+                return null;
+            var result = new Message();
+            result.timestamp = source.getTimestamp();
+            result.topic = source.getTopic();
+            result.partition = source.getPartition();
+            result.offset = source.getOffset();
+            result.headers = Header.of(source.getHeaders());
+            result.key = toUtf8(source.getKey());
+            result.value = toUtf8(source.getValue());
+            return result;
+        }
+
+        private static String toUtf8(byte[] source) {
+            if (source == null)
+                return null;
+            return new String(source, StandardCharsets.UTF_8);
+        }
+
+        @Getter
+        public static class Header {
+
+            private String key;
+            private String value;
+
+            private Header() {
+            }
+
+            private static Header of(ConsumerPollResponse.Message.Header source) {
+                if (source == null)
+                    return null;
+                var result = new Header();
+                result.key = source.getKey();
+                result.value = toUtf8(source.getValue());
+                return result;
+            }
+
+            private static Collection<Header> of(Collection<ConsumerPollResponse.Message.Header> source) {
+                if (source == null)
+                    return null;
+                var result = new ArrayList<Header>(source.size());
+                source.forEach(item -> result.add(Header.of(item)));
+                return result;
+            }
+        }
     }
 }
