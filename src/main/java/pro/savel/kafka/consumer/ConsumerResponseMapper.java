@@ -90,21 +90,4 @@ public class ConsumerResponseMapper {
         return result;
     }
 
-    public static ConsumerTopicsResponse mapTopicsResponse(Map<String, List<org.apache.kafka.common.PartitionInfo>> source) {
-        if (source == null)
-            return null;
-        var result = new ConsumerTopicsResponse(source.size());
-        source.forEach((topic, partitionsSource) -> {
-            var topicInfo = new ConsumerTopicsResponse.TopicInfo();
-            topicInfo.setTopic(topic);
-            topicInfo.setPartitions(new ArrayList<>(partitionsSource.size()));
-            partitionsSource.forEach(partitionSource -> {
-                var partitionInfo = new ConsumerTopicsResponse.PartitionInfo();
-                partitionInfo.setPartition(partitionSource.partition());
-                topicInfo.getPartitions().add(partitionInfo);
-            });
-            result.add(topicInfo);
-        });
-        return result;
-    }
 }

@@ -327,7 +327,7 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
                         .filter(e -> pattern.matcher(e.getKey()).matches())
                         .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
             }
-            var response = ConsumerResponseMapper.mapTopicsResponse(topics);
+            var response = ConsumerTopicsResponse.of(topics);
             return new ConsumerResponseBearer(requestBearer, HttpResponseStatus.OK, response);
         });
     }
