@@ -14,15 +14,21 @@
 
 package pro.savel.kafka.consumer.responses;
 
+import org.apache.kafka.clients.consumer.ConsumerRecords;
+
 import java.util.ArrayList;
 
 public class ConsumerPollResponse extends ArrayList<ConsumerMessage> implements ConsumerResponse {
 
-    public ConsumerPollResponse() {
-        super();
+    private ConsumerPollResponse(int initialCapacity) {
+        super(initialCapacity);
     }
 
-    public ConsumerPollResponse(int initialCapacity) {
-        super(initialCapacity);
+    public static ConsumerPollResponse of(ConsumerRecords<byte[], byte[]> source) {
+        if (source == null)
+            return null;
+        var result = new ConsumerPollResponse(source.count());
+        source.forEach(record -> result.add(ConsumerMessage.of(record)));
+        return result;
     }
 }

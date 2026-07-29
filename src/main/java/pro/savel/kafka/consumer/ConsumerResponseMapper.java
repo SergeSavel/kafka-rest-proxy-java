@@ -14,54 +14,12 @@
 
 package pro.savel.kafka.consumer;
 
-import org.apache.kafka.clients.consumer.ConsumerRecord;
-import org.apache.kafka.clients.consumer.ConsumerRecords;
-import org.apache.kafka.common.header.Header;
-import org.apache.kafka.common.header.Headers;
 import pro.savel.kafka.consumer.responses.*;
 
 import java.util.*;
 
+@Deprecated
 public class ConsumerResponseMapper {
-
-    public static ConsumerPollResponse mapPollResponse(ConsumerRecords<byte[], byte[]> source) {
-        if (source == null)
-            return null;
-        var result = new ConsumerPollResponse(source.count());
-        source.forEach(record -> result.add(mapMessage(record)));
-        return result;
-    }
-
-    public static ConsumerMessage mapMessage(ConsumerRecord<byte[], byte[]> source) {
-        if (source == null)
-            return null;
-        var result = new ConsumerMessage();
-        result.setTimestamp(source.timestamp());
-        result.setTopic(source.topic());
-        result.setPartition(source.partition());
-        result.setOffset(source.offset());
-        result.setHeaders(mapHeaders(source.headers()));
-        result.setKey(source.key());
-        result.setValue(source.value());
-        return result;
-    }
-
-    public static Collection<ConsumerMessage.Header> mapHeaders(Headers source) {
-        if (source == null)
-            return null;
-        var result = new ArrayList<ConsumerMessage.Header>();
-        source.forEach(header -> result.add(mapHeader(header)));
-        return result;
-    }
-
-    public static ConsumerMessage.Header mapHeader(Header source) {
-        if (source == null)
-            return null;
-        var result = new ConsumerMessage.Header();
-        result.setKey(source.key());
-        result.setValue(source.value());
-        return result;
-    }
 
     @Deprecated
     public static ConsumerListPartitionsResponse mapPartitionsResponse(Collection<org.apache.kafka.common.PartitionInfo> source) {

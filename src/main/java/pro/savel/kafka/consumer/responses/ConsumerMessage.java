@@ -14,11 +14,14 @@
 
 package pro.savel.kafka.consumer.responses;
 
-import lombok.Data;
+import lombok.Getter;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.common.header.Headers;
 
+import java.util.ArrayList;
 import java.util.Collection;
 
-@Data
+@Getter
 public class ConsumerMessage {
 
     private long timestamp;
@@ -29,9 +32,47 @@ public class ConsumerMessage {
     private byte[] key;
     private byte[] value;
 
-    @Data
+    private ConsumerMessage() {
+    }
+
+    public static ConsumerMessage of(ConsumerRecord<byte[], byte[]> source) {
+        if (source == null)
+            return null;
+        var result = new ConsumerMessage();
+        result.timestamp = source.timestamp();
+        result.topic = source.topic();
+        result.partition = source.partition();
+        result.offset = source.offset();
+        result.headers = Header.of(source.headers());
+        result.key = source.key();
+        result.value = source.value();
+        return result;
+    }
+
+    @Getter
     public static class Header {
+
         private String key;
         private byte[] value;
+
+        private Header() {
+        }
+
+        private static Header of(org.apache.kafka.common.header.Header source) {
+            if (source == null)
+                return null;
+            var result = new Header();
+            result.key = source.key();
+            result.value = source.value();
+            return result;
+        }
+
+        private static Collection<Header> of(Headers source) {
+            if (source == null)
+                return null;
+            var result = new ArrayList<Header>();
+            source.forEach(header -> result.add(Header.of(header)));
+            return result;
+        }
     }
 }

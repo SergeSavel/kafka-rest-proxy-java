@@ -15,18 +15,46 @@
 package pro.savel.kafka.consumer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.clients.consumer.ConsumerRecords;
+import org.apache.kafka.common.TopicPartition;
+import org.apache.kafka.common.header.Headers;
+import org.apache.kafka.common.header.internals.RecordHeader;
+import org.apache.kafka.common.header.internals.RecordHeaders;
+import org.apache.kafka.common.record.TimestampType;
 import org.junit.jupiter.api.Test;
-import pro.savel.kafka.consumer.responses.ConsumerMessage;
 import pro.savel.kafka.consumer.responses.ConsumerPollResponse;
+import pro.savel.kafka.consumer.responses.ConsumerResponse;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 class ConsumerResponseSerializerTest {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
+
+    private static ConsumerRecord<byte[], byte[]> createRecord(String topic, int partition, long offset,
+                                                               long timestamp, byte[] key, byte[] value,
+                                                               Headers headers)
+    {
+        return new ConsumerRecord<>(topic, partition, offset, timestamp, TimestampType.CREATE_TIME,
+                key == null ? -1 : key.length, value == null ? -1 : value.length,
+                key, value, headers, Optional.empty());
+    }
+
+    private static ConsumerRecords<byte[], byte[]> createRecords(List<ConsumerRecord<byte[], byte[]>> records) {
+        var tp = new TopicPartition(records.get(0).topic(), records.get(0).partition());
+        return new ConsumerRecords<>(Map.of(tp, records));
+    }
+
+    private static ConsumerRecords<byte[], byte[]> emptyRecords() {
+        return new ConsumerRecords<>(Collections.emptyMap());
+    }
 
 //region JSON
 
@@ -37,7 +65,7 @@ class ConsumerResponseSerializerTest {
 
     @Test
     void serializeJson_emptyPollResponse_returnsEmptyArray() throws Exception {
-        var response = new ConsumerPollResponse();
+        var response = ConsumerPollResponse.of(emptyRecords());
         var buf = ConsumerResponseSerializer.serializeJson(objectMapper, response);
         assertNotNull(buf);
         assertEquals("[]", buf.toString(StandardCharsets.UTF_8));
@@ -46,17 +74,11 @@ class ConsumerResponseSerializerTest {
 
     @Test
     void serializeJson_pollResponse_convertsBytesToString() throws Exception {
-        var msg = new ConsumerMessage();
-        msg.setTopic("test");
-        msg.setPartition(0);
-        msg.setOffset(1L);
-        msg.setTimestamp(100L);
-        msg.setKey("key".getBytes(StandardCharsets.UTF_8));
-        msg.setValue("value".getBytes(StandardCharsets.UTF_8));
-        msg.setHeaders(List.of());
+        var record = createRecord("test", 0, 1L, 100L,
+                "key".getBytes(StandardCharsets.UTF_8), "value".getBytes(StandardCharsets.UTF_8),
+                new RecordHeaders());
 
-        var response = new ConsumerPollResponse();
-        response.add(msg);
+        var response = ConsumerPollResponse.of(createRecords(List.of(record)));
 
         var buf = ConsumerResponseSerializer.serializeJson(objectMapper, response);
         assertNotNull(buf);
@@ -77,7 +99,7 @@ class ConsumerResponseSerializerTest {
 
     @Test
     void serializeBinary_emptyPollResponse_returnsValidBinary() {
-        var response = new ConsumerPollResponse();
+        var response = ConsumerPollResponse.of(emptyRecords());
         var buf = ConsumerResponseSerializer.serializeBinary(response);
         assertNotNull(buf);
         assertEquals(1, buf.readShort());  // version
@@ -87,21 +109,15 @@ class ConsumerResponseSerializerTest {
 
     @Test
     void serializeBinary_pollResponseWithMessage_returnsValidBinary() {
-        var header = new ConsumerMessage.Header();
-        header.setKey("h1");
-        header.setValue("hv1".getBytes(StandardCharsets.UTF_8));
+        var headers = new RecordHeaders(List.of(
+                new RecordHeader("h1", "hv1".getBytes(StandardCharsets.UTF_8))
+        ));
 
-        var msg = new ConsumerMessage();
-        msg.setTopic("my-topic");
-        msg.setPartition(3);
-        msg.setOffset(42L);
-        msg.setTimestamp(999L);
-        msg.setHeaders(List.of(header));
-        msg.setKey("k".getBytes(StandardCharsets.UTF_8));
-        msg.setValue("v".getBytes(StandardCharsets.UTF_8));
+        var record = createRecord("my-topic", 3, 42L, 999L,
+                "k".getBytes(StandardCharsets.UTF_8), "v".getBytes(StandardCharsets.UTF_8),
+                headers);
 
-        var response = new ConsumerPollResponse();
-        response.add(msg);
+        var response = ConsumerPollResponse.of(createRecords(List.of(record)));
 
         var buf = ConsumerResponseSerializer.serializeBinary(response);
         assertNotNull(buf);
@@ -149,17 +165,9 @@ class ConsumerResponseSerializerTest {
 
     @Test
     void serializeBinary_nullKeyAndValue_writesNullMarkers() {
-        var msg = new ConsumerMessage();
-        msg.setTopic("t");
-        msg.setPartition(0);
-        msg.setOffset(0L);
-        msg.setTimestamp(0L);
-        msg.setHeaders(List.of());
-        msg.setKey(null);
-        msg.setValue(null);
+        var record = createRecord("t", 0, 0L, 0L, null, null, new RecordHeaders());
 
-        var response = new ConsumerPollResponse();
-        response.add(msg);
+        var response = ConsumerPollResponse.of(createRecords(List.of(record)));
 
         var buf = ConsumerResponseSerializer.serializeBinary(response);
         assertNotNull(buf);
@@ -181,8 +189,9 @@ class ConsumerResponseSerializerTest {
 
     @Test
     void serializeBinary_unsupportedType_throwsException() {
+        ConsumerResponse unsupported = new ConsumerResponse() {};
         assertThrows(IllegalArgumentException.class,
-                () -> ConsumerResponseSerializer.serializeBinary(new ConsumerPollResponse() {}));
+                () -> ConsumerResponseSerializer.serializeBinary(unsupported));
     }
 
 //endregion
