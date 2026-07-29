@@ -101,6 +101,8 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
             processAssign(ctx, requestBearer);
         else if (requestClass == ConsumerSubscribeRequest.class)
             processSubscribe(ctx, requestBearer);
+        else if (requestClass == ConsumerGetGroupMetadataRequest.class)
+            processGetGroupMetadata(ctx, requestBearer);
         else if (requestClass == ConsumerGetCommittedRequest.class)
             processGetCommitted(ctx, requestBearer);
         else if (requestClass == ConsumerGetBeginningOffsetsRequest.class)
@@ -289,6 +291,14 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
             var response = ConsumerResponseMapper.mapPartitionsResponse(partitions);
             return new ConsumerResponseBearer(requestBearer, HttpResponseStatus.OK, response);
         });
+    }
+
+    private void processGetGroupMetadata(ChannelHandlerContext ctx, RequestBearer requestBearer) {
+        var request = (ConsumerGetGroupMetadataRequest) requestBearer.request();
+        var consumer = getConsumer(request.getConsumerId(), request.getToken());
+        var metadata = consumer.groupMetadata();
+        var response = ConsumerGroupMetadataResponse.of(metadata);
+        ctx.writeAndFlush(new ConsumerResponseBearer(requestBearer, HttpResponseStatus.OK, response));
     }
 
     private void processGetCommitted(ChannelHandlerContext ctx, RequestBearer requestBearer) {
