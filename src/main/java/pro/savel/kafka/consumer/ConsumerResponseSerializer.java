@@ -53,7 +53,7 @@ public class ConsumerResponseSerializer {
         return result;
     }
 
-    private static ConsumerStringMessage toStringMessage(ConsumerMessage source) {
+    private static ConsumerStringMessage toStringMessage(ConsumerPollResponse.Message source) {
         if (source == null)
             return null;
         var result = new ConsumerStringMessage();
@@ -67,7 +67,7 @@ public class ConsumerResponseSerializer {
         return result;
     }
 
-    private static Collection<ConsumerStringMessage.Header> toStringMessageHeaders(Collection<ConsumerMessage.Header> source) {
+    private static Collection<ConsumerStringMessage.Header> toStringMessageHeaders(Collection<ConsumerPollResponse.Message.Header> source) {
         if (source == null)
             return null;
         var result = new ArrayList<ConsumerStringMessage.Header>(source.size());
@@ -75,7 +75,7 @@ public class ConsumerResponseSerializer {
         return result;
     }
 
-    private static ConsumerStringMessage.Header toStringMessageHeader(ConsumerMessage.Header source) {
+    private static ConsumerStringMessage.Header toStringMessageHeader(ConsumerPollResponse.Message.Header source) {
         if (source == null)
             return null;
         var result = new ConsumerStringMessage.Header();
@@ -95,13 +95,13 @@ public class ConsumerResponseSerializer {
         try {
             buf.writeShort(1); //version
             buf.writeInt(response.size());
-            for (ConsumerMessage message : response) {
+            for (ConsumerPollResponse.Message message : response) {
                 writeBytes(buf, message.getTopic());
                 buf.writeInt(message.getPartition());
                 buf.writeLong(message.getOffset());
                 buf.writeLong(message.getTimestamp());
                 buf.writeInt(message.getHeaders().size());
-                for (ConsumerMessage.Header header : message.getHeaders()) {
+                for (ConsumerPollResponse.Message.Header header : message.getHeaders()) {
                     writeBytes(buf, header.getKey());
                     if (header.getValue() == null)
                         buf.writeByte(1); // is null
