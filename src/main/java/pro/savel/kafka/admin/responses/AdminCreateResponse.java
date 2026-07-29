@@ -14,10 +14,24 @@
 
 package pro.savel.kafka.admin.responses;
 
-import lombok.Data;
+import lombok.Getter;
+import pro.savel.kafka.admin.AdminWrapper;
 
-@Data
+@Getter
 public class AdminCreateResponse implements AdminResponse {
+
     private String id;
     private String token;
+
+    private AdminCreateResponse() {
+    }
+
+    public static AdminCreateResponse of(AdminWrapper source) {
+        if (source == null)
+            return null;
+        var result = new AdminCreateResponse();
+        result.id = source.getId();
+        result.token = source.getToken();
+        return result;
+    }
 }

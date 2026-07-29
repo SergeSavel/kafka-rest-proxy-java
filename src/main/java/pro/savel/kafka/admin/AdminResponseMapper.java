@@ -52,15 +52,6 @@ public class AdminResponseMapper {
         return result;
     }
 
-    public static AdminCreateResponse mapCreateResponse(AdminWrapper source) {
-        if (source == null)
-            return null;
-        var result = new AdminCreateResponse();
-        result.setId(source.getId());
-        result.setToken(source.getToken());
-        return result;
-    }
-
     public static Set<String> mapAclOperations(Set<AclOperation> source) {
         if (source == null)
             return null;

@@ -205,7 +205,7 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
         var request = (AdminCreateRequest) requestBearer.request();
         var owner = ctx.channel().attr(NettyAttributes.USERNAME).get();
         var wrapper = provider.createAdmin(request.getName(), request.getConfig(), request.getExpirationTimeout(), owner);
-        var response = AdminResponseMapper.mapCreateResponse(wrapper);
+        var response = AdminCreateResponse.of(wrapper);
         var responseBearer = new AdminResponseBearer(requestBearer, HttpResponseStatus.CREATED, response);
         ctx.writeAndFlush(responseBearer);
     }
