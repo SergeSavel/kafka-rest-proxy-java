@@ -124,6 +124,7 @@ scenarios.
 | POST   | `/consumer/get-partitions`        | Get partitions for a topic  |
 | POST   | ~~`/consumer/list-partitions`~~   | ~~List partitions~~ *(deprecated)* |
 | POST   | `/consumer/list-topics`           | List topics                 |
+| POST   | `/consumer/get-committed`         | Get committed offsets       |
 | POST   | `/consumer/get-beginning-offsets` | Get beginning offsets       |
 | POST   | `/consumer/get-end-offsets`       | Get end offsets             |
 | POST   | `/consumer/touch`                 | Reset expiration timer      |
