@@ -52,29 +52,6 @@ public class AdminResponseMapper {
         return result;
     }
 
-    public static AdminConfigResponse mapConfigResponse(Config source) {
-        if (source == null)
-            return null;
-        var result = new AdminConfigResponse(source.entries().size());
-        source.entries().forEach(entry -> result.add(mapConfigEntry(entry)));
-        return result;
-    }
-
-    private static AdminConfigResponse.Entry mapConfigEntry(ConfigEntry source) {
-        if (source == null)
-            return null;
-        var result = new AdminConfigResponse.Entry();
-        result.setName(source.name());
-        result.setValue(source.value());
-        result.setSource(source.source().name());
-        result.setDefault(source.isDefault());
-        result.setSensitive(source.isSensitive());
-        result.setReadOnly(source.isReadOnly());
-        result.setType(source.type().name());
-        result.setDocumentation(source.documentation());
-        return result;
-    }
-
     public static AdminDescribeUserScramCredentialsResponse mapDescribeUserScramCredentialsResponse(Map<String, UserScramCredentialsDescription> source) {
         if (source == null)
             return null;

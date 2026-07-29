@@ -423,7 +423,7 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
                     return;
                 }
                 configs.values().forEach(config -> {
-                    AdminConfigResponse response = AdminResponseMapper.mapConfigResponse(config);
+                    AdminConfigResponse response = AdminConfigResponse.of(config);
                     ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
                 });
             } else if (!handleError(ctx, error)) {

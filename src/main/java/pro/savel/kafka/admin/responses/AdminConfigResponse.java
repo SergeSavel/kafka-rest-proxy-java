@@ -14,18 +14,29 @@
 
 package pro.savel.kafka.admin.responses;
 
-import lombok.Data;
+import lombok.Getter;
+import org.apache.kafka.clients.admin.Config;
+import org.apache.kafka.clients.admin.ConfigEntry;
 
 import java.util.ArrayList;
 
 public class AdminConfigResponse extends ArrayList<AdminConfigResponse.Entry> implements AdminResponse {
 
-    public AdminConfigResponse(int initialCapacity) {
+    private AdminConfigResponse(int initialCapacity) {
         super(initialCapacity);
     }
 
-    @Data
+    public static AdminConfigResponse of(Config source) {
+        if (source == null)
+            return null;
+        var result = new AdminConfigResponse(source.entries().size());
+        source.entries().forEach(entry -> result.add(Entry.of(entry)));
+        return result;
+    }
+
+    @Getter
     public static class Entry {
+
         private String name;
         private String value;
         private String source;
@@ -34,5 +45,23 @@ public class AdminConfigResponse extends ArrayList<AdminConfigResponse.Entry> im
         private boolean isReadOnly;
         private String type;
         private String documentation;
+
+        private Entry() {
+        }
+
+        private static Entry of(ConfigEntry source) {
+            if (source == null)
+                return null;
+            var result = new Entry();
+            result.name = source.name();
+            result.value = source.value();
+            result.source = source.source().name();
+            result.isDefault = source.isDefault();
+            result.isSensitive = source.isSensitive();
+            result.isReadOnly = source.isReadOnly();
+            result.type = source.type().name();
+            result.documentation = source.documentation();
+            return result;
+        }
     }
 }
