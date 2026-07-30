@@ -27,34 +27,27 @@ class ClientProviderTest {
     // Test stub — concrete ClientWrapper
     static class TestWrapper extends ClientWrapper {
         boolean closed = false;
+        final boolean shouldThrow;
 
         TestWrapper(String id, String name, int expirationTimeout) {
+            this(id, name, expirationTimeout, false);
+        }
+
+        TestWrapper(String id, String name, int expirationTimeout, boolean shouldThrow) {
             super(id, name, new Properties(), expirationTimeout, "test-owner");
+            this.shouldThrow = shouldThrow;
         }
 
         @Override
         public void close() {
+            if (shouldThrow)
+                throw new RuntimeException("close failed");
             closed = true;
         }
     }
 
     // Test stub — concrete ClientProvider
     static class TestProvider extends ClientProvider<TestWrapper> {
-    }
-
-    // Throwing wrapper for close-error testing
-    static class ThrowingWrapper extends ClientWrapper {
-        ThrowingWrapper(String id, int expirationTimeout) {
-            super(id, "throwing", new Properties(), expirationTimeout, "owner");
-        }
-
-        @Override
-        public void close() {
-            throw new RuntimeException("close failed");
-        }
-    }
-
-    static class ThrowingProvider extends ClientProvider<ThrowingWrapper> {
     }
 
     private TestProvider provider = new TestProvider();
@@ -125,14 +118,14 @@ class ClientProviderTest {
 
     @Test
     void close_exceptionInOneWrapper_closesRemaining() {
-        var throwingProvider = new ThrowingProvider();
         var good = new TestWrapper("good", "g", 60_000);
-        var bad = new ThrowingWrapper("bad", 60_000);
+        var bad = new TestWrapper("bad", "b", 60_000, true);
 
-        throwingProvider.addItem(bad);
-        // Can't mix wrapper types — test close() separately
-        assertDoesNotThrow(throwingProvider::close);
-        throwingProvider.close();
+        provider.addItem(good);
+        provider.addItem(bad);
+
+        assertDoesNotThrow(provider::close);
+        assertTrue(good.closed);
     }
 
 //endregion
