@@ -49,7 +49,6 @@ import pro.savel.kafka.admin.requests.scram.AdminUpsertUserScramCredentialsReque
 import pro.savel.kafka.admin.requests.topic.*;
 import pro.savel.kafka.admin.responses.*;
 import pro.savel.kafka.common.*;
-import pro.savel.kafka.common.contract.Node;
 import pro.savel.kafka.common.exceptions.BadRequestException;
 
 import java.util.*;
@@ -240,11 +239,11 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
         CompletableFuture.allOf(nodesFuture, clusterIdFuture, controllerFuture, aclFuture)
             .whenComplete((ignored, error) -> {
                 if (error == null) {
-                    var response = new AdminDescribeClusterResponse();
-                    response.setNodes(Node.of(nodesFuture.join()));
-                    response.setClusterId(clusterIdFuture.join());
-                    response.setController(Node.of(controllerFuture.join()));
-                    response.setAuthorizedOperations(AdminResponseMapper.mapAclOperations(aclFuture.join()));
+                    var response = AdminDescribeClusterResponse.of(
+                            clusterIdFuture.join(),
+                            controllerFuture.join(),
+                            nodesFuture.join(),
+                            aclFuture.join());
                     ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
                 } else if (!handleError(ctx, error)) {
                     logger.error("Unable to get cluster description.", error);

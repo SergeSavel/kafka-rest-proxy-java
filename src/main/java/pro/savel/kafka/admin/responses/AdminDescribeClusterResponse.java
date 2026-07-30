@@ -14,16 +14,41 @@
 
 package pro.savel.kafka.admin.responses;
 
-import lombok.Data;
+import java.util.ArrayList;
+import java.util.Collection;
+import lombok.Getter;
+import org.apache.kafka.common.acl.AclOperation;
 import pro.savel.kafka.common.contract.Node;
 
-import java.util.Collection;
-import java.util.Set;
-
-@Data
+@Getter
 public class AdminDescribeClusterResponse implements AdminResponse {
+
     private String clusterId;
+
+    @Deprecated
     private Node controller;
+
+    private Integer controllerId;
     private Collection<Node> nodes;
-    private Set<String> authorizedOperations;
+    private Collection<String> authorizedOperations;
+
+    private AdminDescribeClusterResponse() {}
+
+    public static AdminDescribeClusterResponse of(
+        String clusterId,
+        org.apache.kafka.common.Node controller,
+        Collection<org.apache.kafka.common.Node> nodes,
+        Collection<AclOperation> authorizedOperations
+    ) {
+        var result = new AdminDescribeClusterResponse();
+        result.clusterId = clusterId;
+        result.controller = Node.of(controller);
+        result.controllerId = controller == null ? null : controller.id();
+        result.nodes = Node.of(nodes);
+        if (authorizedOperations != null) {
+            result.authorizedOperations = new ArrayList<>(authorizedOperations.size());
+            authorizedOperations.forEach(op -> result.authorizedOperations.add(op.name()));
+        }
+        return result;
+    }
 }
