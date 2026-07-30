@@ -39,5 +39,8 @@ bin/
 ### VS Code ###
 .vscode/
 
+### Zed ###
+.zed/
+
 ### Mac OS ###
 .DS_Store
