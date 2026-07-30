@@ -48,7 +48,7 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
         this.blockingTaskExecutor = blockingTaskExecutor;
     }
 
-//region Overrides
+    // region Overrides
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) {
@@ -79,8 +79,9 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
         ctx.close();
     }
 
-//endregion
+    // endregion
 
+    @SuppressWarnings("deprecation")
     private void processRequest(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var requestClass = requestBearer.request().getClass();
         if (requestClass == ConsumerPollRequest.class)
@@ -131,7 +132,7 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
             throw new RuntimeException("Unexpected consumer request type: " + requestClass.getName());
     }
 
-//region Management
+    // region Management
 
     private void processList(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var wrappers = provider.getItems();
@@ -144,7 +145,8 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
         var request = (ConsumerCreateRequest) requestBearer.request();
         var owner = ctx.channel().attr(NettyAttributes.USERNAME).get();
         execute(ctx, () -> {
-            var wrapper = provider.createConsumer(request.getName(), request.getConfig(), request.getExpirationTimeout(), owner);
+            var wrapper = provider.createConsumer(request.getName(), request.getConfig(),
+                    request.getExpirationTimeout(), owner);
             var response = ConsumerCreateResponse.of(wrapper);
             return new ConsumerResponseBearer(requestBearer, HttpResponseStatus.CREATED, response);
         });
@@ -166,9 +168,9 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
         ctx.writeAndFlush(responseBearer);
     }
 
-//endregion
+    // endregion
 
-//region Consumer
+    // region Consumer
 
     private void processPoll(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (ConsumerPollRequest) requestBearer.request();
@@ -366,7 +368,7 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
         });
     }
 
-//endregion
+    // endregion
 
     private org.apache.kafka.clients.consumer.Consumer<byte[], byte[]> getConsumer(String id, String token) {
         var wrapper = provider.getConsumer(id, token);
