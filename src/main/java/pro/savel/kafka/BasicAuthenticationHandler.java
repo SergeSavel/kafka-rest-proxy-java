@@ -63,7 +63,7 @@ public class BasicAuthenticationHandler extends ChannelInboundHandlerAdapter {
         var file = new File(usersFileName);
 
         if (!file.exists()) {
-            logger.warn("Users file '{}' not found. Authentication is disabled.", usersFileName);
+            logger.info("Users file '{}' not found. Authentication is disabled.", usersFileName);
             users = null;
             return;
         }
