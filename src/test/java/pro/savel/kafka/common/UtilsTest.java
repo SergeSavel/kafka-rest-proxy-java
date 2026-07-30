@@ -79,7 +79,7 @@ class UtilsTest {
 
     @Test
     void combineConstraintViolationMessage_single_returnsFormatted() {
-        var violation = mock(ConstraintViolation.class);
+        ConstraintViolation<Object> violation = mock(ConstraintViolation.class);
         when(violation.getPropertyPath()).thenReturn(mock(jakarta.validation.Path.class));
         when(violation.getPropertyPath().toString()).thenReturn("name");
         when(violation.getMessage()).thenReturn("must not be empty");
@@ -97,17 +97,17 @@ class UtilsTest {
 
     @Test
     void combineConstraintViolationMessage_collectionEmpty_returnsEmpty() {
-        assertEquals("", Utils.combineConstraintViolationMessage(List.of()));
+        assertEquals("", Utils.combineConstraintViolationMessage(List.<ConstraintViolation<Object>>of()));
     }
 
     @Test
     void combineConstraintViolationMessage_collectionMultiple_returnsJoined() {
-        var v1 = mock(ConstraintViolation.class);
+        ConstraintViolation<Object> v1 = mock(ConstraintViolation.class);
         when(v1.getPropertyPath()).thenReturn(mock(jakarta.validation.Path.class));
         when(v1.getPropertyPath().toString()).thenReturn("name");
         when(v1.getMessage()).thenReturn("must not be empty");
 
-        var v2 = mock(ConstraintViolation.class);
+        ConstraintViolation<Object> v2 = mock(ConstraintViolation.class);
         when(v2.getPropertyPath()).thenReturn(mock(jakarta.validation.Path.class));
         when(v2.getPropertyPath().toString()).thenReturn("age");
         when(v2.getMessage()).thenReturn("must be positive");
