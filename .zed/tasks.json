@@ -1,0 +1,42 @@
+[
+  {
+    "label": "Build",
+    "command": "./gradlew build",
+    "save": "none",
+  },
+  {
+    "label": "Run",
+    "command": "./gradlew run",
+    "save": "none",
+  },
+  {
+    "label": "Test",
+    "command": "./gradlew test",
+    "save": "none",
+  },
+  {
+    "label": "Test (current file)",
+    "command": "./gradlew test --tests \"$ZED_SYMBOL\"",
+    "save": "none",
+  },
+  {
+    "label": "Clean",
+    "command": "./gradlew clean",
+    "save": "none",
+  },
+  {
+    "label": "Clean Build",
+    "command": "./gradlew clean build",
+    "save": "none",
+  },
+  {
+    "label": "Install Dist",
+    "command": "./gradlew installDist",
+    "save": "none",
+  },
+  {
+    "label": "Assemble Dist",
+    "command": "./gradlew assembleDist",
+    "save": "none",
+  },
+]
