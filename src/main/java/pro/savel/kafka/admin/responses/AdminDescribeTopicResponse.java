@@ -16,7 +16,6 @@ package pro.savel.kafka.admin.responses;
 
 import lombok.Getter;
 import org.apache.kafka.clients.admin.TopicDescription;
-import org.apache.kafka.common.Uuid;
 
 import pro.savel.kafka.admin.AdminResponseMapper;
 import pro.savel.kafka.common.contract.PartitionInfo;
@@ -26,7 +25,7 @@ import java.util.Collection;
 @Getter
 public class AdminDescribeTopicResponse implements AdminResponse {
 
-    private Uuid id;
+    private String id;
     private String name;
     private boolean isInternal;
     private Collection<String> authorizedOperations;
@@ -39,7 +38,7 @@ public class AdminDescribeTopicResponse implements AdminResponse {
         if (source == null)
             return null;
         var result = new AdminDescribeTopicResponse();
-        result.id = source.topicId();
+        result.id = source.topicId().toString();
         result.name = source.name();
         result.isInternal = source.isInternal();
         result.authorizedOperations = AdminResponseMapper.mapAclOperations(source.authorizedOperations());
