@@ -14,10 +14,13 @@
 
 package pro.savel.kafka.admin.responses;
 
+import lombok.Getter;
+import org.apache.kafka.common.Uuid;
+
 import java.util.ArrayList;
 import java.util.Collection;
 
-public class AdminListTopicsResponse extends ArrayList<TopicListing> implements AdminResponse {
+public class AdminListTopicsResponse extends ArrayList<AdminListTopicsResponse.TopicListing> implements AdminResponse {
 
     private AdminListTopicsResponse(int initialCapacity) {
         super(initialCapacity);
@@ -26,8 +29,28 @@ public class AdminListTopicsResponse extends ArrayList<TopicListing> implements 
     public static AdminListTopicsResponse of(Collection<org.apache.kafka.clients.admin.TopicListing> source) {
         if (source == null)
             return null;
-        AdminListTopicsResponse result = new AdminListTopicsResponse(source.size());
+        var result = new AdminListTopicsResponse(source.size());
         source.forEach(topicListingSource -> result.add(TopicListing.of(topicListingSource)));
         return result;
+    }
+
+    @Getter
+    public static class TopicListing {
+        private Uuid id;
+        private String name;
+        private boolean isInternal;
+
+        private TopicListing() {
+        }
+
+        public static TopicListing of(org.apache.kafka.clients.admin.TopicListing source) {
+            if (source == null)
+                return null;
+            var result = new TopicListing();
+            result.id = source.topicId();
+            result.name = source.name();
+            result.isInternal = source.isInternal();
+            return result;
+        }
     }
 }
