@@ -14,25 +14,73 @@
 
 package pro.savel.kafka.admin.responses;
 
-import lombok.Data;
+import lombok.Getter;
+import org.apache.kafka.clients.admin.UserScramCredentialsDescription;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Map;
 
-public class AdminDescribeUserScramCredentialsResponse extends ArrayList<AdminDescribeUserScramCredentialsResponse.ScramCredentialDescription> implements AdminResponse {
+public class AdminDescribeUserScramCredentialsResponse extends
+        ArrayList<AdminDescribeUserScramCredentialsResponse.ScramCredentialDescription> implements AdminResponse {
 
-    public AdminDescribeUserScramCredentialsResponse(int initialCapacity) {
+    private AdminDescribeUserScramCredentialsResponse(int initialCapacity) {
         super(initialCapacity);
     }
 
-    @Data
-    public static class ScramCredentialDescription {
-        String name;
-        ArrayList<ScramCredentialInfo> credentialInfos;
+    public static AdminDescribeUserScramCredentialsResponse of(Map<String, UserScramCredentialsDescription> source) {
+        if (source == null)
+            return null;
+        var sourceDescriptions = source.values();
+        var result = new AdminDescribeUserScramCredentialsResponse(sourceDescriptions.size());
+        sourceDescriptions.forEach(sourceDescription -> result.add(ScramCredentialDescription.of(sourceDescription)));
+        return result;
     }
 
-    @Data
+    @Getter
+    public static class ScramCredentialDescription {
+
+        private String name;
+        private Collection<ScramCredentialInfo> credentialInfos;
+
+        private ScramCredentialDescription() {
+        }
+
+        public static ScramCredentialDescription of(UserScramCredentialsDescription source) {
+            if (source == null)
+                return null;
+            var result = new ScramCredentialDescription();
+            result.name = source.name();
+            result.credentialInfos = ScramCredentialInfo.of(source.credentialInfos());
+            return result;
+        }
+    }
+
+    @Getter
     public static class ScramCredentialInfo {
-        String scramMechanism;
-        int iterations;
+
+        private String scramMechanism;
+        private int iterations;
+
+        private ScramCredentialInfo() {
+        }
+
+        public static ScramCredentialInfo of(org.apache.kafka.clients.admin.ScramCredentialInfo source) {
+            if (source == null)
+                return null;
+            var result = new ScramCredentialInfo();
+            result.scramMechanism = source.mechanism().mechanismName();
+            result.iterations = source.iterations();
+            return result;
+        }
+
+        private static ArrayList<ScramCredentialInfo> of(
+                Collection<org.apache.kafka.clients.admin.ScramCredentialInfo> source) {
+            if (source == null)
+                return null;
+            var result = new ArrayList<ScramCredentialInfo>(source.size());
+            source.forEach(sourceItem -> result.add(of(sourceItem)));
+            return result;
+        }
     }
 }

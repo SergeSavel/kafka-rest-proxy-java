@@ -39,45 +39,6 @@ public class AdminResponseMapper {
         return result;
     }
 
-    public static AdminDescribeUserScramCredentialsResponse mapDescribeUserScramCredentialsResponse(
-            Map<String, UserScramCredentialsDescription> source) {
-        if (source == null)
-            return null;
-        var sourceDescriptions = source.values();
-        var result = new AdminDescribeUserScramCredentialsResponse(sourceDescriptions.size());
-        sourceDescriptions.forEach(sourceDescription -> result.add(mapScramCredentialDescription(sourceDescription)));
-        return result;
-    }
-
-    private static AdminDescribeUserScramCredentialsResponse.ScramCredentialDescription mapScramCredentialDescription(
-            UserScramCredentialsDescription source) {
-        if (source == null)
-            return null;
-        var result = new AdminDescribeUserScramCredentialsResponse.ScramCredentialDescription();
-        result.setName(source.name());
-        result.setCredentialInfos(mapScramCredentialInfos(source.credentialInfos()));
-        return result;
-    }
-
-    private static ArrayList<AdminDescribeUserScramCredentialsResponse.ScramCredentialInfo> mapScramCredentialInfos(
-            Collection<ScramCredentialInfo> source) {
-        if (source == null)
-            return null;
-        var result = new ArrayList<AdminDescribeUserScramCredentialsResponse.ScramCredentialInfo>(source.size());
-        source.forEach(sourceItem -> result.add(mapScramCredentialInfo(sourceItem)));
-        return result;
-    }
-
-    private static AdminDescribeUserScramCredentialsResponse.ScramCredentialInfo mapScramCredentialInfo(
-            ScramCredentialInfo source) {
-        if (source == null)
-            return null;
-        var result = new AdminDescribeUserScramCredentialsResponse.ScramCredentialInfo();
-        result.setScramMechanism(source.mechanism().mechanismName());
-        result.setIterations(source.iterations());
-        return result;
-    }
-
     public static AdminDescribeAclsResponse mapDescribeAclsResponse(Collection<AclBinding> source) {
         if (source == null)
             return null;

@@ -483,7 +483,7 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
         var describeResult = admin.describeUserScramCredentials(request.getUsers());
         describeResult.all().whenComplete((descriptions, error) -> {
             if (error == null) {
-                var response = AdminResponseMapper.mapDescribeUserScramCredentialsResponse(descriptions);
+                var response = AdminDescribeUserScramCredentialsResponse.of(descriptions);
                 ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
             } else if (!handleError(ctx, error)) {
                 logger.error("Unable to describe user SCRAM credentials.", error);
