@@ -26,7 +26,6 @@ import org.apache.kafka.common.acl.AclPermissionType;
 import org.apache.kafka.common.resource.ResourcePattern;
 import pro.savel.kafka.admin.data.AdminAclBinding;
 import pro.savel.kafka.admin.responses.*;
-import pro.savel.kafka.common.contract.PartitionInfo;
 
 import java.util.*;
 
@@ -40,19 +39,8 @@ public class AdminResponseMapper {
         return result;
     }
 
-    public static AdminDescribeTopicResponse mapDescribeTopicResponse(TopicDescription source) {
-        if (source == null)
-            return null;
-        var result = new AdminDescribeTopicResponse();
-        result.setId(source.topicId().toString());
-        result.setName(source.name());
-        result.setInternal(source.isInternal());
-        result.setAuthorizedOperations(mapAclOperations(source.authorizedOperations()));
-        result.setPartitions(PartitionInfo.of(source.partitions()));
-        return result;
-    }
-
-    public static AdminDescribeUserScramCredentialsResponse mapDescribeUserScramCredentialsResponse(Map<String, UserScramCredentialsDescription> source) {
+    public static AdminDescribeUserScramCredentialsResponse mapDescribeUserScramCredentialsResponse(
+            Map<String, UserScramCredentialsDescription> source) {
         if (source == null)
             return null;
         var sourceDescriptions = source.values();
@@ -61,7 +49,8 @@ public class AdminResponseMapper {
         return result;
     }
 
-    private static AdminDescribeUserScramCredentialsResponse.ScramCredentialDescription mapScramCredentialDescription(UserScramCredentialsDescription source) {
+    private static AdminDescribeUserScramCredentialsResponse.ScramCredentialDescription mapScramCredentialDescription(
+            UserScramCredentialsDescription source) {
         if (source == null)
             return null;
         var result = new AdminDescribeUserScramCredentialsResponse.ScramCredentialDescription();
@@ -70,7 +59,8 @@ public class AdminResponseMapper {
         return result;
     }
 
-    private static ArrayList<AdminDescribeUserScramCredentialsResponse.ScramCredentialInfo> mapScramCredentialInfos(Collection<ScramCredentialInfo> source) {
+    private static ArrayList<AdminDescribeUserScramCredentialsResponse.ScramCredentialInfo> mapScramCredentialInfos(
+            Collection<ScramCredentialInfo> source) {
         if (source == null)
             return null;
         var result = new ArrayList<AdminDescribeUserScramCredentialsResponse.ScramCredentialInfo>(source.size());
@@ -78,7 +68,8 @@ public class AdminResponseMapper {
         return result;
     }
 
-    private static AdminDescribeUserScramCredentialsResponse.ScramCredentialInfo mapScramCredentialInfo(ScramCredentialInfo source) {
+    private static AdminDescribeUserScramCredentialsResponse.ScramCredentialInfo mapScramCredentialInfo(
+            ScramCredentialInfo source) {
         if (source == null)
             return null;
         var result = new AdminDescribeUserScramCredentialsResponse.ScramCredentialInfo();
@@ -137,19 +128,24 @@ public class AdminResponseMapper {
         return source.name();
     }
 
-    public static AdminDescribeProducersResponse mapDescribeProducerResponse(Map<TopicPartition, DescribeProducersResult.PartitionProducerState> source) {
+    public static AdminDescribeProducersResponse mapDescribeProducerResponse(
+            Map<TopicPartition, DescribeProducersResult.PartitionProducerState> source) {
         if (source == null)
             return null;
         var result = new AdminDescribeProducersResponse(source.size());
-        source.forEach((topicPartition, partitionProducerState) -> result.add(mapPartitionProducerState(topicPartition, partitionProducerState)));
+        source.forEach((topicPartition, partitionProducerState) -> result
+                .add(mapPartitionProducerState(topicPartition, partitionProducerState)));
         return result;
     }
 
-    private static AdminDescribeProducersResponse.PartitionProducerState mapPartitionProducerState(TopicPartition topicPartition, DescribeProducersResult.PartitionProducerState partitionProducerState) {
+    private static AdminDescribeProducersResponse.PartitionProducerState mapPartitionProducerState(
+            TopicPartition topicPartition, DescribeProducersResult.PartitionProducerState partitionProducerState) {
         if (topicPartition == null || partitionProducerState == null)
             return null;
-        var activeProducers = new ArrayList<AdminDescribeProducersResponse.ProducerState>(partitionProducerState.activeProducers().size());
-        partitionProducerState.activeProducers().forEach(producerState -> activeProducers.add(mapProducerState(producerState)));
+        var activeProducers = new ArrayList<AdminDescribeProducersResponse.ProducerState>(
+                partitionProducerState.activeProducers().size());
+        partitionProducerState.activeProducers()
+                .forEach(producerState -> activeProducers.add(mapProducerState(producerState)));
         var result = new AdminDescribeProducersResponse.PartitionProducerState();
         result.setTopic(topicPartition.topic());
         result.setPartition(topicPartition.partition());
@@ -160,7 +156,9 @@ public class AdminResponseMapper {
     private static AdminDescribeProducersResponse.ProducerState mapProducerState(ProducerState source) {
         if (source == null)
             return null;
-        Long currentTransactionStartOffset = source.currentTransactionStartOffset().isPresent() ? source.currentTransactionStartOffset().getAsLong() : null;
+        Long currentTransactionStartOffset = source.currentTransactionStartOffset().isPresent()
+                ? source.currentTransactionStartOffset().getAsLong()
+                : null;
         Integer coordinatorEpoch = source.coordinatorEpoch().isPresent() ? source.coordinatorEpoch().getAsInt() : null;
         var result = new AdminDescribeProducersResponse.ProducerState();
         result.setProducerId(source.producerId());
@@ -190,13 +188,15 @@ public class AdminResponseMapper {
         return source.name();
     }
 
-    public static Collection<pro.savel.kafka.common.contract.TopicPartition> mapMemberAssignment(MemberAssignment source) {
+    public static Collection<pro.savel.kafka.common.contract.TopicPartition> mapMemberAssignment(
+            MemberAssignment source) {
         if (source == null)
             return null;
         return pro.savel.kafka.common.contract.TopicPartition.of(source.topicPartitions());
     }
 
-    public static Collection<pro.savel.kafka.common.contract.TopicPartition> mapMemberAssignment(ShareMemberAssignment source) {
+    public static Collection<pro.savel.kafka.common.contract.TopicPartition> mapMemberAssignment(
+            ShareMemberAssignment source) {
         if (source == null)
             return null;
         return pro.savel.kafka.common.contract.TopicPartition.of(source.topicPartitions());

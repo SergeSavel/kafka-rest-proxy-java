@@ -14,16 +14,36 @@
 
 package pro.savel.kafka.admin.responses;
 
-import lombok.Data;
+import lombok.Getter;
+import org.apache.kafka.clients.admin.TopicDescription;
+import org.apache.kafka.common.Uuid;
+
+import pro.savel.kafka.admin.AdminResponseMapper;
 import pro.savel.kafka.common.contract.PartitionInfo;
 
 import java.util.Collection;
 
-@Data
+@Getter
 public class AdminDescribeTopicResponse implements AdminResponse {
-    private String id;
+
+    private Uuid id;
     private String name;
     private boolean isInternal;
     private Collection<String> authorizedOperations;
     private Collection<PartitionInfo> partitions;
+
+    private AdminDescribeTopicResponse() {
+    }
+
+    public static AdminDescribeTopicResponse of(TopicDescription source) {
+        if (source == null)
+            return null;
+        var result = new AdminDescribeTopicResponse();
+        result.id = source.topicId();
+        result.name = source.name();
+        result.isInternal = source.isInternal();
+        result.authorizedOperations = AdminResponseMapper.mapAclOperations(source.authorizedOperations());
+        result.partitions = PartitionInfo.of(source.partitions());
+        return result;
+    }
 }

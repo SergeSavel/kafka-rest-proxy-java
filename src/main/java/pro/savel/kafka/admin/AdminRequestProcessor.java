@@ -64,7 +64,7 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
 
     private final AdminProvider provider = new AdminProvider();
 
-//region Overrides
+    // region Overrides
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) {
@@ -95,7 +95,7 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
         provider.close();
     }
 
-//endregion
+    // endregion
 
     public void processRequest(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var requestClass = requestBearer.request().getClass();
@@ -191,7 +191,7 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
             throw new RuntimeException("Unexpected admin request type: " + requestClass.getName());
     }
 
-//region Management
+    // region Management
 
     private void processList(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var wrappers = provider.getItems();
@@ -203,7 +203,8 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
     private void processCreate(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (AdminCreateRequest) requestBearer.request();
         var owner = ctx.channel().attr(NettyAttributes.USERNAME).get();
-        var wrapper = provider.createAdmin(request.getName(), request.getConfig(), request.getExpirationTimeout(), owner);
+        var wrapper = provider.createAdmin(request.getName(), request.getConfig(), request.getExpirationTimeout(),
+                owner);
         var response = AdminCreateResponse.of(wrapper);
         var responseBearer = new AdminResponseBearer(requestBearer, HttpResponseStatus.CREATED, response);
         ctx.writeAndFlush(responseBearer);
@@ -224,9 +225,9 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
         ctx.writeAndFlush(responseBearer);
     }
 
-//endregion
+    // endregion
 
-//region Cluster
+    // region Cluster
 
     private void processDescribeCluster(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (AdminDescribeClusterRequest) requestBearer.request();
@@ -237,19 +238,19 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
         var controllerFuture = describeResult.controller().toCompletionStage().toCompletableFuture();
         var aclFuture = describeResult.authorizedOperations().toCompletionStage().toCompletableFuture();
         CompletableFuture.allOf(nodesFuture, clusterIdFuture, controllerFuture, aclFuture)
-            .whenComplete((ignored, error) -> {
-                if (error == null) {
-                    var response = AdminDescribeClusterResponse.of(
-                            clusterIdFuture.join(),
-                            controllerFuture.join(),
-                            nodesFuture.join(),
-                            aclFuture.join());
-                    ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
-                } else if (!handleError(ctx, error)) {
-                    logger.error("Unable to get cluster description.", error);
-                    HttpUtils.writeInternalServerErrorAndClose(ctx, error.getMessage());
-                }
-            });
+                .whenComplete((ignored, error) -> {
+                    if (error == null) {
+                        var response = AdminDescribeClusterResponse.of(
+                                clusterIdFuture.join(),
+                                controllerFuture.join(),
+                                nodesFuture.join(),
+                                aclFuture.join());
+                        ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
+                    } else if (!handleError(ctx, error)) {
+                        logger.error("Unable to get cluster description.", error);
+                        HttpUtils.writeInternalServerErrorAndClose(ctx, error.getMessage());
+                    }
+                });
     }
 
     private void processDescribeLogDirs(ChannelHandlerContext ctx, RequestBearer requestBearer) {
@@ -268,9 +269,9 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
         });
     }
 
-//endregion
+    // endregion
 
-//region Topics
+    // region Topics
 
     private void processListTopics(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (AdminListTopicsRequest) requestBearer.request();
@@ -312,9 +313,11 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
             options = options.includeAuthorizedOperations(includeAuthorizedOperations);
         org.apache.kafka.common.TopicCollection topicCollection;
         if (request.getTopicId() != null)
-            topicCollection = org.apache.kafka.common.TopicCollection.ofTopicIds(Collections.singleton(request.getTopicId()));
+            topicCollection = org.apache.kafka.common.TopicCollection
+                    .ofTopicIds(Collections.singleton(request.getTopicId()));
         else if (request.getTopicName() != null)
-            topicCollection = org.apache.kafka.common.TopicCollection.ofTopicNames(Collections.singleton(request.getTopicName()));
+            topicCollection = org.apache.kafka.common.TopicCollection
+                    .ofTopicNames(Collections.singleton(request.getTopicName()));
         else
             throw new IllegalArgumentException("Topic name or id must be specified");
         var describeResult = admin.describeTopics(topicCollection, options);
@@ -325,7 +328,7 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
                     return;
                 }
                 for (TopicDescription topicDescription : topicNames.values()) {
-                    var response = AdminResponseMapper.mapDescribeTopicResponse(topicDescription);
+                    var response = AdminDescribeTopicResponse.of(topicDescription);
                     ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
                 }
             } else if (!handleError(ctx, error)) {
@@ -338,7 +341,8 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
     private void processCreateTopic(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (AdminCreateTopicRequest) requestBearer.request();
         var admin = getAdmin(request.getAdminId(), request.getToken());
-        var newTopic = new NewTopic(request.getTopicName(), Optional.ofNullable(request.getNumPartitions()), Optional.ofNullable(request.getReplicationFactor()));
+        var newTopic = new NewTopic(request.getTopicName(), Optional.ofNullable(request.getNumPartitions()),
+                Optional.ofNullable(request.getReplicationFactor()));
         var createResult = admin.createTopics(Collections.singleton(newTopic));
         createResult.all().whenComplete((topics, error) -> {
             if (error == null)
@@ -395,9 +399,9 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
         });
     }
 
-//endregion
+    // endregion
 
-//region Configs
+    // region Configs
 
     private void processDescribeBrokerConfigs(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (AdminDescribeBrokerConfigsRequest) requestBearer.request();
@@ -413,7 +417,8 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
         processDescribeConfigs(ctx, requestBearer, admin, resource);
     }
 
-    private static void processDescribeConfigs(ChannelHandlerContext ctx, RequestBearer requestBearer, Admin admin, ConfigResource resource) {
+    private static void processDescribeConfigs(ChannelHandlerContext ctx, RequestBearer requestBearer, Admin admin,
+            ConfigResource resource) {
         var describeResult = admin.describeConfigs(Collections.singleton(resource));
         describeResult.all().whenComplete((configs, error) -> {
             if (error == null) {
@@ -454,7 +459,8 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
         processIncrementalAlterConfigs(ctx, requestBearer, admin, configs);
     }
 
-    private static void processIncrementalAlterConfigs(ChannelHandlerContext ctx, RequestBearer requestBearer, Admin admin, Map<ConfigResource, Collection<AlterConfigOp>> configs) {
+    private static void processIncrementalAlterConfigs(ChannelHandlerContext ctx, RequestBearer requestBearer,
+            Admin admin, Map<ConfigResource, Collection<AlterConfigOp>> configs) {
         var alterConfigsResult = admin.incrementalAlterConfigs(configs);
         alterConfigsResult.all().whenComplete((ignore, error) -> {
             if (error == null) {
@@ -467,9 +473,9 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
         });
     }
 
-//endregion
+    // endregion
 
-//region User SCRAM credentials
+    // region User SCRAM credentials
 
     private void processDescribeUserScramCredentials(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (AdminDescribeUserScramCredentialsRequest) requestBearer.request();
@@ -490,7 +496,8 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
         var request = (AdminUpsertUserScramCredentialsRequest) requestBearer.request();
         var admin = getAdmin(request.getAdminId(), request.getToken());
         var iterations = request.getIterations() == null ? 4096 : request.getIterations();
-        var credentialInfo = new ScramCredentialInfo(ScramMechanism.fromMechanismName(request.getMechanism()), iterations);
+        var credentialInfo = new ScramCredentialInfo(ScramMechanism.fromMechanismName(request.getMechanism()),
+                iterations);
         var alteration = new UserScramCredentialUpsertion(request.getUser(), credentialInfo, request.getPassword());
         processAlterUserScramCredentials(ctx, requestBearer, admin, alteration);
     }
@@ -498,11 +505,13 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
     private void processDeleteUserScramCredentials(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (AdminDeleteUserScramCredentialsRequest) requestBearer.request();
         var admin = getAdmin(request.getAdminId(), request.getToken());
-        var alteration = new UserScramCredentialDeletion(request.getUser(), ScramMechanism.fromMechanismName(request.getMechanism()));
+        var alteration = new UserScramCredentialDeletion(request.getUser(),
+                ScramMechanism.fromMechanismName(request.getMechanism()));
         processAlterUserScramCredentials(ctx, requestBearer, admin, alteration);
     }
 
-    private static void processAlterUserScramCredentials(ChannelHandlerContext ctx, RequestBearer requestBearer, Admin admin, UserScramCredentialAlteration alteration) {
+    private static void processAlterUserScramCredentials(ChannelHandlerContext ctx, RequestBearer requestBearer,
+            Admin admin, UserScramCredentialAlteration alteration) {
         var alterationResult = admin.alterUserScramCredentials(Collections.singletonList(alteration));
         alterationResult.all().whenComplete((ignore, error) -> {
             if (error == null) {
@@ -515,9 +524,9 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
         });
     }
 
-//endregion
+    // endregion
 
-//region Acls
+    // region Acls
 
     private void processDescribeAcls(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (AdminDescribeAclsRequest) requestBearer.request();
@@ -565,9 +574,9 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
         });
     }
 
-//endregion
+    // endregion
 
-//region Producers
+    // region Producers
 
     private void processDescribeProducers(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (AdminDescribeProducersRequest) requestBearer.request();
@@ -585,9 +594,9 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
         });
     }
 
-//endregion
+    // endregion
 
-//region Groups
+    // region Groups
 
     private void processListGroups(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (AdminListGroupsRequest) requestBearer.request();
@@ -912,9 +921,9 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
         });
     }
 
-// endregion
+    // endregion
 
-//region Offsets
+    // region Offsets
 
     private void processListEarliestOffsetsRequest(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var offsetSpec = OffsetSpec.earliest();
@@ -947,7 +956,8 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
         processListOffsetsRequest(ctx, requestBearer, offsetSpec);
     }
 
-    private void processListOffsetsRequest(ChannelHandlerContext ctx, RequestBearer requestBearer, OffsetSpec offsetSpec) {
+    private void processListOffsetsRequest(ChannelHandlerContext ctx, RequestBearer requestBearer,
+            OffsetSpec offsetSpec) {
         var request = (AdminListOffsetsRequest) requestBearer.request();
         var admin = getAdmin(request.getAdminId(), request.getToken());
         var topicPartitionOffsets = request.getPartitions().stream()
@@ -973,7 +983,7 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
         });
     }
 
-// endregion
+    // endregion
 
     private Admin getAdmin(String id, String token) {
         var wrapper = provider.getAdmin(id, token);
