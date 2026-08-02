@@ -14,31 +14,89 @@
 
 package pro.savel.kafka.admin.responses;
 
-import lombok.Data;
+import lombok.Getter;
+import org.apache.kafka.clients.admin.DescribeProducersResult;
+import org.apache.kafka.common.TopicPartition;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Map;
 
-public class AdminDescribeProducersResponse extends ArrayList<AdminDescribeProducersResponse.PartitionProducerState> implements AdminResponse {
+public class AdminDescribeProducersResponse extends ArrayList<AdminDescribeProducersResponse.PartitionProducerState>
+        implements AdminResponse {
 
-    public AdminDescribeProducersResponse(int initialCapacity) {
+    private AdminDescribeProducersResponse(int initialCapacity) {
         super(initialCapacity);
     }
 
-    @Data
+    public static AdminDescribeProducersResponse of(
+            Map<TopicPartition, DescribeProducersResult.PartitionProducerState> source) {
+        if (source == null)
+            return null;
+        var result = new AdminDescribeProducersResponse(source.size());
+        source.forEach((topicPartition, partitionProducerState) -> result
+                .add(PartitionProducerState.of(topicPartition, partitionProducerState)));
+        return result;
+    }
+
+    @Getter
     public static class PartitionProducerState {
+
         private String topic;
         private int partition;
         private Collection<ProducerState> activeProducers;
+
+        private PartitionProducerState() {
+        }
+
+        private static PartitionProducerState of(
+                TopicPartition topicPartition,
+                DescribeProducersResult.PartitionProducerState source) {
+            if (topicPartition == null || source == null)
+                return null;
+            var result = new PartitionProducerState();
+            result.topic = topicPartition.topic();
+            result.partition = topicPartition.partition();
+            result.activeProducers = ProducerState.of(source.activeProducers());
+            return result;
+        }
     }
 
-    @Data
+    @Getter
     public static class ProducerState {
+
         private long producerId;
         private int producerEpoch;
         private int lastSequence;
         private long lastTimestamp;
         private Long currentTransactionStartOffset;
         private Integer coordinatorEpoch;
+
+        private ProducerState() {
+        }
+
+        private static ProducerState of(org.apache.kafka.clients.admin.ProducerState source) {
+            if (source == null)
+                return null;
+            var result = new ProducerState();
+            result.producerId = source.producerId();
+            result.producerEpoch = source.producerEpoch();
+            result.lastSequence = source.lastSequence();
+            result.lastTimestamp = source.lastTimestamp();
+            result.currentTransactionStartOffset = source.currentTransactionStartOffset()
+                    .isPresent() ? source.currentTransactionStartOffset().getAsLong() : null;
+            result.coordinatorEpoch = source.coordinatorEpoch()
+                    .isPresent() ? source.coordinatorEpoch().getAsInt() : null;
+            return result;
+        }
+
+        private static ArrayList<ProducerState> of(
+                Collection<org.apache.kafka.clients.admin.ProducerState> source) {
+            if (source == null)
+                return null;
+            var result = new ArrayList<ProducerState>(source.size());
+            source.forEach(sourceItem -> result.add(of(sourceItem)));
+            return result;
+        }
     }
 }

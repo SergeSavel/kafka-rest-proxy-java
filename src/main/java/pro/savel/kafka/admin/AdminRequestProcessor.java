@@ -585,7 +585,7 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
         var describeResult = admin.describeProducers(partitions);
         describeResult.all().whenComplete((producerStates, error) -> {
             if (error == null) {
-                var response = AdminResponseMapper.mapDescribeProducerResponse(producerStates);
+                var response = AdminDescribeProducersResponse.of(producerStates);
                 ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
             } else if (!handleError(ctx, error)) {
                 logger.error("Unable to describe producers.", error);
