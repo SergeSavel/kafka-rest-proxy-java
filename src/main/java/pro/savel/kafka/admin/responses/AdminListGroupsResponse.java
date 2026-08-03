@@ -14,10 +14,15 @@
 
 package pro.savel.kafka.admin.responses;
 
+import lombok.Getter;
+
 import java.util.ArrayList;
 import java.util.Collection;
 
-public class AdminListGroupsResponse extends ArrayList<GroupListing> implements AdminResponse {
+import static pro.savel.kafka.admin.AdminResponseMapper.mapGroupState;
+import static pro.savel.kafka.admin.AdminResponseMapper.mapGroupType;
+
+public class AdminListGroupsResponse extends ArrayList<AdminListGroupsResponse.GroupListing> implements AdminResponse {
 
     private AdminListGroupsResponse(int initialCapacity) {
         super(initialCapacity);
@@ -29,5 +34,30 @@ public class AdminListGroupsResponse extends ArrayList<GroupListing> implements 
         var result = new AdminListGroupsResponse(source.size());
         source.forEach(item -> result.add(GroupListing.of(item)));
         return result;
+    }
+
+    @Getter
+    public static class GroupListing {
+
+        private String groupId;
+        private String type;
+        private String protocol;
+        private String groupState;
+        private boolean isSimpleConsumerGroup;
+
+        private GroupListing() {
+        }
+
+        private static GroupListing of(org.apache.kafka.clients.admin.GroupListing source) {
+            if (source == null)
+                return null;
+            var result = new GroupListing();
+            result.groupId = source.groupId();
+            result.type = mapGroupType(source.type().orElse(null));
+            result.protocol = source.protocol();
+            result.groupState = mapGroupState(source.groupState().orElse(null));
+            result.isSimpleConsumerGroup = source.isSimpleConsumerGroup();
+            return result;
+        }
     }
 }
