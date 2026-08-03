@@ -192,6 +192,7 @@ scenarios.
 | Method | Endpoint                    | Description        |
 |--------|-----------------------------|--------------------|
 | POST   | `/admin/describe-producers` | Describe producers |
+| POST   | `/admin/abort-transaction`  | Abort transaction  |
 
 **Groups**
 

@@ -42,6 +42,7 @@ import pro.savel.kafka.admin.requests.management.AdminListRequest;
 import pro.savel.kafka.admin.requests.management.AdminRemoveRequest;
 import pro.savel.kafka.admin.requests.management.AdminTouchRequest;
 import pro.savel.kafka.admin.requests.offset.*;
+import pro.savel.kafka.admin.requests.producer.AdminAbortTransactionRequest;
 import pro.savel.kafka.admin.requests.producer.AdminDescribeProducersRequest;
 import pro.savel.kafka.admin.requests.scram.AdminDeleteUserScramCredentialsRequest;
 import pro.savel.kafka.admin.requests.scram.AdminDescribeUserScramCredentialsRequest;
@@ -120,6 +121,7 @@ public class AdminRequestDecoder extends ChannelInboundHandlerAdapter {
             case "/delete-acls" -> decodeDeleteAcls(ctx, httpRequest);
             case "/create-partitions" -> decodeCreatePartitions(ctx, httpRequest);
             case "/describe-producers" -> decodeDescribeProducers(ctx, httpRequest);
+            case "/abort-transaction" -> decodeAbortTransaction(ctx, httpRequest);
             case "/list-groups" -> decodeListGroups(ctx, httpRequest);
             case "/describe-classic-group" -> decodeDescribeClassicGroup(ctx, httpRequest);
             case "/describe-consumer-group" -> decodeDescribeConsumerGroup(ctx, httpRequest);
@@ -325,6 +327,14 @@ public class AdminRequestDecoder extends ChannelInboundHandlerAdapter {
     private void decodeDescribeProducers(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
         if (httpRequest.method() == HttpMethod.POST) {
             decodeRequest(ctx, httpRequest, AdminDescribeProducersRequest.class);
+        } else {
+            throw new MethodNotAllowedException("Unsupported HTTP method.");
+        }
+    }
+
+    private void decodeAbortTransaction(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
+        if (httpRequest.method() == HttpMethod.POST) {
+            decodeRequest(ctx, httpRequest, AdminAbortTransactionRequest.class);
         } else {
             throw new MethodNotAllowedException("Unsupported HTTP method.");
         }

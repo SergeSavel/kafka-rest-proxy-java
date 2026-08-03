@@ -42,6 +42,7 @@ import pro.savel.kafka.admin.requests.management.AdminListRequest;
 import pro.savel.kafka.admin.requests.management.AdminRemoveRequest;
 import pro.savel.kafka.admin.requests.management.AdminTouchRequest;
 import pro.savel.kafka.admin.requests.offset.*;
+import pro.savel.kafka.admin.requests.producer.AdminAbortTransactionRequest;
 import pro.savel.kafka.admin.requests.producer.AdminDescribeProducersRequest;
 import pro.savel.kafka.admin.requests.scram.AdminDeleteUserScramCredentialsRequest;
 import pro.savel.kafka.admin.requests.scram.AdminDescribeUserScramCredentialsRequest;
@@ -145,6 +146,8 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
             processCreatePartitions(ctx, requestBearer);
         else if (requestClass == AdminDescribeProducersRequest.class)
             processDescribeProducers(ctx, requestBearer);
+        else if (requestClass == AdminAbortTransactionRequest.class)
+            processAbortTransaction(ctx, requestBearer);
         else if (requestClass == AdminListGroupsRequest.class)
             processListGroups(ctx, requestBearer);
         else if (requestClass == AdminDescribeClassicGroupRequest.class)
@@ -589,6 +592,21 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
                 ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
             } else if (!handleError(ctx, error)) {
                 logger.error("Unable to describe producers.", error);
+                HttpUtils.writeInternalServerErrorAndClose(ctx, error.getMessage());
+            }
+        });
+    }
+
+    private void processAbortTransaction(ChannelHandlerContext ctx, RequestBearer requestBearer) {
+        var request = (AdminAbortTransactionRequest) requestBearer.request();
+        var admin = getAdmin(request.getAdminId(), request.getToken());
+        var partition = CommonRequestMapper.mapTopicPartition(request.getPartition());
+        var spec = new AbortTransactionSpec(partition, request.getProducerId(), request.getProducerEpoch(), request.getCoordinatorEpoch());
+        admin.abortTransaction(spec).all().whenComplete((ignore, error) -> {
+            if (error == null)
+                ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null));
+            else if (!handleError(ctx, error)) {
+                logger.error("Unable to abort transaction.", error);
                 HttpUtils.writeInternalServerErrorAndClose(ctx, error.getMessage());
             }
         });
