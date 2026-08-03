@@ -37,6 +37,7 @@ public class AdminDescribeLogDirsResponse extends ArrayList<AdminDescribeLogDirs
 
     @Getter
     public static class BrokersLogDirsDescription {
+
         private Integer brokerId;
         private Collection<LogDirDescription> logDirs;
 
