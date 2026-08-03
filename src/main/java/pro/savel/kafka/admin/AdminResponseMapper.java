@@ -18,14 +18,8 @@ import org.apache.kafka.clients.admin.*;
 import org.apache.kafka.common.ClassicGroupState;
 import org.apache.kafka.common.GroupState;
 import org.apache.kafka.common.GroupType;
-import org.apache.kafka.common.TopicPartition;
-import org.apache.kafka.common.acl.AccessControlEntry;
-import org.apache.kafka.common.acl.AclBinding;
 import org.apache.kafka.common.acl.AclOperation;
 import org.apache.kafka.common.acl.AclPermissionType;
-import org.apache.kafka.common.resource.ResourcePattern;
-import pro.savel.kafka.admin.data.AdminAclBinding;
-import pro.savel.kafka.admin.responses.*;
 
 import java.util.*;
 
@@ -36,44 +30,6 @@ public class AdminResponseMapper {
             return null;
         var result = new HashSet<String>(source.size());
         source.forEach(aclOperation -> result.add(mapAclOperation(aclOperation)));
-        return result;
-    }
-
-    public static AdminDescribeAclsResponse mapDescribeAclsResponse(Collection<AclBinding> source) {
-        if (source == null)
-            return null;
-        var result = new AdminDescribeAclsResponse(source.size());
-        source.forEach(aclBinding -> result.add(mapAclBinding(aclBinding)));
-        return result;
-    }
-
-    private static AdminAclBinding mapAclBinding(AclBinding source) {
-        if (source == null)
-            return null;
-        var result = new AdminAclBinding();
-        result.setPattern(mapResourcePattern(source.pattern()));
-        result.setEntry(mapAccessControlEntry(source.entry()));
-        return result;
-    }
-
-    private static AdminAclBinding.ResourcePattern mapResourcePattern(ResourcePattern source) {
-        if (source == null)
-            return null;
-        var result = new AdminAclBinding.ResourcePattern();
-        result.setResourceType(source.resourceType().name());
-        result.setName(source.name());
-        result.setPatternType(source.patternType().name());
-        return result;
-    }
-
-    private static AdminAclBinding.AccessControlEntry mapAccessControlEntry(AccessControlEntry source) {
-        if (source == null)
-            return null;
-        var result = new AdminAclBinding.AccessControlEntry();
-        result.setPrincipal(source.principal());
-        result.setHost(source.host());
-        result.setOperation(mapAclOperation(source.operation()));
-        result.setPermissionType(mapAclPermissionType(source.permissionType()));
         return result;
     }
 

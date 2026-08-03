@@ -14,13 +14,23 @@
 
 package pro.savel.kafka.admin.responses;
 
+import org.apache.kafka.common.acl.AclBinding;
 import pro.savel.kafka.admin.data.AdminAclBinding;
 
 import java.util.ArrayList;
+import java.util.Collection;
 
 public class AdminDescribeAclsResponse extends ArrayList<AdminAclBinding> implements AdminResponse {
 
-    public AdminDescribeAclsResponse(int initialCapacity) {
+    private AdminDescribeAclsResponse(int initialCapacity) {
         super(initialCapacity);
+    }
+
+    public static AdminDescribeAclsResponse of(Collection<AclBinding> source) {
+        if (source == null)
+            return null;
+        var result = new AdminDescribeAclsResponse(source.size());
+        source.forEach(aclBinding -> result.add(AdminAclBinding.of(aclBinding)));
+        return result;
     }
 }

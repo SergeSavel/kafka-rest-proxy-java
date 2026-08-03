@@ -25,22 +25,44 @@ public class AdminAclBinding {
     @NotNull
     @Valid
     private ResourcePattern pattern;
+
     @NotNull
     @Valid
     private AccessControlEntry entry;
 
+    public static AdminAclBinding of(org.apache.kafka.common.acl.AclBinding source) {
+        if (source == null)
+            return null;
+        var result = new AdminAclBinding();
+        result.pattern = ResourcePattern.of(source.pattern());
+        result.entry = AccessControlEntry.of(source.entry());
+        return result;
+    }
+
     @Data
     public static class ResourcePattern {
+
         @NotEmpty
         private String resourceType;
         @NotNull
         private String name;
         @NotEmpty
         private String patternType;
+
+        private static ResourcePattern of(org.apache.kafka.common.resource.ResourcePattern source) {
+            if (source == null)
+                return null;
+            var result = new ResourcePattern();
+            result.resourceType = source.resourceType().name();
+            result.name = source.name();
+            result.patternType = source.patternType().name();
+            return result;
+        }
     }
 
     @Data
     public static class AccessControlEntry {
+
         @NotNull
         private String principal;
         @NotNull
@@ -49,5 +71,16 @@ public class AdminAclBinding {
         private String operation;
         @NotEmpty
         private String permissionType;
+
+        private static AccessControlEntry of(org.apache.kafka.common.acl.AccessControlEntry source) {
+            if (source == null)
+                return null;
+            var result = new AccessControlEntry();
+            result.principal = source.principal();
+            result.host = source.host();
+            result.operation = source.operation().name();
+            result.permissionType = source.permissionType().name();
+            return result;
+        }
     }
 }

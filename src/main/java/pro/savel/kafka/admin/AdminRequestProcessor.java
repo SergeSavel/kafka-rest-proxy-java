@@ -535,7 +535,7 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
         var describeResult = admin.describeAcls(filter);
         describeResult.values().whenComplete((aclBindings, error) -> {
             if (error == null) {
-                var response = AdminResponseMapper.mapDescribeAclsResponse(aclBindings);
+                var response = AdminDescribeAclsResponse.of(aclBindings);
                 ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
             } else if (!handleError(ctx, error)) {
                 logger.error("Unable to describe ACLs.", error);
