@@ -102,6 +102,7 @@ public class AdminRequestDecoder extends ChannelInboundHandlerAdapter {
             case "/describe-topic" -> decodeDescribeTopic(ctx, httpRequest);
             case "/list-topics" -> decodeListTopics(ctx, httpRequest);
             case "/create-topic" -> decodeCreateTopic(ctx, httpRequest);
+            case "/create-topics" -> decodeCreateTopics(ctx, httpRequest);
             case "/delete-topic" -> decodeDeleteTopic(ctx, httpRequest);
             case "/delete-topics" -> decodeDeleteTopics(ctx, httpRequest);
             case "/describe-topic-configs" -> decodeDescribeTopicConfigs(ctx, httpRequest);
@@ -207,6 +208,14 @@ public class AdminRequestDecoder extends ChannelInboundHandlerAdapter {
     private void decodeCreateTopic(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
         if (httpRequest.method() == HttpMethod.POST) {
             decodeRequest(ctx, httpRequest, AdminCreateTopicRequest.class);
+        } else {
+            throw new MethodNotAllowedException("Unsupported HTTP method.");
+        }
+    }
+
+    private void decodeCreateTopics(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
+        if (httpRequest.method() == HttpMethod.POST) {
+            decodeRequest(ctx, httpRequest, AdminCreateTopicsRequest.class);
         } else {
             throw new MethodNotAllowedException("Unsupported HTTP method.");
         }

@@ -1,0 +1,43 @@
+// Copyright 2026 Sergey Savelev (serge@savel.pro)
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package pro.savel.kafka.admin.requests.topic;
+
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
+import lombok.Data;
+
+import java.util.Collection;
+
+@Data
+public class AdminCreateTopicsRequest implements AdminTopicRequest {
+    @NotEmpty
+    private String adminId;
+    @NotEmpty
+    private String token;
+    @NotEmpty
+    private Collection<@NotNull @Valid TopicSpec> topics;
+
+    @Data
+    public static class TopicSpec {
+        @NotEmpty
+        private String topicName;
+        @Positive
+        private Integer numPartitions;
+        @Positive
+        private Short replicationFactor;
+    }
+}

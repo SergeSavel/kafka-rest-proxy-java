@@ -158,6 +158,7 @@ scenarios.
 | POST   | `/admin/list-topics`       | List topics            |
 | POST   | `/admin/describe-topic`    | Describe topic         |
 | POST   | `/admin/create-topic`      | Create topic           |
+| POST   | `/admin/create-topics`     | Create multiple topics |
 | POST   | `/admin/delete-topic`      | Delete topic           |
 | POST   | `/admin/delete-topics`     | Delete multiple topics |
 | POST   | `/admin/create-partitions` | Create partitions      |

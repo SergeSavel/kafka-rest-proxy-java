@@ -104,6 +104,8 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
             processDescribeTopic(ctx, requestBearer);
         else if (requestClass == AdminCreateTopicRequest.class)
             processCreateTopic(ctx, requestBearer);
+        else if (requestClass == AdminCreateTopicsRequest.class)
+            processCreateTopics(ctx, requestBearer);
         else if (requestClass == AdminDeleteTopicRequest.class)
             processDeleteTopic(ctx, requestBearer);
         else if (requestClass == AdminDeleteTopicsRequest.class)
@@ -348,12 +350,36 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
                 Optional.ofNullable(request.getReplicationFactor()));
         var createResult = admin.createTopics(Collections.singleton(newTopic));
         createResult.all().whenComplete((topics, error) -> {
-            if (error == null)
-                ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null));
-            else if (!handleError(ctx, error)) {
+            if (error == null) {
+                for (var topicName : createResult.values().keySet()) {
+                    var response = AdminCreateTopicResponse.of(
+                            createResult.topicId(topicName),
+                            createResult.numPartitions(topicName),
+                            createResult.replicationFactor(topicName),
+                            createResult.config(topicName)
+                    );
+                    ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
+                    return;
+                }
+            } else if (!handleError(ctx, error)) {
                 logger.error("Unable to create topic.", error);
                 HttpUtils.writeInternalServerErrorAndClose(ctx, error.getMessage());
             }
+        });
+    }
+
+    private void processCreateTopics(ChannelHandlerContext ctx, RequestBearer requestBearer) {
+        var request = (AdminCreateTopicsRequest) requestBearer.request();
+        var admin = getAdmin(request.getAdminId(), request.getToken());
+        var topicsSource = request.getTopics();
+        var newTopics = new ArrayList<NewTopic>(topicsSource.size());
+        topicsSource.forEach(topicSpec -> newTopics.add(new NewTopic(topicSpec.getTopicName(),
+                Optional.ofNullable(topicSpec.getNumPartitions()),
+                Optional.ofNullable(topicSpec.getReplicationFactor()))));
+        var createResult = admin.createTopics(newTopics);
+        createResult.all().whenComplete((ignore1, ignore2) -> {
+            var response = AdminCreateTopicsResponse.of(createResult);
+            ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
         });
     }
 
