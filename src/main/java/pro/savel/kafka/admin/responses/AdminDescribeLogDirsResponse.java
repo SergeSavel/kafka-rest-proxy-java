@@ -21,17 +21,20 @@ import java.util.Collection;
 import java.util.Map;
 
 @Getter
-public class AdminDescribeLogDirsResponse extends ArrayList<AdminDescribeLogDirsResponse.BrokersLogDirsDescription> implements AdminResponse {
+public class AdminDescribeLogDirsResponse extends ArrayList<AdminDescribeLogDirsResponse.BrokersLogDirsDescription>
+        implements AdminResponse {
 
     private AdminDescribeLogDirsResponse(int initialCapacity) {
         super(initialCapacity);
     }
 
-    public static AdminDescribeLogDirsResponse of(Map<Integer, Map<String, org.apache.kafka.clients.admin.LogDirDescription>> source) {
+    public static AdminDescribeLogDirsResponse of(
+            Map<Integer, Map<String, org.apache.kafka.clients.admin.LogDirDescription>> source) {
         if (source == null)
             return null;
         var result = new AdminDescribeLogDirsResponse(source.size());
-        source.forEach((brokerId, logDirsDescriptionSource) -> result.add(BrokersLogDirsDescription.of(brokerId, logDirsDescriptionSource)));
+        source.forEach((brokerId, logDirsDescriptionSource) -> result
+                .add(BrokersLogDirsDescription.of(brokerId, logDirsDescriptionSource)));
         return result;
     }
 
@@ -44,13 +47,70 @@ public class AdminDescribeLogDirsResponse extends ArrayList<AdminDescribeLogDirs
         private BrokersLogDirsDescription() {
         }
 
-        private static BrokersLogDirsDescription of(Integer brokerId, Map<String, org.apache.kafka.clients.admin.LogDirDescription> descriptionsSource) {
+        private static BrokersLogDirsDescription of(Integer brokerId,
+                Map<String, org.apache.kafka.clients.admin.LogDirDescription> descriptionsSource) {
             var result = new BrokersLogDirsDescription();
             result.brokerId = brokerId;
             if (descriptionsSource != null) {
                 result.logDirs = new ArrayList<>(descriptionsSource.size());
-                descriptionsSource.forEach((path, descriptionSource) -> result.logDirs.add(LogDirDescription.of(path, descriptionSource)));
+                descriptionsSource.forEach(
+                        (path, descriptionSource) -> result.logDirs.add(LogDirDescription.of(path, descriptionSource)));
             }
+            return result;
+        }
+    }
+
+    @Getter
+    public static class LogDirDescription {
+
+        private String path;
+        private String errorMessage;
+        private Collection<TopicPartitionReplicaInfo> replicaInfos;
+
+        private LogDirDescription() {
+        }
+
+        private static LogDirDescription of(String path, org.apache.kafka.clients.admin.LogDirDescription source) {
+            var result = new LogDirDescription();
+            result.path = path;
+            if (source != null) {
+                result.errorMessage = source.error() == null ? null : source.error().getMessage();
+                var sourceReplicaInfos = source.replicaInfos();
+                if (sourceReplicaInfos != null) {
+                    result.replicaInfos = new ArrayList<>(sourceReplicaInfos.size());
+                    sourceReplicaInfos.forEach((topicPartitionSource, replicaInfoSource) -> {
+                        var item = TopicPartitionReplicaInfo.of(topicPartitionSource.topic(),
+                                topicPartitionSource.partition(), replicaInfoSource);
+                        result.replicaInfos.add(item);
+                    });
+                }
+            }
+            return result;
+        }
+    }
+
+    @Getter
+    public static class TopicPartitionReplicaInfo {
+
+        private String topic;
+        private int partition;
+        private long size;
+        private long offsetLag;
+        private boolean isFuture;
+
+        private TopicPartitionReplicaInfo() {
+        }
+
+        private static TopicPartitionReplicaInfo of(String topic, int partition,
+                org.apache.kafka.clients.admin.ReplicaInfo source) {
+            if (source == null)
+                return null;
+            var result = new TopicPartitionReplicaInfo();
+            result.topic = topic;
+            result.partition = partition;
+            result.size = source.size();
+            result.offsetLag = source.offsetLag();
+            result.isFuture = source.isFuture();
             return result;
         }
     }
