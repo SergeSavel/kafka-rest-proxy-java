@@ -15,7 +15,6 @@
 package pro.savel.kafka.admin.responses;
 
 import lombok.Getter;
-import org.apache.kafka.common.Uuid;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -36,7 +35,7 @@ public class AdminListTopicsResponse extends ArrayList<AdminListTopicsResponse.T
 
     @Getter
     public static class TopicListing {
-        private Uuid id;
+        private String id;
         private String name;
         private boolean isInternal;
 
@@ -47,7 +46,7 @@ public class AdminListTopicsResponse extends ArrayList<AdminListTopicsResponse.T
             if (source == null)
                 return null;
             var result = new TopicListing();
-            result.id = source.topicId();
+            result.id = source.topicId().toString();
             result.name = source.name();
             result.isInternal = source.isInternal();
             return result;
