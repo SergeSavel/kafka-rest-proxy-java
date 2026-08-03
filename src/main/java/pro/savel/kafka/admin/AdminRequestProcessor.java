@@ -447,7 +447,7 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
     }
 
     private static void processDescribeConfigs(ChannelHandlerContext ctx, RequestBearer requestBearer, Admin admin,
-            ConfigResource resource) {
+                                               ConfigResource resource) {
         var describeResult = admin.describeConfigs(Collections.singleton(resource));
         describeResult.all().whenComplete((configs, error) -> {
             if (error == null) {
@@ -489,7 +489,7 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
     }
 
     private static void processIncrementalAlterConfigs(ChannelHandlerContext ctx, RequestBearer requestBearer,
-            Admin admin, Map<ConfigResource, Collection<AlterConfigOp>> configs) {
+                                                       Admin admin, Map<ConfigResource, Collection<AlterConfigOp>> configs) {
         var alterConfigsResult = admin.incrementalAlterConfigs(configs);
         alterConfigsResult.all().whenComplete((ignore, error) -> {
             if (error == null) {
@@ -540,7 +540,7 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
     }
 
     private static void processAlterUserScramCredentials(ChannelHandlerContext ctx, RequestBearer requestBearer,
-            Admin admin, UserScramCredentialAlteration alteration) {
+                                                         Admin admin, UserScramCredentialAlteration alteration) {
         var alterationResult = admin.alterUserScramCredentials(Collections.singletonList(alteration));
         alterationResult.all().whenComplete((ignore, error) -> {
             if (error == null) {
@@ -1001,7 +1001,7 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
     }
 
     private void processListOffsetsRequest(ChannelHandlerContext ctx, RequestBearer requestBearer,
-            OffsetSpec offsetSpec) {
+                                           OffsetSpec offsetSpec) {
         var request = (AdminListOffsetsRequest) requestBearer.request();
         var admin = getAdmin(request.getAdminId(), request.getToken());
         var topicPartitionOffsets = request.getPartitions().stream()
