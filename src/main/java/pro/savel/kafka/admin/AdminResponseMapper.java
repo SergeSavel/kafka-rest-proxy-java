@@ -21,6 +21,8 @@ import org.apache.kafka.common.GroupType;
 import org.apache.kafka.common.acl.AclOperation;
 import org.apache.kafka.common.acl.AclPermissionType;
 
+import pro.savel.kafka.common.contract.TopicPartition;
+
 import java.util.*;
 
 public class AdminResponseMapper {
@@ -63,17 +65,15 @@ public class AdminResponseMapper {
         return source.name();
     }
 
-    public static Collection<pro.savel.kafka.common.contract.TopicPartition> mapMemberAssignment(
-            MemberAssignment source) {
+    public static Collection<TopicPartition> mapMemberAssignment(MemberAssignment source) {
         if (source == null)
             return null;
-        return pro.savel.kafka.common.contract.TopicPartition.of(source.topicPartitions());
+        return TopicPartition.of(source.topicPartitions());
     }
 
-    public static Collection<pro.savel.kafka.common.contract.TopicPartition> mapMemberAssignment(
-            ShareMemberAssignment source) {
+    public static Collection<TopicPartition> mapMemberAssignment(ShareMemberAssignment source) {
         if (source == null)
             return null;
-        return pro.savel.kafka.common.contract.TopicPartition.of(source.topicPartitions());
+        return TopicPartition.of(source.topicPartitions());
     }
 }
