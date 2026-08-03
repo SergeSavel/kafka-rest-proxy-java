@@ -14,20 +14,55 @@
 
 package pro.savel.kafka.admin.responses;
 
+import lombok.Getter;
+
 import java.util.ArrayList;
 import java.util.Map;
 
-public class AdminListConsumerGroupOffsetsResponse extends ArrayList<TopicPartitionOffsetMetadata> implements AdminResponse {
+public class AdminListConsumerGroupOffsetsResponse
+        extends ArrayList<AdminListConsumerGroupOffsetsResponse.TopicPartitionOffsetMetadata> implements AdminResponse {
 
     private AdminListConsumerGroupOffsetsResponse(int initialCapacity) {
         super(initialCapacity);
     }
 
-    public static AdminListConsumerGroupOffsetsResponse of(Map<org.apache.kafka.common.TopicPartition, org.apache.kafka.clients.consumer.OffsetAndMetadata> source) {
+    public static AdminListConsumerGroupOffsetsResponse of(
+            Map<org.apache.kafka.common.TopicPartition, org.apache.kafka.clients.consumer.OffsetAndMetadata> source) {
         if (source == null)
             return null;
         var result = new AdminListConsumerGroupOffsetsResponse(source.size());
-        source.forEach((topicPartition, offsetAndMetadata) -> result.add(TopicPartitionOffsetMetadata.of(topicPartition, offsetAndMetadata)));
+        source.forEach((topicPartition, offsetAndMetadata) -> result
+                .add(TopicPartitionOffsetMetadata.of(topicPartition, offsetAndMetadata)));
         return result;
+    }
+
+    @Getter
+    public static class TopicPartitionOffsetMetadata {
+
+        private String topic;
+        private Integer partition;
+        private Long offset;
+        private Integer leaderEpoch;
+        private String metadata;
+
+        private TopicPartitionOffsetMetadata() {
+        }
+
+        private static TopicPartitionOffsetMetadata of(org.apache.kafka.common.TopicPartition topicPartition,
+                org.apache.kafka.clients.consumer.OffsetAndMetadata offsetMetadata) {
+            if (topicPartition == null && offsetMetadata == null)
+                return null;
+            var result = new TopicPartitionOffsetMetadata();
+            if (topicPartition != null) {
+                result.topic = topicPartition.topic();
+                result.partition = topicPartition.partition();
+            }
+            if (offsetMetadata != null) {
+                result.offset = offsetMetadata.offset();
+                result.leaderEpoch = offsetMetadata.leaderEpoch().orElse(null);
+                result.metadata = offsetMetadata.metadata();
+            }
+            return result;
+        }
     }
 }
