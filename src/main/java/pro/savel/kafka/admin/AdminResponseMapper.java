@@ -58,12 +58,6 @@ public class AdminResponseMapper {
         return source.name();
     }
 
-    public static Collection<TopicPartition> mapMemberAssignment(MemberAssignment source) {
-        if (source == null)
-            return null;
-        return TopicPartition.of(source.topicPartitions());
-    }
-
     public static Collection<TopicPartition> mapMemberAssignment(ShareMemberAssignment source) {
         if (source == null)
             return null;

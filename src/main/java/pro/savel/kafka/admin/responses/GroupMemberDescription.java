@@ -52,10 +52,16 @@ public class GroupMemberDescription {
         result.groupInstanceId = source.groupInstanceId().orElse(null);
         result.clientId = source.clientId();
         result.host = source.host();
-        result.assignment = AdminResponseMapper.mapMemberAssignment(source.assignment());
-        result.targetAssignment = source.targetAssignment().map(AdminResponseMapper::mapMemberAssignment).orElse(null);
+        result.assignment = mapMemberAssignment(source.assignment());
+        result.targetAssignment = source.targetAssignment().map(GroupMemberDescription::mapMemberAssignment).orElse(null);
         result.memberEpoch = source.memberEpoch().orElse(null);
         result.upgraded = source.upgraded().orElse(null);
         return result;
+    }
+
+    public static Collection<TopicPartition> mapMemberAssignment(org.apache.kafka.clients.admin.MemberAssignment source) {
+        if (source == null)
+            return null;
+        return TopicPartition.of(source.topicPartitions());
     }
 }
