@@ -19,7 +19,6 @@ import org.apache.kafka.common.ClassicGroupState;
 import org.apache.kafka.common.GroupState;
 import org.apache.kafka.common.GroupType;
 import org.apache.kafka.common.acl.AclOperation;
-import org.apache.kafka.common.acl.AclPermissionType;
 
 import pro.savel.kafka.common.contract.TopicPartition;
 
@@ -36,12 +35,6 @@ public class AdminResponseMapper {
     }
 
     public static String mapAclOperation(AclOperation source) {
-        if (source == null)
-            return null;
-        return source.name();
-    }
-
-    public static String mapAclPermissionType(AclPermissionType source) {
         if (source == null)
             return null;
         return source.name();
