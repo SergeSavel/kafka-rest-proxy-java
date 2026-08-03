@@ -14,13 +14,10 @@
 
 package pro.savel.kafka.admin;
 
-import org.apache.kafka.clients.admin.*;
 import org.apache.kafka.common.ClassicGroupState;
 import org.apache.kafka.common.GroupState;
 import org.apache.kafka.common.GroupType;
 import org.apache.kafka.common.acl.AclOperation;
-
-import pro.savel.kafka.common.contract.TopicPartition;
 
 import java.util.*;
 
@@ -56,11 +53,5 @@ public class AdminResponseMapper {
         if (source == null)
             return null;
         return source.name();
-    }
-
-    public static Collection<TopicPartition> mapMemberAssignment(ShareMemberAssignment source) {
-        if (source == null)
-            return null;
-        return TopicPartition.of(source.topicPartitions());
     }
 }
