@@ -69,7 +69,8 @@ public class AdminCreateTopicsResponse extends ArrayList<AdminCreateTopicRespons
                 source.topicId(topicName),
                 source.numPartitions(topicName),
                 source.replicationFactor(topicName),
-                source.config(topicName))));
+                source.config(topicName)
+        )));
         return result;
     }
 }
