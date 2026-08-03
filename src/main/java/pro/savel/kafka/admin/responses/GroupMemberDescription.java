@@ -15,7 +15,6 @@
 package pro.savel.kafka.admin.responses;
 
 import lombok.Getter;
-import pro.savel.kafka.admin.AdminResponseMapper;
 import pro.savel.kafka.common.contract.TopicPartition;
 
 import java.util.ArrayList;
