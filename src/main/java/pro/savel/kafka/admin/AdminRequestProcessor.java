@@ -20,9 +20,7 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.util.ReferenceCountUtil;
 import org.apache.kafka.clients.admin.*;
-import org.apache.kafka.common.GroupState;
-import org.apache.kafka.common.GroupType;
-import org.apache.kafka.common.IsolationLevel;
+import org.apache.kafka.common.*;
 import org.apache.kafka.common.config.ConfigResource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -396,7 +394,15 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
     private void processDeleteTopic(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (AdminDeleteTopicRequest) requestBearer.request();
         var admin = getAdmin(request.getAdminId(), request.getToken());
-        var topics = Collections.singleton(request.getTopicName());
+        TopicCollection topics;
+        if (request.getTopicId() != null) {
+            var topicUuids = Collections.singleton(Uuid.fromString(request.getTopicId()));
+            topics = TopicCollection.ofTopicIds(topicUuids);
+        } else if (request.getTopicName() != null) {
+            var topicNames = Collections.singleton(request.getTopicName());
+            topics = TopicCollection.ofTopicNames(topicNames);
+        } else
+            throw new IllegalArgumentException("Topic id or name must be specified");
         var deleteResult = admin.deleteTopics(topics);
         deleteResult.all().whenComplete((ignore, error) -> {
             if (error == null)
@@ -411,15 +417,23 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
     private void processDeleteTopics(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (AdminDeleteTopicsRequest) requestBearer.request();
         var admin = getAdmin(request.getAdminId(), request.getToken());
-        var topics = request.getTopicNames();
+        TopicCollection topics;
+        if (request.getTopicIds() != null) {
+            var topicUuids = new ArrayList<Uuid>(request.getTopicIds().size());
+            request.getTopicIds().forEach(topicId -> topicUuids.add(Uuid.fromString(topicId)));
+            topics = TopicCollection.ofTopicIds(topicUuids);
+        } else if (request.getTopicNames() != null) {
+            topics = TopicCollection.ofTopicNames(request.getTopicNames());
+        } else
+            throw new IllegalArgumentException("Topic ids or names must be specified");
         var deleteResult = admin.deleteTopics(topics);
-        deleteResult.all().whenComplete((ignore, error) -> {
-            if (error == null)
-                ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null));
-            else if (!handleError(ctx, error)) {
-                logger.error("Unable to delete topics.", error);
-                HttpUtils.writeInternalServerErrorAndClose(ctx, error.getMessage());
-            }
+        deleteResult.all().whenComplete((ignore1, ignore2) -> {
+            AdminDeleteTopicsResponse response;
+            if (request.getTopicIds() != null)
+                response = AdminDeleteTopicsResponse.ofUuids(deleteResult.topicIdValues());
+            else
+                response = AdminDeleteTopicsResponse.ofNames(deleteResult.topicNameValues());
+            ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
         });
     }
 

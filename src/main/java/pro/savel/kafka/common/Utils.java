@@ -38,6 +38,15 @@ public abstract class Utils {
         return builder.toString();
     }
 
+    public static String rootErrorMessage(Throwable throwable) {
+        String result = null;
+        while (throwable != null) {
+            result = throwable.getMessage();
+            throwable = throwable.getCause();
+        }
+        return result;
+    }
+
     public static <T> String combineConstraintViolationMessage(ConstraintViolation<T> violation) {
         if (violation == null)
             return null;

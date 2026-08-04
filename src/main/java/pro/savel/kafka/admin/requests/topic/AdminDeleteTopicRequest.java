@@ -23,6 +23,6 @@ public class AdminDeleteTopicRequest implements AdminTopicRequest {
     private String adminId;
     @NotEmpty
     private String token;
-    @NotEmpty
+    private String topicId;
     private String topicName;
 }

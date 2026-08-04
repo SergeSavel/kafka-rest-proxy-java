@@ -15,6 +15,7 @@
 package pro.savel.kafka.admin.requests.topic;
 
 import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 import java.util.Collection;
@@ -25,6 +26,8 @@ public class AdminDeleteTopicsRequest implements AdminTopicRequest {
     private String adminId;
     @NotEmpty
     private String token;
-    @NotEmpty
+    @Size(min = 1)
+    private Collection<String> topicIds;
+    @Size(min = 1)
     private Collection<String> topicNames;
 }
