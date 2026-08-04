@@ -14,18 +14,18 @@
 
 package pro.savel.kafka.admin;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty.buffer.ByteBufAllocator;
 import pro.savel.kafka.admin.responses.AdminResponse;
+import pro.savel.kafka.common.JsonUtils;
+
+import java.io.IOException;
 
 public abstract class AdminResponseSerializer {
 
-    public static ByteBuf serializeJson(ObjectMapper objectMapper, AdminResponse response) throws JsonProcessingException {
-        if (response == null)
-            return null;
-        var bytes = objectMapper.writeValueAsBytes(response);
-        return Unpooled.wrappedBuffer(bytes);
+    public static ByteBuf serializeJson(ObjectMapper objectMapper, ByteBufAllocator allocator, AdminResponse response)
+            throws IOException {
+        return JsonUtils.serializeJson(objectMapper, allocator, response);
     }
 }

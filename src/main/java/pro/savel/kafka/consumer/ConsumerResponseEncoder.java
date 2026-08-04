@@ -14,7 +14,6 @@
 
 package pro.savel.kafka.consumer;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.netty.channel.*;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
@@ -26,6 +25,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import pro.savel.kafka.common.HttpUtils;
 import pro.savel.kafka.common.contract.Serde;
+
+import java.io.IOException;
 
 @ChannelHandler.Sharable
 public class ConsumerResponseEncoder extends ChannelOutboundHandlerAdapter {
@@ -45,7 +46,7 @@ public class ConsumerResponseEncoder extends ChannelOutboundHandlerAdapter {
                 if (logger.isDebugEnabled()) {
                     logger.debug("Encoding consumer response.");
                 }
-                var httpResponse = createHttpResponse(bearer);
+                var httpResponse = createHttpResponse(ctx, bearer);
                 var future = ctx.write(httpResponse, promise);
                 if (!bearer.isConnectionKeepAlive()) {
                     future.addListener(ChannelFutureListener.CLOSE);
@@ -63,17 +64,18 @@ public class ConsumerResponseEncoder extends ChannelOutboundHandlerAdapter {
         }
     }
 
-    private FullHttpResponse createHttpResponse(ConsumerResponseBearer bearer) throws JsonProcessingException {
+    private FullHttpResponse createHttpResponse(ChannelHandlerContext ctx, ConsumerResponseBearer bearer)
+            throws IOException {
         FullHttpResponse httpResponse;
         if (bearer.getResponse() == null) {
             httpResponse = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, bearer.getStatus());
         } else {
             if (bearer.getSerializeTo() == Serde.JSON) {
-                var content = ConsumerResponseSerializer.serializeJson(objectMapper, bearer.getResponse());
+                var content = ConsumerResponseSerializer.serializeJson(objectMapper, ctx.alloc(), bearer.getResponse());
                 httpResponse = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, bearer.getStatus(), content);
                 httpResponse.headers().set(HttpUtils.ASCII_CONTENT_TYPE, HttpUtils.ASCII_APPLICATION_JSON_CHARSET_UTF8);
             } else if (bearer.getSerializeTo() == Serde.BINARY) {
-                var content = ConsumerResponseSerializer.serializeBinary(bearer.getResponse());
+                var content = ConsumerResponseSerializer.serializeBinary(ctx.alloc(), bearer.getResponse());
                 httpResponse = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, bearer.getStatus(), content);
                 httpResponse.headers().set(HttpUtils.ASCII_CONTENT_TYPE, HttpUtils.ASCII_APPLICATION_OCTET_STREAM);
             } else {

@@ -15,6 +15,7 @@
 package pro.savel.kafka.producer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.netty.buffer.UnpooledByteBufAllocator;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.TopicPartition;
 import org.junit.jupiter.api.Test;
@@ -28,6 +29,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class ProducerResponseSerializerTest {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
+    private final UnpooledByteBufAllocator allocator = UnpooledByteBufAllocator.DEFAULT;
 
     private static ProducerSendResponse createSendResponse(String topic, int partition, long offset,
                                                            long timestamp, int keySize, int valueSize)
@@ -41,14 +43,14 @@ class ProducerResponseSerializerTest {
 
     @Test
     void serializeJson_null_returnsNull() throws Exception {
-        assertNull(ProducerResponseSerializer.serializeJson(objectMapper, null));
+        assertNull(ProducerResponseSerializer.serializeJson(objectMapper, allocator, null));
     }
 
     @Test
     void serializeJson_sendResponse_returnsValidJson() throws Exception {
         var response = createSendResponse("test-topic", 2, 100L, 1234567890L, 10, 200);
 
-        var buf = ProducerResponseSerializer.serializeJson(objectMapper, response);
+        var buf = ProducerResponseSerializer.serializeJson(objectMapper, allocator, response);
         assertNotNull(buf);
 
         var json = buf.toString(StandardCharsets.UTF_8);
@@ -64,22 +66,23 @@ class ProducerResponseSerializerTest {
 
     @Test
     void serializeBinary_null_returnsNull() {
-        assertNull(ProducerResponseSerializer.serializeBinary(null));
+        assertNull(ProducerResponseSerializer.serializeBinary(allocator, null));
     }
 
     @Test
     void serializeBinary_sendResponse_returnsValidBinary() {
-        var response = createSendResponse("my-topic", 5, 42L, 9999L, 8, 64);
+        var response = createSendResponse("моя-тема", 5, 42L, 9999L, 8, 64);
 
-        var buf = ProducerResponseSerializer.serializeBinary(response);
+        var buf = ProducerResponseSerializer.serializeBinary(allocator, response);
         assertNotNull(buf);
+        assertEquals(buf.writerIndex(), buf.capacity());
 
         assertEquals(1, buf.readShort());  // version
         var topicLen = buf.readInt();
-        assertEquals("my-topic".length(), topicLen);
+        assertEquals("моя-тема".getBytes(StandardCharsets.UTF_8).length, topicLen);
         var topicBytes = new byte[topicLen];
         buf.readBytes(topicBytes);
-        assertEquals("my-topic", new String(topicBytes, StandardCharsets.UTF_8));
+        assertEquals("моя-тема", new String(topicBytes, StandardCharsets.UTF_8));
         assertEquals(5, buf.readInt());     // partition
         assertEquals(42L, buf.readLong());  // offset
         assertEquals(9999L, buf.readLong()); // timestamp
@@ -92,7 +95,7 @@ class ProducerResponseSerializerTest {
     void serializeBinary_unsupportedType_throwsException() {
         ProducerResponse unsupported = new ProducerResponse() {};
         assertThrows(IllegalArgumentException.class,
-                () -> ProducerResponseSerializer.serializeBinary(unsupported));
+                () -> ProducerResponseSerializer.serializeBinary(allocator, unsupported));
     }
 
 //endregion

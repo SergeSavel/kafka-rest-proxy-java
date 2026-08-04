@@ -15,6 +15,7 @@
 package pro.savel.kafka.consumer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.netty.buffer.UnpooledByteBufAllocator;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.common.TopicPartition;
@@ -37,6 +38,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class ConsumerResponseSerializerTest {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
+    private final UnpooledByteBufAllocator allocator = UnpooledByteBufAllocator.DEFAULT;
 
     private static ConsumerRecord<byte[], byte[]> createRecord(String topic, int partition, long offset,
                                                                long timestamp, byte[] key, byte[] value,
@@ -60,13 +62,13 @@ class ConsumerResponseSerializerTest {
 
     @Test
     void serializeJson_null_returnsNull() throws Exception {
-        assertNull(ConsumerResponseSerializer.serializeJson(objectMapper, null));
+        assertNull(ConsumerResponseSerializer.serializeJson(objectMapper, allocator, null));
     }
 
     @Test
     void serializeJson_emptyPollResponse_returnsEmptyArray() throws Exception {
         var response = ConsumerPollResponse.of(emptyRecords());
-        var buf = ConsumerResponseSerializer.serializeJson(objectMapper, response);
+        var buf = ConsumerResponseSerializer.serializeJson(objectMapper, allocator, response);
         assertNotNull(buf);
         assertEquals("[]", buf.toString(StandardCharsets.UTF_8));
         buf.release();
@@ -80,11 +82,29 @@ class ConsumerResponseSerializerTest {
 
         var response = ConsumerPollResponse.of(createRecords(List.of(record)));
 
-        var buf = ConsumerResponseSerializer.serializeJson(objectMapper, response);
+        var buf = ConsumerResponseSerializer.serializeJson(objectMapper, allocator, response);
         assertNotNull(buf);
         var json = buf.toString(StandardCharsets.UTF_8);
         assertTrue(json.contains("\"key\":\"key\""));
         assertTrue(json.contains("\"value\":\"value\""));
+        buf.release();
+    }
+
+    @Test
+    void serializeJson_pollResponse_preservesUtf8AndEscaping() throws Exception {
+        var headers = new RecordHeaders(List.of(
+                new RecordHeader("header", "значение\n".getBytes(StandardCharsets.UTF_8))
+        ));
+        var record = createRecord("test", 0, 1L, 100L,
+                "ключ\"".getBytes(StandardCharsets.UTF_8), "строка\n".getBytes(StandardCharsets.UTF_8), headers);
+        var response = ConsumerPollResponse.of(createRecords(List.of(record)));
+
+        var buf = ConsumerResponseSerializer.serializeJson(objectMapper, allocator, response);
+        var json = objectMapper.readTree(buf.toString(StandardCharsets.UTF_8)).get(0);
+
+        assertEquals("ключ\"", json.get("key").asText());
+        assertEquals("строка\n", json.get("value").asText());
+        assertEquals("значение\n", json.get("headers").get(0).get("value").asText());
         buf.release();
     }
 
@@ -94,14 +114,15 @@ class ConsumerResponseSerializerTest {
 
     @Test
     void serializeBinary_null_returnsNull() {
-        assertNull(ConsumerResponseSerializer.serializeBinary(null));
+        assertNull(ConsumerResponseSerializer.serializeBinary(allocator, null));
     }
 
     @Test
     void serializeBinary_emptyPollResponse_returnsValidBinary() {
         var response = ConsumerPollResponse.of(emptyRecords());
-        var buf = ConsumerResponseSerializer.serializeBinary(response);
+        var buf = ConsumerResponseSerializer.serializeBinary(allocator, response);
         assertNotNull(buf);
+        assertEquals(buf.writerIndex(), buf.capacity());
         assertEquals(1, buf.readShort());  // version
         assertEquals(0, buf.readInt());    // size = 0
         buf.release();
@@ -110,27 +131,28 @@ class ConsumerResponseSerializerTest {
     @Test
     void serializeBinary_pollResponseWithMessage_returnsValidBinary() {
         var headers = new RecordHeaders(List.of(
-                new RecordHeader("h1", "hv1".getBytes(StandardCharsets.UTF_8))
+                new RecordHeader("ключ", "hv1".getBytes(StandardCharsets.UTF_8))
         ));
 
-        var record = createRecord("my-topic", 3, 42L, 999L,
+        var record = createRecord("моя-тема", 3, 42L, 999L,
                 "k".getBytes(StandardCharsets.UTF_8), "v".getBytes(StandardCharsets.UTF_8),
                 headers);
 
         var response = ConsumerPollResponse.of(createRecords(List.of(record)));
 
-        var buf = ConsumerResponseSerializer.serializeBinary(response);
+        var buf = ConsumerResponseSerializer.serializeBinary(allocator, response);
         assertNotNull(buf);
+        assertEquals(buf.writerIndex(), buf.capacity());
 
         assertEquals(1, buf.readShort());   // version
         assertEquals(1, buf.readInt());      // 1 message
 
         // topic
         var topicLen = buf.readInt();
-        assertEquals("my-topic".length(), topicLen);
+        assertEquals("моя-тема".getBytes(StandardCharsets.UTF_8).length, topicLen);
         var topicBytes = new byte[topicLen];
         buf.readBytes(topicBytes);
-        assertEquals("my-topic", new String(topicBytes, StandardCharsets.UTF_8));
+        assertEquals("моя-тема", new String(topicBytes, StandardCharsets.UTF_8));
 
         assertEquals(3, buf.readInt());      // partition
         assertEquals(42L, buf.readLong());   // offset
@@ -141,7 +163,7 @@ class ConsumerResponseSerializerTest {
         var hkLen = buf.readInt();
         var hkBytes = new byte[hkLen];
         buf.readBytes(hkBytes);
-        assertEquals("h1", new String(hkBytes, StandardCharsets.UTF_8));
+        assertEquals("ключ", new String(hkBytes, StandardCharsets.UTF_8));
         assertEquals(0, buf.readByte());     // header value not null
         var hvLen = buf.readInt();
         var hvBytes = new byte[hvLen];
@@ -169,7 +191,7 @@ class ConsumerResponseSerializerTest {
 
         var response = ConsumerPollResponse.of(createRecords(List.of(record)));
 
-        var buf = ConsumerResponseSerializer.serializeBinary(response);
+        var buf = ConsumerResponseSerializer.serializeBinary(allocator, response);
         assertNotNull(buf);
 
         buf.readShort();   // version
@@ -191,7 +213,7 @@ class ConsumerResponseSerializerTest {
     void serializeBinary_unsupportedType_throwsException() {
         ConsumerResponse unsupported = new ConsumerResponse() {};
         assertThrows(IllegalArgumentException.class,
-                () -> ConsumerResponseSerializer.serializeBinary(unsupported));
+                () -> ConsumerResponseSerializer.serializeBinary(allocator, unsupported));
     }
 
 //endregion

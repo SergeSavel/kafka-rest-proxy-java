@@ -14,36 +14,38 @@
 
 package pro.savel.kafka.producer;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.ByteBufUtil;
+import pro.savel.kafka.common.JsonUtils;
 import pro.savel.kafka.producer.responses.ProducerResponse;
 import pro.savel.kafka.producer.responses.ProducerSendResponse;
 
-import java.nio.charset.StandardCharsets;
+import java.io.IOException;
 
 public class ProducerResponseSerializer {
 
-    public static ByteBuf serializeJson(ObjectMapper objectMapper, ProducerResponse response) throws JsonProcessingException {
-        if (response == null)
-            return null;
-        var bytes = objectMapper.writeValueAsBytes(response);
-        return Unpooled.wrappedBuffer(bytes);
+    public static ByteBuf serializeJson(ObjectMapper objectMapper, ByteBufAllocator allocator,
+                                        ProducerResponse response) throws IOException {
+        return JsonUtils.serializeJson(objectMapper, allocator, response);
     }
 
-    public static ByteBuf serializeBinary(ProducerResponse response) {
+    public static ByteBuf serializeBinary(ByteBufAllocator allocator, ProducerResponse response) {
         if (response == null)
             return null;
         var responseClass = response.getClass();
         if (responseClass == ProducerSendResponse.class)
-            return serializeSend((ProducerSendResponse) response);
+            return serializeSend(allocator, (ProducerSendResponse) response);
         else
             throw new IllegalArgumentException("Response class " + responseClass + " not supported");
     }
 
-    private static ByteBuf serializeSend(ProducerSendResponse response) {
-        var buf = Unpooled.buffer();
+    private static ByteBuf serializeSend(ByteBufAllocator allocator, ProducerSendResponse response) {
+        var topicLength = ByteBufUtil.utf8Bytes(response.getTopic());
+        var capacity = Short.BYTES + Integer.BYTES + topicLength + Integer.BYTES
+                + Long.BYTES + Long.BYTES + Integer.BYTES + Integer.BYTES;
+        var buf = allocator.buffer(capacity);
         try {
             buf.writeShort(1); //version
             writeString(buf, response.getTopic());
@@ -60,8 +62,8 @@ public class ProducerResponseSerializer {
     }
 
     private static void writeString(ByteBuf buf, String value) {
-        var bytes = value.getBytes(StandardCharsets.UTF_8);
-        buf.writeInt(bytes.length);
-        buf.writeBytes(bytes);
+        var length = ByteBufUtil.utf8Bytes(value);
+        buf.writeInt(length);
+        ByteBufUtil.writeUtf8(buf, value);
     }
 }

@@ -14,37 +14,97 @@
 
 package pro.savel.kafka.consumer;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.ByteBufOutputStream;
+import io.netty.buffer.ByteBufUtil;
+import pro.savel.kafka.common.JsonUtils;
 import pro.savel.kafka.consumer.responses.*;
 
-import java.nio.charset.StandardCharsets;
+import java.io.IOException;
+import java.io.OutputStream;
 
 public class ConsumerResponseSerializer {
 
-    public static ByteBuf serializeJson(ObjectMapper objectMapper, ConsumerResponse response) throws JsonProcessingException {
+    public static ByteBuf serializeJson(ObjectMapper objectMapper, ByteBufAllocator allocator,
+                                        ConsumerResponse response) throws IOException {
         if (response == null)
             return null;
         var responseClass = response.getClass();
         if (responseClass == ConsumerPollResponse.class)
-            response = ConsumerPollStringResponse.of((ConsumerPollResponse) response);
-        var bytes = objectMapper.writeValueAsBytes(response);
-        return Unpooled.wrappedBuffer(bytes);
+            return serializePollJson(objectMapper, allocator, (ConsumerPollResponse) response);
+        return JsonUtils.serializeJson(objectMapper, allocator, response);
     }
 
-    public static ByteBuf serializeBinary(ConsumerResponse response) {
+    public static ByteBuf serializeBinary(ByteBufAllocator allocator, ConsumerResponse response) {
         if (response == null)
             return null;
         var responseClass = response.getClass();
         if (responseClass == ConsumerPollResponse.class)
-            return toPollBinaryResponse((ConsumerPollResponse) response);
+            return serializePollBinary(allocator, (ConsumerPollResponse) response);
         throw new IllegalArgumentException("Binary serialization of response class " + responseClass + " not supported");
     }
 
-    private static ByteBuf toPollBinaryResponse(ConsumerPollResponse response) {
-        var buf = Unpooled.buffer();
+    private static ByteBuf serializePollJson(ObjectMapper objectMapper, ByteBufAllocator allocator,
+                                             ConsumerPollResponse response) throws IOException {
+        var buf = allocator.buffer();
+        try {
+            try (var outputStream = new ByteBufOutputStream(buf);
+                 var generator = objectMapper.getFactory().createGenerator((OutputStream) outputStream)) {
+                generator.writeStartArray();
+                for (var message : response) {
+                    if (message == null) {
+                        generator.writeNull();
+                        continue;
+                    }
+                    generator.writeStartObject();
+                    generator.writeNumberField("timestamp", message.getTimestamp());
+                    generator.writeStringField("topic", message.getTopic());
+                    generator.writeNumberField("partition", message.getPartition());
+                    generator.writeNumberField("offset", message.getOffset());
+                    generator.writeFieldName("headers");
+                    if (message.getHeaders() == null) {
+                        generator.writeNull();
+                    } else {
+                        generator.writeStartArray();
+                        for (var header : message.getHeaders()) {
+                            if (header == null) {
+                                generator.writeNull();
+                                continue;
+                            }
+                            generator.writeStartObject();
+                            generator.writeStringField("key", header.getKey());
+                            writeUtf8Field(generator, "value", header.getValue());
+                            generator.writeEndObject();
+                        }
+                        generator.writeEndArray();
+                    }
+                    writeUtf8Field(generator, "key", message.getKey());
+                    writeUtf8Field(generator, "value", message.getValue());
+                    generator.writeEndObject();
+                }
+                generator.writeEndArray();
+            }
+            return buf;
+        } catch (IOException | RuntimeException e) {
+            buf.release();
+            throw e;
+        }
+    }
+
+    private static void writeUtf8Field(JsonGenerator generator, String name, byte[] value)
+            throws IOException {
+        generator.writeFieldName(name);
+        if (value == null)
+            generator.writeNull();
+        else
+            generator.writeUTF8String(value, 0, value.length);
+    }
+
+    private static ByteBuf serializePollBinary(ByteBufAllocator allocator, ConsumerPollResponse response) {
+        var buf = allocator.buffer(calculatePollBinaryCapacity(response));
         try {
             buf.writeShort(1); //version
             buf.writeInt(response.size());
@@ -84,12 +144,41 @@ public class ConsumerResponseSerializer {
     }
 
     private static void writeBytes(ByteBuf buf, String value) {
-        var bytes = value.getBytes(StandardCharsets.UTF_8);
-        writeBytes(buf, bytes);
+        var length = ByteBufUtil.utf8Bytes(value);
+        buf.writeInt(length);
+        ByteBufUtil.writeUtf8(buf, value);
     }
 
     private static void writeBytes(ByteBuf buf, byte[] bytes) {
         buf.writeInt(bytes.length);
         buf.writeBytes(bytes);
+    }
+
+    private static int calculatePollBinaryCapacity(ConsumerPollResponse response) {
+        long capacity = Short.BYTES + Integer.BYTES;
+        for (var message : response) {
+            capacity += serializedStringSize(message.getTopic())
+                    + Integer.BYTES + Long.BYTES + Long.BYTES + Integer.BYTES;
+            for (var header : message.getHeaders()) {
+                capacity += serializedStringSize(header.getKey()) + Byte.BYTES;
+                if (header.getValue() != null)
+                    capacity += serializedBytesSize(header.getValue());
+            }
+            capacity += Byte.BYTES;
+            if (message.getKey() != null)
+                capacity += serializedBytesSize(message.getKey());
+            capacity += Byte.BYTES;
+            if (message.getValue() != null)
+                capacity += serializedBytesSize(message.getValue());
+        }
+        return Math.toIntExact(capacity);
+    }
+
+    private static long serializedStringSize(String value) {
+        return Integer.BYTES + ByteBufUtil.utf8Bytes(value);
+    }
+
+    private static long serializedBytesSize(byte[] value) {
+        return Integer.BYTES + value.length;
     }
 }

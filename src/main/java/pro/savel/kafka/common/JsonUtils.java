@@ -17,12 +17,32 @@ package pro.savel.kafka.common;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
+import io.netty.buffer.ByteBufOutputStream;
+import io.netty.buffer.ByteBufAllocator;
 import pro.savel.kafka.common.exceptions.BadRequestException;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 
 public abstract class JsonUtils {
+
+    public static ByteBuf serializeJson(ObjectMapper objectMapper, ByteBufAllocator allocator, Object value)
+            throws IOException {
+        if (value == null)
+            return null;
+        var buffer = allocator.buffer();
+        try {
+            try (var outputStream = new ByteBufOutputStream(buffer);
+                 var generator = objectMapper.getFactory().createGenerator((OutputStream) outputStream)) {
+                objectMapper.writeValue(generator, value);
+            }
+            return buffer;
+        } catch (IOException | RuntimeException e) {
+            buffer.release();
+            throw e;
+        }
+    }
 
     public static <T> T parseJson(ObjectMapper objectMapper, ByteBuf byteBuf, Class<T> clazz) throws BadRequestException {
         T result;

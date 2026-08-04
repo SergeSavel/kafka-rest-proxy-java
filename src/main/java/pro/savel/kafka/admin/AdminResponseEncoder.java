@@ -14,7 +14,6 @@
 
 package pro.savel.kafka.admin;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.netty.channel.*;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
@@ -26,6 +25,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import pro.savel.kafka.common.HttpUtils;
 import pro.savel.kafka.common.contract.Serde;
+
+import java.io.IOException;
 
 @ChannelHandler.Sharable
 public class AdminResponseEncoder extends ChannelOutboundHandlerAdapter {
@@ -45,7 +46,7 @@ public class AdminResponseEncoder extends ChannelOutboundHandlerAdapter {
                 if (logger.isDebugEnabled()) {
                     logger.debug("Encoding admin response.");
                 }
-                var httpResponse = createHttpResponse(bearer);
+                var httpResponse = createHttpResponse(ctx, bearer);
                 var future = ctx.write(httpResponse, promise);
                 if (!bearer.isConnectionKeepAlive()) {
                     future.addListener(ChannelFutureListener.CLOSE);
@@ -63,13 +64,13 @@ public class AdminResponseEncoder extends ChannelOutboundHandlerAdapter {
         }
     }
 
-    private FullHttpResponse createHttpResponse(AdminResponseBearer bearer) throws JsonProcessingException {
+    private FullHttpResponse createHttpResponse(ChannelHandlerContext ctx, AdminResponseBearer bearer) throws IOException {
         FullHttpResponse httpResponse;
         if (bearer.getResponse() == null) {
             httpResponse = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, bearer.getStatus());
         } else {
             if (bearer.getSerializeTo() == Serde.JSON) {
-                var content = AdminResponseSerializer.serializeJson(objectMapper, bearer.getResponse());
+                var content = AdminResponseSerializer.serializeJson(objectMapper, ctx.alloc(), bearer.getResponse());
                 httpResponse = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, bearer.getStatus(), content);
                 httpResponse.headers().set(HttpUtils.ASCII_CONTENT_TYPE, HttpUtils.ASCII_APPLICATION_JSON_CHARSET_UTF8);
             } else {
