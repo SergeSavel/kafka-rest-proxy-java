@@ -42,6 +42,7 @@ public class Application
 
             var bootstrap = new ServerBootstrap();
             bootstrap.option(ChannelOption.SO_BACKLOG, 1024);
+            bootstrap.childOption(ChannelOption.TCP_NODELAY, true);
             bootstrap.group(bossGroup, workerGroup)
                     .channel(NioServerSocketChannel.class)
                     .childHandler(initializer);
