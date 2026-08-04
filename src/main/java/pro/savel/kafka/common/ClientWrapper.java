@@ -16,10 +16,13 @@ package pro.savel.kafka.common;
 
 import lombok.Getter;
 
+import java.time.Duration;
 import java.util.Properties;
 
 @Getter
 public abstract class ClientWrapper implements AutoCloseable {
+
+    protected static final Duration CLOSE_TIMEOUT = Duration.ofSeconds(30);
 
     private final String id;
     private final String name;

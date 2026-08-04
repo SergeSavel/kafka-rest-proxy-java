@@ -16,6 +16,7 @@ package pro.savel.kafka.consumer;
 
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
+import org.apache.kafka.clients.consumer.CloseOptions;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.serialization.ByteArrayDeserializer;
@@ -40,6 +41,6 @@ public class ConsumerWrapper extends ClientWrapper {
     @Override
     public void close() {
         consumer.wakeup();
-        consumer.close();
+        consumer.close(CloseOptions.timeout(CLOSE_TIMEOUT));
     }
 }

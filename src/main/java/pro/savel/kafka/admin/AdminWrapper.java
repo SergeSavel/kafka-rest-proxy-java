@@ -36,6 +36,6 @@ public class AdminWrapper extends ClientWrapper {
 
     @Override
     public void close() {
-        admin.close();
+        admin.close(CLOSE_TIMEOUT);
     }
 }
