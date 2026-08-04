@@ -26,8 +26,8 @@ public class AdminDeleteTopicsRequest implements AdminTopicRequest {
     private String adminId;
     @NotEmpty
     private String token;
-    @Size(min = 1)
+    @Size(min = 1, max = 200)
     private Collection<String> topicIds;
-    @Size(min = 1)
+    @Size(min = 1, max = 200)
     private Collection<String> topicNames;
 }

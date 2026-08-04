@@ -18,6 +18,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 import java.util.Collection;
@@ -28,7 +29,7 @@ public class AdminCreateTopicsRequest implements AdminTopicRequest {
     private String adminId;
     @NotEmpty
     private String token;
-    @NotEmpty
+    @NotNull @Size(min = 1, max = 200)
     private Collection<@NotNull @Valid TopicSpec> topics;
     private Boolean validateOnly;
     private Boolean retryOnQuotaViolation;
