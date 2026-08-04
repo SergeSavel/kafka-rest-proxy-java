@@ -1907,6 +1907,7 @@ components:
             topics:
               type: array
               minItems: 1
+              maxItems: 200
               items: {$ref: '#/components/schemas/TopicSpec'}
             validateOnly:
               type: boolean
@@ -1958,12 +1959,14 @@ components:
             topicNames:
               type: array
               minItems: 1
+              maxItems: 200
               items:
                 type: string
                 minLength: 1
             topicIds:
               type: array
               minItems: 1
+              maxItems: 200
               description: Kafka topic UUIDs as base64url strings
               items:
                 type: string
