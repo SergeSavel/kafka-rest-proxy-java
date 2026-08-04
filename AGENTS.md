@@ -8,6 +8,7 @@ Lightweight Kafka HTTP Gateway built on Netty — exposes Kafka Producer, Consum
 HTTP Request
   → HttpServerCodec → HttpVersionHandler → ReadTimeoutHandler(300s) → WriteTimeoutHandler(300s)
   → HttpObjectAggregator(32MB)
+  → HttpRequestFlowControlHandler (one active request per connection)
   → HealthRequestDecoder
   → VersionRequestDecoder
   → BasicAuthenticationHandler (optional, users.json)
