@@ -89,6 +89,7 @@ class ServerInitializer extends ChannelInitializer<SocketChannel> implements Aut
         pipeline.addLast(new ReadTimeoutHandler(300, TimeUnit.SECONDS));
         pipeline.addLast(new WriteTimeoutHandler(300, TimeUnit.SECONDS));
         pipeline.addLast(new HttpObjectAggregator(32 * 1024 * 1024));
+        pipeline.addLast(new HttpRequestFlowControlHandler());
         pipeline.addLast(healthRequestDecoder);
         pipeline.addLast(versionRequestDecoder);
         pipeline.addLast(basicAuthenticationHandler);
