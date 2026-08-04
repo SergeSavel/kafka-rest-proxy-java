@@ -317,7 +317,7 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
         org.apache.kafka.common.TopicCollection topicCollection;
         if (request.getTopicId() != null)
             topicCollection = org.apache.kafka.common.TopicCollection
-                    .ofTopicIds(Collections.singleton(request.getTopicId()));
+                    .ofTopicIds(Collections.singleton(Uuid.fromString(request.getTopicId())));
         else if (request.getTopicName() != null)
             topicCollection = org.apache.kafka.common.TopicCollection
                     .ofTopicNames(Collections.singleton(request.getTopicName()));

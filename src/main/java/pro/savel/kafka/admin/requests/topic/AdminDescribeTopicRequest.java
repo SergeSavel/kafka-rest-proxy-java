@@ -16,7 +16,6 @@ package pro.savel.kafka.admin.requests.topic;
 
 import jakarta.validation.constraints.NotEmpty;
 import lombok.Data;
-import org.apache.kafka.common.Uuid;
 
 @Data
 public class AdminDescribeTopicRequest implements AdminTopicRequest {
@@ -25,6 +24,6 @@ public class AdminDescribeTopicRequest implements AdminTopicRequest {
     @NotEmpty
     private String token;
     private String topicName;
-    private Uuid topicId;
+    private String topicId;
     private Boolean includeAuthorizedOperations;
 }
