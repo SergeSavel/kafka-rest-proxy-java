@@ -39,7 +39,12 @@ servers:
   - url: http://localhost:8086
     description: Local gateway
 
+security:
+  - basicAuth: []
+
 tags:
+  - name: system
+    description: Health check and version
   - name: lifecycle
     description: AdminClient instance management
   - name: topics
@@ -64,6 +69,39 @@ tags:
     description: KafkaConsumer instance management, poll, offsets, subscriptions
 
 paths:
+  /health:
+    get:
+      tags: [system]
+      summary: Health check
+      operationId: health
+      responses:
+        '200':
+          description: Gateway is running
+          content:
+            text/plain:
+              schema:
+                type: string
+                description: JSON-formatted status string
+                example: '{"status":"UP"}'
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+
+  /version:
+    get:
+      tags: [system]
+      summary: Get the gateway version
+      operationId: version
+      responses:
+        '200':
+          description: Implementation version from the jar manifest
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: '5.1.0'
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+
   /admin:
     get:
       tags: [lifecycle]
@@ -1702,7 +1740,7 @@ components:
 
     AdminCreateRequest:
       type: object
-      required: [name, config]
+      required: [name, config, expirationTimeout]
       properties:
         name:
           type: string
@@ -1715,7 +1753,9 @@ components:
           additionalProperties: {type: string}
         expirationTimeout:
           type: integer
-          description: Instance expiration timeout in milliseconds (1 second to 24 hours)
+          description: |
+            Instance expiration timeout in milliseconds (1 second to 24 hours).
+            The timer resets on every request.
           minimum: 1000
           maximum: 86400000
 
@@ -2682,7 +2722,7 @@ components:
 
     ProducerCreateRequest:
       type: object
-      required: [name, config]
+      required: [name, config, expirationTimeout]
       properties:
         name:
           type: string
@@ -2695,7 +2735,9 @@ components:
           additionalProperties: {type: string}
         expirationTimeout:
           type: integer
-          description: Instance expiration timeout in milliseconds (1 second to 24 hours)
+          description: |
+            Instance expiration timeout in milliseconds (1 second to 24 hours).
+            The timer resets on every request.
           minimum: 1000
           maximum: 86400000
 
@@ -2780,7 +2822,7 @@ components:
 
     ConsumerCreateRequest:
       type: object
-      required: [name, config]
+      required: [name, config, expirationTimeout]
       properties:
         name:
           type: string
@@ -2793,7 +2835,9 @@ components:
           additionalProperties: {type: string}
         expirationTimeout:
           type: integer
-          description: Instance expiration timeout in milliseconds (1 second to 24 hours)
+          description: |
+            Instance expiration timeout in milliseconds (1 second to 24 hours).
+            The timer resets on every request.
           minimum: 1000
           maximum: 86400000
 
