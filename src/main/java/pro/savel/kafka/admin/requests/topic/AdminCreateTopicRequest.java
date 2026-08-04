@@ -30,4 +30,6 @@ public class AdminCreateTopicRequest implements AdminTopicRequest {
     private Integer numPartitions;
     @Positive
     private Short replicationFactor;
+    private Boolean validateOnly;
+    private Boolean retryOnQuotaViolation;
 }

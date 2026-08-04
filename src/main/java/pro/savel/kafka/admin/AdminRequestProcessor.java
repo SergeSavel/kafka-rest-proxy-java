@@ -348,7 +348,12 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
         var admin = getAdmin(request.getAdminId(), request.getToken());
         var newTopic = new NewTopic(request.getTopicName(), Optional.ofNullable(request.getNumPartitions()),
                 Optional.ofNullable(request.getReplicationFactor()));
-        var createResult = admin.createTopics(Collections.singleton(newTopic));
+        var options = new CreateTopicsOptions();
+        if (request.getValidateOnly() != null)
+            options.validateOnly(request.getValidateOnly());
+        if (request.getRetryOnQuotaViolation() != null)
+            options.retryOnQuotaViolation(request.getRetryOnQuotaViolation());
+        var createResult = admin.createTopics(Collections.singleton(newTopic), options);
         createResult.all().whenComplete((topics, error) -> {
             if (error == null) {
                 for (var topicName : createResult.values().keySet()) {
