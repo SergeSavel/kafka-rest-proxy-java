@@ -43,10 +43,11 @@ KAFKA_GATEWAY_OPTS="-Dhost=127.0.0.1 -Dport=9090" ./build/install/kafka-gateway/
 
 ## Configuration
 
-| System Property | Default   | Description  |
-|-----------------|-----------|--------------|
-| `-Dhost`        | `0.0.0.0` | Bind address |
-| `-Dport`        | `8086`    | Listen port  |
+| System Property              | Default   | Description                                          |
+|------------------------------|-----------|------------------------------------------------------|
+| `-Dhost`                     | `0.0.0.0` | Bind address                                         |
+| `-Dport`                     | `8086`    | Listen port                                          |
+| `-Dclient.close.parallelism` | `32`      | Maximum concurrent close operations per client type |
 
 ## Deployment
 
