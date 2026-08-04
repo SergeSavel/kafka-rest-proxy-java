@@ -46,7 +46,7 @@ public class AdminCreateTopicsResponse extends ArrayList<AdminCreateTopicRespons
                 statusFuture.get();
             } catch (Exception e) {
                 result.success = false;
-                result.errorMessage = Utils.combineErrorMessage(e);
+                result.errorMessage = Utils.rootErrorMessage(e);
                 return result;
             }
             var topicId = get(idFuture);
