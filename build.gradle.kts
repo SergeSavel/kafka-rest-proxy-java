@@ -3,6 +3,8 @@ plugins {
     java
 }
 
+val nettyVersion = "4.2.16.Final"
+
 group = "pro.savel.kafka"
 version = "5.1.0"
 
@@ -21,11 +23,14 @@ repositories {
 }
 
 dependencies {
-    implementation(platform("io.netty:netty-bom:4.2.16.Final"))
+    implementation(platform("io.netty:netty-bom:$nettyVersion"))
     implementation("io.netty:netty-common")
     implementation("io.netty:netty-buffer")
     implementation("io.netty:netty-transport")
+    implementation("io.netty:netty-transport-classes-epoll")
     implementation("io.netty:netty-codec-http")
+    runtimeOnly("io.netty:netty-transport-native-epoll:$nettyVersion:linux-x86_64")
+    runtimeOnly("io.netty:netty-transport-native-epoll:$nettyVersion:linux-aarch_64")
     implementation("org.apache.kafka:kafka-clients:4.1.2")
     implementation("jakarta.validation:jakarta.validation-api:3.1.1")
     implementation("org.hibernate.validator:hibernate-validator:9.1.3.Final")

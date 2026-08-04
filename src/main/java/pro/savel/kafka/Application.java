@@ -16,7 +16,12 @@ package pro.savel.kafka;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.IoHandlerFactory;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
+import io.netty.channel.ServerChannel;
+import io.netty.channel.epoll.Epoll;
+import io.netty.channel.epoll.EpollIoHandler;
+import io.netty.channel.epoll.EpollServerSocketChannel;
 import io.netty.channel.nio.NioIoHandler;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import org.slf4j.Logger;
@@ -30,25 +35,26 @@ public class Application
 
     public static void main(String[] args) throws InterruptedException
     {
-        final var host = System.getProperty("host", "0.0.0.0");
-        final var port = Integer.parseInt(System.getProperty("port", "8086"));
-        var bossGroup = new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory());
-        var workerGroup = new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory());
+        var config = ServerConfig.fromSystemProperties();
+        var transport = selectTransport(config.epollEnabled());
+        var bossGroup = new MultiThreadIoEventLoopGroup(1, transport.ioHandlerFactory());
+        var workerGroup = new MultiThreadIoEventLoopGroup(config.workerThreads(), transport.ioHandlerFactory());
         var shutdownLatch = new CountDownLatch(1);
 
-        try (var initializer = new ServerInitializer())
+        try (var initializer = new ServerInitializer(config))
         {
             initializer.initialize();
 
             var bootstrap = new ServerBootstrap();
-            bootstrap.option(ChannelOption.SO_BACKLOG, 1024);
+            bootstrap.option(ChannelOption.SO_BACKLOG, config.backlog());
             bootstrap.childOption(ChannelOption.TCP_NODELAY, true);
             bootstrap.group(bossGroup, workerGroup)
-                    .channel(NioServerSocketChannel.class)
+                    .channel(transport.serverChannelClass())
                     .childHandler(initializer);
 
-            var channel = bootstrap.bind(host, port).sync().channel();
-            logger.info("Server started on {}:{}", host, port);
+            var channel = bootstrap.bind(config.host(), config.port()).sync().channel();
+            logger.info("Server started on {}:{} using {} transport and {} worker threads.",
+                    config.host(), config.port(), transport.name(), workerGroup.executorCount());
 
             Runtime.getRuntime().addShutdownHook(new Thread(() ->
             {
@@ -69,5 +75,24 @@ public class Application
             bossGroup.shutdownGracefully();
             workerGroup.shutdownGracefully();
         }
+    }
+
+    private static Transport selectTransport(boolean epollEnabled) {
+        if (epollEnabled && isLinux()) {
+            if (Epoll.isAvailable())
+                return new Transport(EpollIoHandler.newFactory(), EpollServerSocketChannel.class, "epoll");
+            logger.warn("Epoll transport is unavailable; falling back to NIO.", Epoll.unavailabilityCause());
+        }
+        return new Transport(NioIoHandler.newFactory(), NioServerSocketChannel.class, "NIO");
+    }
+
+    private static boolean isLinux() {
+        return System.getProperty("os.name", "").toLowerCase().contains("linux");
+    }
+
+    private record Transport(
+            IoHandlerFactory ioHandlerFactory,
+            Class<? extends ServerChannel> serverChannelClass,
+            String name) {
     }
 }

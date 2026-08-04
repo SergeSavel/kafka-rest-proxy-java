@@ -7,6 +7,7 @@ Lightweight Kafka HTTP Gateway built on Netty — exposes Kafka Producer, Consum
 ```
 HTTP Request
   → HttpServerCodec → HttpVersionHandler → ReadTimeoutHandler(300s) → WriteTimeoutHandler(300s)
+  → JsonRequestSizeLimitHandler(4MB JSON)
   → HttpObjectAggregator(32MB)
   → HttpRequestFlowControlHandler (one active request per connection)
   → HealthRequestDecoder
@@ -19,7 +20,9 @@ HTTP Request
   → DefaultInboundHandler
 ```
 
-**Entry point:** `pro.savel.kafka.Application` — Netty NIO server, default `0.0.0.0:8086` (`-Dhost=`, `-Dport=`).
+**Entry point:** `pro.savel.kafka.Application` — Netty server using epoll on Linux with NIO fallback, default
+`0.0.0.0:8086` (`-Dhost=`, `-Dport=`). Netty thread counts, backlog, timeouts, and request limits are configurable via
+`-Dnetty.*` system properties documented in `README.md`.
 
 ### Modules
 

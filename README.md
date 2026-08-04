@@ -43,11 +43,18 @@ KAFKA_GATEWAY_OPTS="-Dhost=127.0.0.1 -Dport=9090" ./build/install/kafka-gateway/
 
 ## Configuration
 
-| System Property              | Default   | Description                                          |
-|------------------------------|-----------|------------------------------------------------------|
-| `-Dhost`                     | `0.0.0.0` | Bind address                                         |
-| `-Dport`                     | `8086`    | Listen port                                          |
-| `-Dclient.close.parallelism` | `32`      | Maximum concurrent close operations per client type |
+| System Property                  | Default    | Description                                                   |
+|----------------------------------|------------|---------------------------------------------------------------|
+| `-Dhost`                         | `0.0.0.0`  | Bind address                                                  |
+| `-Dport`                         | `8086`     | Listen port                                                   |
+| `-Dnetty.workerThreads`          | `0`        | Worker threads; `0` uses the Netty default (2 x CPU cores)    |
+| `-Dnetty.backlog`                | `1024`     | Maximum pending TCP connections                               |
+| `-Dnetty.readTimeoutSeconds`     | `300`      | HTTP connection read timeout                                  |
+| `-Dnetty.writeTimeoutSeconds`    | `300`      | HTTP connection write timeout                                 |
+| `-Dnetty.maxRequestBytes`        | `33554432` | Maximum request body size                                     |
+| `-Dnetty.maxJsonRequestBytes`    | `4194304`  | Maximum JSON request body size                                |
+| `-Dnetty.epoll`                  | `true`     | Use native epoll on Linux when available                      |
+| `-Dclient.close.parallelism`     | `32`       | Maximum concurrent close operations per client type           |
 
 ## Deployment
 
@@ -251,6 +258,7 @@ need to keep an instance alive without performing any operation.
 ```
 HTTP Request
   → HttpServerCodec → HttpVersionHandler → ReadTimeoutHandler(300s) → WriteTimeoutHandler(300s)
+  → JsonRequestSizeLimitHandler(4MB JSON)
   → HttpObjectAggregator(32MB)
   → HttpRequestFlowControlHandler (one active request per connection)
   → HealthRequestDecoder

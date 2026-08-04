@@ -75,6 +75,11 @@ class ServerInitializer extends ChannelInitializer<SocketChannel> implements Aut
     private final AdminResponseEncoder adminResponseEncoder = new AdminResponseEncoder(objectMapper);
 
     private final DefaultInboundHandler defaultInboundHandler = new DefaultInboundHandler();
+    private final ServerConfig config;
+
+    ServerInitializer(ServerConfig config) {
+        this.config = config;
+    }
 
     public void initialize() {
         basicAuthenticationHandler.initialize();
@@ -86,9 +91,10 @@ class ServerInitializer extends ChannelInitializer<SocketChannel> implements Aut
         ChannelPipeline pipeline = channel.pipeline();
         pipeline.addLast(new HttpServerCodec());
         pipeline.addLast(httpVersionHandler);
-        pipeline.addLast(new ReadTimeoutHandler(300, TimeUnit.SECONDS));
-        pipeline.addLast(new WriteTimeoutHandler(300, TimeUnit.SECONDS));
-        pipeline.addLast(new HttpObjectAggregator(32 * 1024 * 1024));
+        pipeline.addLast(new ReadTimeoutHandler(config.readTimeoutSeconds(), TimeUnit.SECONDS));
+        pipeline.addLast(new WriteTimeoutHandler(config.writeTimeoutSeconds(), TimeUnit.SECONDS));
+        pipeline.addLast(new JsonRequestSizeLimitHandler(config.maxJsonRequestBytes()));
+        pipeline.addLast(new HttpObjectAggregator(config.maxRequestBytes()));
         pipeline.addLast(new HttpRequestFlowControlHandler());
         pipeline.addLast(healthRequestDecoder);
         pipeline.addLast(versionRequestDecoder);
