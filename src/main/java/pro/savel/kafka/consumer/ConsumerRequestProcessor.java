@@ -25,7 +25,6 @@ import org.apache.kafka.common.TopicPartition;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import pro.savel.kafka.common.*;
-import pro.savel.kafka.common.exceptions.BadRequestException;
 import pro.savel.kafka.consumer.requests.*;
 import pro.savel.kafka.consumer.responses.*;
 
@@ -350,15 +349,16 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
     private void processListTopics(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (ConsumerListTopicsRequest) requestBearer.request();
         var consumer = getConsumer(request.getConsumerId(), request.getToken());
+        final Pattern pattern;
+        try {
+            pattern = request.getPattern() == null ? null : Pattern.compile(request.getPattern());
+        } catch (PatternSyntaxException e) {
+            HttpUtils.writeBadRequestAndClose(ctx, "Invalid pattern: " + e.getMessage());
+            return;
+        }
         execute(ctx, () -> {
             var topics = consumer.listTopics();
-            if (request.getPattern() != null) {
-                Pattern pattern;
-                try {
-                    pattern = Pattern.compile(request.getPattern());
-                } catch (PatternSyntaxException e) {
-                    throw new BadRequestException("Invalid pattern.", e);
-                }
+            if (pattern != null) {
                 topics = topics.entrySet().stream()
                         .filter(e -> pattern.matcher(e.getKey()).matches())
                         .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));

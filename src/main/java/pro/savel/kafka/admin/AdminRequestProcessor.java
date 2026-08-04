@@ -48,7 +48,6 @@ import pro.savel.kafka.admin.requests.scram.AdminUpsertUserScramCredentialsReque
 import pro.savel.kafka.admin.requests.topic.*;
 import pro.savel.kafka.admin.responses.*;
 import pro.savel.kafka.common.*;
-import pro.savel.kafka.common.exceptions.BadRequestException;
 
 import java.util.*;
 import java.util.concurrent.Callable;
@@ -293,6 +292,13 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
     private void processListTopics(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (AdminListTopicsRequest) requestBearer.request();
         var admin = getAdmin(request.getAdminId(), request.getToken());
+        final Pattern pattern;
+        try {
+            pattern = request.getPattern() == null ? null : Pattern.compile(request.getPattern());
+        } catch (PatternSyntaxException e) {
+            HttpUtils.writeBadRequestAndClose(ctx, "Invalid pattern: " + e.getMessage());
+            return;
+        }
         var options = new ListTopicsOptions();
         var includeInternal = request.getIncludeInternal();
         if (includeInternal != null)
@@ -301,13 +307,7 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
         topicsResult.listings().whenComplete((listings, error) -> {
             if (error == null) {
                 var filtered = listings;
-                if (request.getPattern() != null) {
-                    Pattern pattern;
-                    try {
-                        pattern = Pattern.compile(request.getPattern());
-                    } catch (PatternSyntaxException e) {
-                        throw new BadRequestException("Invalid pattern.", e);
-                    }
+                if (pattern != null) {
                     filtered = listings.stream()
                             .filter(t -> pattern.matcher(t.name()).matches())
                             .toList();
