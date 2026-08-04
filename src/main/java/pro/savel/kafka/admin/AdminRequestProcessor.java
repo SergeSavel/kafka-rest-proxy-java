@@ -51,7 +51,9 @@ import pro.savel.kafka.common.*;
 import pro.savel.kafka.common.exceptions.BadRequestException;
 
 import java.util.*;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 import java.util.stream.Collectors;
@@ -62,6 +64,11 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
     private static final Logger logger = LoggerFactory.getLogger(AdminRequestProcessor.class);
 
     private final AdminProvider provider = new AdminProvider();
+    private final BlockingTaskExecutor blockingTaskExecutor;
+
+    public AdminRequestProcessor(BlockingTaskExecutor blockingTaskExecutor) {
+        this.blockingTaskExecutor = blockingTaskExecutor;
+    }
 
     // region Overrides
 
@@ -206,18 +213,25 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
     private void processCreate(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (AdminCreateRequest) requestBearer.request();
         var owner = ctx.channel().attr(NettyAttributes.USERNAME).get();
-        var wrapper = provider.createAdmin(request.getName(), request.getConfig(), request.getExpirationTimeout(),
-                owner);
-        var response = AdminCreateResponse.of(wrapper);
-        var responseBearer = new AdminResponseBearer(requestBearer, HttpResponseStatus.CREATED, response);
-        ctx.writeAndFlush(responseBearer);
+        execute(ctx,
+                () -> provider.createAdmin(request.getName(), request.getConfig(), request.getExpirationTimeout(),
+                        owner),
+                wrapper -> {
+                    var response = AdminCreateResponse.of(wrapper);
+                    var responseBearer = new AdminResponseBearer(requestBearer, HttpResponseStatus.CREATED, response);
+                    ctx.writeAndFlush(responseBearer);
+                });
     }
 
     private void processRemove(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (AdminRemoveRequest) requestBearer.request();
-        provider.removeAdmin(request.getAdminId(), request.getToken());
-        var responseBearer = new AdminResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null);
-        ctx.writeAndFlush(responseBearer);
+        execute(ctx, () -> {
+            provider.removeAdmin(request.getAdminId(), request.getToken());
+            return null;
+        }, ignored -> {
+            var responseBearer = new AdminResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null);
+            ctx.writeAndFlush(responseBearer);
+        });
     }
 
     private void processTouch(ChannelHandlerContext ctx, RequestBearer requestBearer) {
@@ -1057,6 +1071,17 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
         var wrapper = provider.getAdmin(id, token);
         wrapper.touch();
         return wrapper.getAdmin();
+    }
+
+    private <T> void execute(ChannelHandlerContext ctx, Callable<T> operation, Consumer<T> completion) {
+        blockingTaskExecutor.execute(ctx, operation, (result, error) -> {
+            if (error == null) {
+                completion.accept(result);
+            } else if (!handleError(ctx, error)) {
+                logger.error("An unexpected error occurred while processing admin request.", error);
+                HttpUtils.writeInternalServerErrorAndClose(ctx, Utils.combineErrorMessage(error));
+            }
+        });
     }
 
     private static boolean handleError(ChannelHandlerContext ctx, Throwable error) {

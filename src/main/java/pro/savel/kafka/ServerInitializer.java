@@ -65,7 +65,7 @@ class ServerInitializer extends ChannelInitializer<SocketChannel> implements Aut
     private final BlockingTaskExecutor blockingTaskExecutor = new BlockingTaskExecutor();
     private final ProducerRequestProcessor producerRequestProcessor = new ProducerRequestProcessor(blockingTaskExecutor);
     private final ConsumerRequestProcessor consumerRequestProcessor = new ConsumerRequestProcessor(blockingTaskExecutor);
-    private final AdminRequestProcessor adminRequestProcessor = new AdminRequestProcessor();
+    private final AdminRequestProcessor adminRequestProcessor = new AdminRequestProcessor(blockingTaskExecutor);
 
     private final ProducerResponseEncoder producerResponseEncoder = new ProducerResponseEncoder(objectMapper);
     private final ConsumerResponseEncoder consumerResponseEncoder = new ConsumerResponseEncoder(objectMapper);
