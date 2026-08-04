@@ -92,6 +92,9 @@ If `users.json` is missing, authentication is disabled and a warning is logged a
 All endpoints accept JSON by default. Producer send and consumer poll also support a binary protocol for high-throughput
 scenarios.
 
+The API is documented as an OpenAPI 3.1 specification in [`docs/api/openapi.yaml`](docs/api/openapi.yaml)
+(see [`docs/api/README.md`](docs/api/README.md) for Swagger UI setup).
+
 ### Producer
 
 | Method | Endpoint                       | Description               |

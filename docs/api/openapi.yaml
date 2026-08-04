@@ -1,0 +1,3027 @@
+openapi: 3.1.0
+info:
+  title: Kafka HTTP Gateway
+  version: 5.1.0
+  description: |
+    HTTP gateway exposing Kafka Producer, Consumer and AdminClient APIs over HTTP.
+
+    ## Instances
+    Every operation (except `POST /admin/create` and `GET /admin`) requires `adminId`
+    (instance UUID) and `token` (ownership token returned by `POST /admin/create`).
+    Instances expire after `expirationTimeout` milliseconds of inactivity (timer resets
+    on every request); use `POST /admin/touch` to keep an instance alive.
+
+    ## Authentication
+    HTTP Basic auth is **optional and server-dependent**: it is enabled only when a
+    `users.json` file is present in the gateway working directory.
+
+    ## Errors
+    Error responses carry a `text/plain` body with the error message and **close the
+    connection** (`Connection: close`). Status codes:
+    - `400` — bad request (invalid JSON, validation failure, unknown topic/partition, invalid Kafka request)
+    - `401` — not authenticated (Kafka `AuthenticationException`)
+    - `403` — not authorized (Kafka `AuthorizationException`, broker ACLs)
+    - `404` — unknown admin instance or unknown route
+    - `405` — unsupported HTTP method
+    - `409` — conflict (topic exists, group not empty, reassignment in progress, illegal state)
+    - `500` — internal error (timeout, interrupted, unexpected)
+
+    ## JSON conventions
+    - Unknown properties in request bodies are rejected (`400`).
+    - Missing primitive fields (`int`, `long`, `boolean`, `short`) are rejected (`400`).
+    - Boolean getters named `isX` are serialized as `x` (e.g. `isInternal` → `internal`).
+    - Kafka topic UUIDs are represented as base64url strings.
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0
+
+servers:
+  - url: http://localhost:8086
+    description: Local gateway
+
+tags:
+  - name: lifecycle
+    description: AdminClient instance management
+  - name: topics
+    description: Topic management
+  - name: configs
+    description: Topic and broker configuration
+  - name: cluster
+    description: Cluster metadata
+  - name: scram
+    description: SCRAM user credentials
+  - name: acls
+    description: Access control lists
+  - name: producers
+    description: Transactional producers
+  - name: groups
+    description: Consumer, classic, share and streams groups
+  - name: offsets
+    description: Partition offset lookups
+  - name: producer
+    description: KafkaProducer instance management, send and transactions
+  - name: consumer
+    description: KafkaConsumer instance management, poll, offsets, subscriptions
+
+paths:
+  /admin:
+    get:
+      tags: [lifecycle]
+      summary: List admin instances
+      operationId: adminList
+      responses:
+        '200':
+          description: Admin instances
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminListResponse'
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+
+  /admin/create:
+    post:
+      tags: [lifecycle]
+      summary: Create an AdminClient instance
+      description: |
+        Creates a new `KafkaAdmin` instance. The `config` map accepts arbitrary
+        Kafka client properties (`bootstrap.servers`, SASL, etc.). Returns the
+        instance id and the ownership token.
+      operationId: adminCreate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/AdminCreateRequest'}
+      responses:
+        '201':
+          description: Instance created
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AdminCreateResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+
+  /admin/release:
+    post:
+      tags: [lifecycle]
+      summary: Release (close) an admin instance
+      operationId: adminRelease
+      requestBody: {$ref: '#/components/requestBodies/AdminInstanceRef'}
+      responses:
+        '204': {description: Instance released}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+
+  /admin/touch:
+    post:
+      tags: [lifecycle]
+      summary: Reset the expiration timer of an admin instance
+      operationId: adminTouch
+      requestBody: {$ref: '#/components/requestBodies/AdminInstanceRef'}
+      responses:
+        '204': {description: Timer reset}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+
+  /admin/list-topics:
+    post:
+      tags: [topics]
+      summary: List topics
+      operationId: adminListTopics
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/AdminListTopicsRequest'}
+      responses:
+        '200':
+          description: Topic listings
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AdminListTopicsResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+
+  /admin/describe-topic:
+    post:
+      tags: [topics]
+      summary: Describe a topic by name or topic id
+      description: Exactly one of `topicName` and `topicId` must be provided, otherwise `400`.
+      operationId: adminDescribeTopic
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/AdminDescribeTopicRequest'}
+      responses:
+        '200':
+          description: Topic description
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AdminDescribeTopicResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+
+  /admin/create-topic:
+    post:
+      tags: [topics]
+      summary: Create a topic
+      description: |
+        `numPartitions` and `replicationFactor` are optional — the broker defaults
+        are used when omitted. Returns the created topic details.
+      operationId: adminCreateTopic
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/AdminCreateTopicRequest'}
+      responses:
+        '200':
+          description: Topic created
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AdminCreateTopicResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+
+  /admin/create-topics:
+    post:
+      tags: [topics]
+      summary: Create multiple topics
+      description: |
+        Not atomic — each topic is created independently. The response contains a
+        creation status entry per topic. HTTP status is `200` even when some topics fail.
+      operationId: adminCreateTopics
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/AdminCreateTopicsRequest'}
+      responses:
+        '200':
+          description: Per-topic creation results
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AdminCreateTopicsResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+
+  /admin/delete-topic:
+    post:
+      tags: [topics]
+      summary: Delete a topic by name or topic id
+      description: |
+        Specify `topicName` or `topicId`. When both are provided, `topicId` is
+        used. `400` when neither is provided.
+      operationId: adminDeleteTopic
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/AdminDeleteTopicRequest'}
+      responses:
+        '204': {description: Topic deleted}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+
+  /admin/delete-topics:
+    post:
+      tags: [topics]
+      summary: Delete multiple topics by names or topic ids
+      description: |
+        Specify `topicNames` or `topicIds`. When both are provided, `topicIds`
+        is used. `400` when neither is provided.
+
+        Not atomic — each topic is deleted independently. The response contains a
+        deletion status entry per topic. HTTP status is `200` even when some topics fail.
+      operationId: adminDeleteTopics
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/AdminDeleteTopicsRequest'}
+      responses:
+        '200':
+          description: Per-topic deletion results
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AdminDeleteTopicsResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+
+  /admin/create-partitions:
+    post:
+      tags: [topics]
+      summary: Increase the partition count of a topic
+      operationId: adminCreatePartitions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/AdminCreatePartitionsRequest'}
+      responses:
+        '204': {description: Partitions created}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+
+  /admin/describe-topic-configs:
+    post:
+      tags: [configs]
+      summary: Describe the configuration of a topic
+      operationId: adminDescribeTopicConfigs
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/AdminTopicNameRequest'}
+      responses:
+        '200':
+          description: Config entries
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AdminConfigResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+
+  /admin/describe-broker-configs:
+    post:
+      tags: [configs]
+      summary: Describe the configuration of a broker
+      operationId: adminDescribeBrokerConfigs
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/AdminDescribeBrokerConfigsRequest'}
+      responses:
+        '200':
+          description: Config entries
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AdminConfigResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+
+  /admin/set-topic-config:
+    post:
+      tags: [configs]
+      summary: Set (incrementally alter) a single topic config entry
+      operationId: adminSetTopicConfig
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/AdminSetTopicConfigRequest'}
+      responses:
+        '200': {description: "Config entry set, empty body"}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+
+  /admin/delete-topic-config:
+    post:
+      tags: [configs]
+      summary: Delete (revert to default) a single topic config entry
+      operationId: adminDeleteTopicConfig
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/AdminDeleteTopicConfigRequest'}
+      responses:
+        '200': {description: "Config entry deleted, empty body"}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+
+  /admin/describe-cluster:
+    post:
+      tags: [cluster]
+      summary: Describe the cluster (id, controller, nodes)
+      operationId: adminDescribeCluster
+      requestBody: {$ref: '#/components/requestBodies/AdminInstanceRef'}
+      responses:
+        '200':
+          description: Cluster description
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AdminDescribeClusterResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+
+  /admin/describe-log-dirs:
+    post:
+      tags: [cluster]
+      summary: Describe log directories of the given brokers
+      operationId: adminDescribeLogDirs
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/AdminDescribeLogDirsRequest'}
+      responses:
+        '200':
+          description: Per-broker log dir descriptions
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AdminDescribeLogDirsResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+
+  /admin/describe-user-scram-credentials:
+    post:
+      tags: [scram]
+      summary: Describe SCRAM credentials of the given users
+      operationId: adminDescribeUserScramCredentials
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/AdminDescribeUserScramCredentialsRequest'}
+      responses:
+        '200':
+          description: SCRAM credential descriptions
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AdminDescribeUserScramCredentialsResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+
+  /admin/upsert-user-scram-credentials:
+    post:
+      tags: [scram]
+      summary: Create or update a SCRAM credential for a user
+      operationId: adminUpsertUserScramCredentials
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/AdminUpsertUserScramCredentialsRequest'}
+      responses:
+        '200': {description: "Credential upserted, empty body"}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+
+  /admin/delete-user-scram-credentials:
+    post:
+      tags: [scram]
+      summary: Delete a SCRAM credential of a user
+      operationId: adminDeleteUserScramCredentials
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/AdminDeleteUserScramCredentialsRequest'}
+      responses:
+        '200': {description: "Credential deleted, empty body"}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+
+  /admin/describe-acls:
+    post:
+      tags: [acls]
+      summary: Describe ACLs matching the given filter
+      operationId: adminDescribeAcls
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/AdminDescribeAclsRequest'}
+      responses:
+        '200':
+          description: Matching ACL bindings
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AdminDescribeAclsResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+
+  /admin/create-acls:
+    post:
+      tags: [acls]
+      summary: Create ACL bindings
+      operationId: adminCreateAcls
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/AdminCreateAclsRequest'}
+      responses:
+        '204': {description: ACLs created}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+
+  /admin/delete-acls:
+    post:
+      tags: [acls]
+      summary: Delete ACL bindings matching the given filters
+      operationId: adminDeleteAcls
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/AdminDeleteAclsRequest'}
+      responses:
+        '204': {description: ACLs deleted}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+
+  /admin/describe-producers:
+    post:
+      tags: [producers]
+      summary: Describe active transactional producers on the given partitions
+      operationId: adminDescribeProducers
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/AdminDescribeProducersRequest'}
+      responses:
+        '200':
+          description: Per-partition producer states
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AdminDescribeProducersResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+
+  /admin/abort-transaction:
+    post:
+      tags: [producers]
+      summary: Abort a stuck transaction
+      description: |
+        Aborts the transaction identified by the partition and the producer
+        coordinates (obtainable from `/admin/describe-producers`).
+      operationId: adminAbortTransaction
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/AdminAbortTransactionRequest'}
+      responses:
+        '204': {description: Transaction aborted}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+
+  /admin/list-groups:
+    post:
+      tags: [groups]
+      summary: List groups, optionally filtered by type/protocol/state
+      operationId: adminListGroups
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/AdminListGroupsRequest'}
+      responses:
+        '200':
+          description: Group listings
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AdminListGroupsResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+
+  /admin/describe-classic-group:
+    post:
+      tags: [groups]
+      summary: Describe a classic (old consumer/other protocol) group
+      operationId: adminDescribeClassicGroup
+      requestBody: {$ref: '#/components/requestBodies/AdminGroupIdRequest'}
+      responses:
+        '200':
+          description: Classic group description
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AdminDescribeClassicGroupResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+
+  /admin/describe-consumer-group:
+    post:
+      tags: [groups]
+      summary: Describe a consumer group
+      operationId: adminDescribeConsumerGroup
+      requestBody: {$ref: '#/components/requestBodies/AdminGroupIdRequest'}
+      responses:
+        '200':
+          description: Consumer group description
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AdminDescribeConsumerGroupResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+
+  /admin/describe-share-group:
+    post:
+      tags: [groups]
+      summary: Describe a share group
+      operationId: adminDescribeShareGroup
+      requestBody: {$ref: '#/components/requestBodies/AdminGroupIdRequest'}
+      responses:
+        '200':
+          description: Share group description
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AdminDescribeShareGroupResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+
+  /admin/describe-streams-group:
+    post:
+      tags: [groups]
+      summary: Describe a streams application group
+      operationId: adminDescribeStreamsGroup
+      requestBody: {$ref: '#/components/requestBodies/AdminGroupIdRequest'}
+      responses:
+        '200':
+          description: Streams group description
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AdminDescribeStreamsGroupResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+
+  /admin/list-consumer-group-offsets:
+    post:
+      tags: [groups]
+      summary: List committed offsets of a consumer group
+      operationId: adminListConsumerGroupOffsets
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/AdminListConsumerGroupOffsetsRequest'}
+      responses:
+        '200':
+          description: Committed offsets
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AdminListConsumerGroupOffsetsResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+
+  /admin/alter-consumer-group-offsets:
+    post:
+      tags: [groups]
+      summary: Alter (reset) committed offsets of a consumer group
+      description: The group must be empty (inactive), otherwise `409`.
+      operationId: adminAlterConsumerGroupOffsets
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/AdminAlterConsumerGroupOffsetsRequest'}
+      responses:
+        '204': {description: Offsets altered}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+
+  /admin/delete-consumer-group-offsets:
+    post:
+      tags: [groups]
+      summary: Delete committed offsets of partitions of a consumer group
+      operationId: adminDeleteConsumerGroupOffsets
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/AdminDeleteConsumerGroupOffsetsRequest'}
+      responses:
+        '204': {description: Offsets deleted}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+
+  /admin/remove-members-from-consumer-group:
+    post:
+      tags: [groups]
+      summary: Remove members from a consumer group
+      description: Omit `members` to remove all members.
+      operationId: adminRemoveMembersFromConsumerGroup
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/AdminRemoveMembersFromConsumerGroupRequest'}
+      responses:
+        '204': {description: Members removed}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+
+  /admin/delete-consumer-group:
+    post:
+      tags: [groups]
+      summary: Delete an empty consumer group
+      operationId: adminDeleteConsumerGroup
+      requestBody: {$ref: '#/components/requestBodies/AdminGroupIdRequest'}
+      responses:
+        '204': {description: Group deleted}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+
+  /admin/delete-consumer-groups:
+    post:
+      tags: [groups]
+      summary: Delete multiple empty consumer groups
+      operationId: adminDeleteConsumerGroups
+      requestBody: {$ref: '#/components/requestBodies/AdminGroupIdsRequest'}
+      responses:
+        '204': {description: Groups deleted}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+
+  /admin/delete-share-group:
+    post:
+      tags: [groups]
+      summary: Delete an empty share group
+      operationId: adminDeleteShareGroup
+      requestBody: {$ref: '#/components/requestBodies/AdminGroupIdRequest'}
+      responses:
+        '204': {description: Group deleted}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+
+  /admin/delete-share-groups:
+    post:
+      tags: [groups]
+      summary: Delete multiple empty share groups
+      operationId: adminDeleteShareGroups
+      requestBody: {$ref: '#/components/requestBodies/AdminGroupIdsRequest'}
+      responses:
+        '204': {description: Groups deleted}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+
+  /admin/delete-streams-group:
+    post:
+      tags: [groups]
+      summary: Delete an empty streams group
+      operationId: adminDeleteStreamsGroup
+      requestBody: {$ref: '#/components/requestBodies/AdminGroupIdRequest'}
+      responses:
+        '204': {description: Group deleted}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+
+  /admin/delete-streams-groups:
+    post:
+      tags: [groups]
+      summary: Delete multiple empty streams groups
+      operationId: adminDeleteStreamsGroups
+      requestBody: {$ref: '#/components/requestBodies/AdminGroupIdsRequest'}
+      responses:
+        '204': {description: Groups deleted}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+
+  /admin/list-earliest-offsets:
+    post:
+      tags: [offsets]
+      summary: List the earliest available offsets of partitions
+      operationId: adminListEarliestOffsets
+      requestBody: {$ref: '#/components/requestBodies/AdminListOffsetsRequest'}
+      responses:
+        '200':
+          description: Offsets
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AdminListOffsetsResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+
+  /admin/list-earliest-local-offsets:
+    post:
+      tags: [offsets]
+      summary: List the earliest local offsets of partitions (tiered storage aware)
+      operationId: adminListEarliestLocalOffsets
+      requestBody: {$ref: '#/components/requestBodies/AdminListOffsetsRequest'}
+      responses:
+        '200':
+          description: Offsets
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AdminListOffsetsResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+
+  /admin/list-latest-offsets:
+    post:
+      tags: [offsets]
+      summary: List the latest offsets of partitions
+      operationId: adminListLatestOffsets
+      requestBody: {$ref: '#/components/requestBodies/AdminListOffsetsRequest'}
+      responses:
+        '200':
+          description: Offsets
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AdminListOffsetsResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+
+  /admin/list-latest-tiered-offsets:
+    post:
+      tags: [offsets]
+      summary: List the latest tiered offsets of partitions (tiered storage aware)
+      operationId: adminListLatestTieredOffsets
+      requestBody: {$ref: '#/components/requestBodies/AdminListOffsetsRequest'}
+      responses:
+        '200':
+          description: Offsets
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AdminListOffsetsResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+
+  /admin/list-max-timestamp-offsets:
+    post:
+      tags: [offsets]
+      summary: List the offsets with the largest timestamp of partitions
+      operationId: adminListMaxTimestampOffsets
+      requestBody: {$ref: '#/components/requestBodies/AdminListOffsetsRequest'}
+      responses:
+        '200':
+          description: Offsets
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AdminListOffsetsResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+
+  /admin/list-timestamp-offsets:
+    post:
+      tags: [offsets]
+      summary: List the first offsets with a timestamp >= the given timestamp
+      operationId: adminListTimestampOffsets
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/AdminListTimestampOffsetsRequest'}
+      responses:
+        '200':
+          description: Offsets
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AdminListOffsetsResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+
+  /producer:
+    get:
+      tags: [producer]
+      summary: List producer instances
+      operationId: producerList
+      responses:
+        '200':
+          description: Producer instances
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ProducerListResponse'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+
+  /producer/create:
+    post:
+      tags: [producer]
+      summary: Create a KafkaProducer instance
+      description: |
+        Creates a new `KafkaProducer` instance. The `config` map accepts arbitrary
+        Kafka client properties (`bootstrap.servers`, SASL, etc.). Returns the
+        instance id and the ownership token.
+      operationId: producerCreate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/ProducerCreateRequest'}
+      responses:
+        '201':
+          description: Instance created
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ProducerCreateResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+
+  /producer/release:
+    post:
+      tags: [producer]
+      summary: Release (close) a producer instance
+      operationId: producerRelease
+      requestBody: {$ref: '#/components/requestBodies/ProducerInstanceRef'}
+      responses:
+        '204': {description: Instance released}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+
+  /producer/touch:
+    post:
+      tags: [producer]
+      summary: Reset the expiration timer of a producer instance
+      operationId: producerTouch
+      requestBody: {$ref: '#/components/requestBodies/ProducerInstanceRef'}
+      responses:
+        '204': {description: Timer reset}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+
+  /producer/send:
+    post:
+      tags: [producer]
+      summary: Send a message to a topic
+      description: |
+        Request content types:
+        - `application/json` — key, value and header values are strings
+        - `application/octet-stream` — binary format v1 (see the request schema
+          description for the layout)
+
+        The response format is selected by the `Accept` header (falls back to the
+        request `Content-Type` when `Accept` is absent or `*/*`): JSON returns
+        `ProducerSendResponse`, octet-stream returns the binary format v1:
+
+        ```
+        int16  version (1)
+        string topic            — int32 length + UTF-8 bytes
+        int32  partition
+        int64  offset
+        int64  timestamp
+        int32  serializedKeySize
+        int32  serializedValueSize
+        ```
+      operationId: producerSend
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/ProducerSendStringRequest'}
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+              description: |
+                Binary send format v1, big-endian:
+
+                ```
+                int16  version (1)
+                string producerId       — int32 length + UTF-8 bytes
+                string token
+                string topic
+                int8   partitionIsNull (1 = null, 0 = present)
+                [int32 partition]       — present only when not null
+                int32  headersCount     — max 900
+                headersCount × {
+                  string headerKey
+                  int8   headerValueIsNull
+                  [int32 headerValueLength + bytes]
+                }
+                int8   keyIsNull
+                [int32 keyLength + bytes]
+                int8   valueIsNull
+                [bytes value — the rest of the buffer]
+                ```
+      responses:
+        '201':
+          description: Message sent
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ProducerSendResponse'}
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+                description: Binary format v1 — see the operation description
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+
+  /producer/get-partitions:
+    post:
+      tags: [producer]
+      summary: Get the partitions of a topic
+      operationId: producerGetPartitions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/ProducerGetPartitionsRequest'}
+      responses:
+        '200':
+          description: Partition numbers
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ProducerPartitionsResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+
+  /producer/begin-transaction:
+    post:
+      tags: [producer]
+      summary: Begin a transaction
+      description: The producer must be created with `transactional.id` configured.
+      operationId: producerBeginTransaction
+      requestBody: {$ref: '#/components/requestBodies/ProducerInstanceRef'}
+      responses:
+        '204': {description: Transaction begun}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+
+  /producer/commit-transaction:
+    post:
+      tags: [producer]
+      summary: Commit the current transaction
+      operationId: producerCommitTransaction
+      requestBody: {$ref: '#/components/requestBodies/ProducerInstanceRef'}
+      responses:
+        '204': {description: Transaction committed}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+
+  /producer/abort-transaction:
+    post:
+      tags: [producer]
+      summary: Abort the current transaction
+      operationId: producerAbortTransaction
+      requestBody: {$ref: '#/components/requestBodies/ProducerInstanceRef'}
+      responses:
+        '204': {description: Transaction aborted}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+
+  /consumer:
+    get:
+      tags: [consumer]
+      summary: List consumer instances
+      operationId: consumerList
+      responses:
+        '200':
+          description: Consumer instances
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ConsumerListResponse'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+
+  /consumer/create:
+    post:
+      tags: [consumer]
+      summary: Create a KafkaConsumer instance
+      description: |
+        Creates a new `KafkaConsumer` instance. The `config` map accepts arbitrary
+        Kafka client properties (`bootstrap.servers`, `group.id`, etc.). Returns the
+        instance id and the ownership token.
+
+        **Concurrency:** each consumer instance must be used strictly sequentially by
+        the client; the gateway does not synchronize access.
+      operationId: consumerCreate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/ConsumerCreateRequest'}
+      responses:
+        '201':
+          description: Instance created
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ConsumerCreateResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+
+  /consumer/release:
+    post:
+      tags: [consumer]
+      summary: Release (close) a consumer instance
+      operationId: consumerRelease
+      requestBody: {$ref: '#/components/requestBodies/ConsumerInstanceRef'}
+      responses:
+        '204': {description: Instance released}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+
+  /consumer/touch:
+    post:
+      tags: [consumer]
+      summary: Reset the expiration timer of a consumer instance
+      operationId: consumerTouch
+      requestBody: {$ref: '#/components/requestBodies/ConsumerInstanceRef'}
+      responses:
+        '204': {description: Timer reset}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+
+  /consumer/poll:
+    post:
+      tags: [consumer]
+      summary: Poll for messages
+      description: |
+        The request body is always JSON. The response format is selected by the
+        `Accept` header (falls back to the request `Content-Type` when `Accept`
+        is absent or `*/*`):
+
+        - `application/json` — messages with string key/value/headers (UTF-8)
+        - `application/octet-stream` — binary format v1:
+
+        ```
+        int16  version (1)
+        int32  messageCount
+        messageCount × {
+          string topic            — int32 length + UTF-8 bytes
+          int32  partition
+          int64  offset
+          int64  timestamp
+          int32  headerCount
+          headerCount × {
+            string headerKey
+            int8   headerValueIsNull (1 = null, 0 = present)
+            [int32 headerValueLength + bytes]
+          }
+          int8   keyIsNull
+          [int32 keyLength + bytes]
+          int8   valueIsNull
+          [int32 valueLength + bytes]
+        }
+        ```
+      operationId: consumerPoll
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/ConsumerPollRequest'}
+      responses:
+        '200':
+          description: Polled messages
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ConsumerPollStringResponse'}
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+                description: Binary format v1 — see the operation description
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+
+  /consumer/commit:
+    post:
+      tags: [consumer]
+      summary: Commit the current offsets synchronously
+      operationId: consumerCommit
+      requestBody: {$ref: '#/components/requestBodies/ConsumerInstanceRef'}
+      responses:
+        '204': {description: Offsets committed}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+
+  /consumer/seek:
+    post:
+      tags: [consumer]
+      summary: Seek a partition to the given offset
+      operationId: consumerSeek
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/ConsumerSeekRequest'}
+      responses:
+        '204': {description: Position set}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+
+  /consumer/seek-to-beginning:
+    post:
+      tags: [consumer]
+      summary: Seek the given partitions to the beginning
+      operationId: consumerSeekToBeginning
+      requestBody: {$ref: '#/components/requestBodies/ConsumerPartitionsRequest'}
+      responses:
+        '204': {description: Positions set}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+
+  /consumer/seek-to-end:
+    post:
+      tags: [consumer]
+      summary: Seek the given partitions to the end
+      operationId: consumerSeekToEnd
+      requestBody: {$ref: '#/components/requestBodies/ConsumerPartitionsRequest'}
+      responses:
+        '204': {description: Positions set}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+
+  /consumer/get-position:
+    post:
+      tags: [consumer]
+      summary: Get the current position (next offset) of a partition
+      operationId: consumerGetPosition
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/ConsumerGetPositionRequest'}
+      responses:
+        '200':
+          description: Current position
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ConsumerPositionResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+
+  /consumer/assign:
+    post:
+      tags: [consumer]
+      summary: Manually assign partitions to the consumer
+      operationId: consumerAssign
+      requestBody: {$ref: '#/components/requestBodies/ConsumerPartitionsRequest'}
+      responses:
+        '204': {description: Partitions assigned}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+
+  /consumer/get-assignment:
+    post:
+      tags: [consumer]
+      summary: Get the partitions currently assigned to the consumer
+      operationId: consumerGetAssignment
+      requestBody: {$ref: '#/components/requestBodies/ConsumerInstanceRef'}
+      responses:
+        '200':
+          description: Assigned partitions
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ConsumerAssignmentResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+
+  /consumer/subscribe:
+    post:
+      tags: [consumer]
+      summary: Subscribe to topics by list or regex pattern
+      description: Provide either `topics` or `pattern`.
+      operationId: consumerSubscribe
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/ConsumerSubscribeRequest'}
+      responses:
+        '204': {description: Subscribed}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+
+  /consumer/unsubscribe:
+    post:
+      tags: [consumer]
+      summary: Unsubscribe from all topics and partitions
+      operationId: consumerUnsubscribe
+      requestBody: {$ref: '#/components/requestBodies/ConsumerInstanceRef'}
+      responses:
+        '204': {description: Unsubscribed}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+
+  /consumer/get-subscription:
+    post:
+      tags: [consumer]
+      summary: Get the topics the consumer is subscribed to
+      operationId: consumerGetSubscription
+      requestBody: {$ref: '#/components/requestBodies/ConsumerInstanceRef'}
+      responses:
+        '200':
+          description: Topic names
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ConsumerSubscriptionResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+
+  /consumer/get-partitions:
+    post:
+      tags: [consumer]
+      summary: Get the partitions of a topic
+      operationId: consumerGetPartitions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/ConsumerGetPartitionsRequest'}
+      responses:
+        '200':
+          description: Partition numbers
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ConsumerPartitionsResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+
+  /consumer/list-partitions:
+    post:
+      tags: [consumer]
+      summary: Get the partitions of a topic
+      deprecated: true
+      description: Deprecated — use `/consumer/get-partitions` instead.
+      operationId: consumerListPartitions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/ConsumerGetPartitionsRequest'}
+      responses:
+        '200':
+          description: Topic and its partition numbers
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ConsumerListPartitionsResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+
+  /consumer/list-topics:
+    post:
+      tags: [consumer]
+      summary: List topics visible to the consumer
+      operationId: consumerListTopics
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/ConsumerListTopicsRequest'}
+      responses:
+        '200':
+          description: Topics with their partitions
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ConsumerTopicsResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+
+  /consumer/get-group-metadata:
+    post:
+      tags: [consumer]
+      summary: Get the consumer group metadata of the consumer
+      operationId: consumerGetGroupMetadata
+      requestBody: {$ref: '#/components/requestBodies/ConsumerInstanceRef'}
+      responses:
+        '200':
+          description: Group metadata
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ConsumerGroupMetadataResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+
+  /consumer/get-committed:
+    post:
+      tags: [consumer]
+      summary: Get the last committed offsets of the given partitions
+      operationId: consumerGetCommitted
+      requestBody: {$ref: '#/components/requestBodies/ConsumerPartitionsRequest'}
+      responses:
+        '200':
+          description: Committed offsets grouped by topic
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ConsumerCommittedResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+
+  /consumer/get-beginning-offsets:
+    post:
+      tags: [consumer]
+      summary: Get the earliest available offsets of the given partitions
+      operationId: consumerGetBeginningOffsets
+      requestBody: {$ref: '#/components/requestBodies/ConsumerPartitionsRequest'}
+      responses:
+        '200':
+          description: Offsets grouped by topic
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ConsumerOffsetsResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+
+  /consumer/get-end-offsets:
+    post:
+      tags: [consumer]
+      summary: Get the latest offsets of the given partitions
+      operationId: consumerGetEndOffsets
+      requestBody: {$ref: '#/components/requestBodies/ConsumerPartitionsRequest'}
+      responses:
+        '200':
+          description: Offsets grouped by topic
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ConsumerOffsetsResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+
+components:
+  securitySchemes:
+    basicAuth:
+      type: http
+      scheme: basic
+      description: |
+        Optional — enabled only when the gateway is started with a `users.json`
+        file in its working directory.
+
+  responses:
+    BadRequest:
+      description: Invalid JSON, validation failure or Kafka invalid request
+      content:
+        text/plain:
+          schema: {$ref: '#/components/schemas/ErrorMessage'}
+    Unauthorized:
+      description: Authentication required or failed
+      content:
+        text/plain:
+          schema: {$ref: '#/components/schemas/ErrorMessage'}
+    Forbidden:
+      description: Not authorized (Kafka broker ACLs)
+      content:
+        text/plain:
+          schema: {$ref: '#/components/schemas/ErrorMessage'}
+    NotFound:
+      description: Unknown admin instance or route
+      content:
+        text/plain:
+          schema: {$ref: '#/components/schemas/ErrorMessage'}
+    MethodNotAllowed:
+      description: Unsupported HTTP method
+      content:
+        text/plain:
+          schema: {$ref: '#/components/schemas/ErrorMessage'}
+    Conflict:
+      description: Conflict (topic exists, group not empty, illegal state)
+      content:
+        text/plain:
+          schema: {$ref: '#/components/schemas/ErrorMessage'}
+    InternalServerError:
+      description: Internal error (timeout, interrupted, unexpected)
+      content:
+        text/plain:
+          schema: {$ref: '#/components/schemas/ErrorMessage'}
+
+  requestBodies:
+    AdminInstanceRef:
+      required: true
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/AdminInstanceRef'}
+    AdminGroupIdRequest:
+      required: true
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/AdminGroupIdRequest'}
+    AdminGroupIdsRequest:
+      required: true
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/AdminGroupIdsRequest'}
+    AdminListOffsetsRequest:
+      required: true
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/AdminListOffsetsRequest'}
+    ProducerInstanceRef:
+      required: true
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/ProducerInstanceRef'}
+    ConsumerInstanceRef:
+      required: true
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/ConsumerInstanceRef'}
+    ConsumerPartitionsRequest:
+      required: true
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/ConsumerPartitionsRequest'}
+
+  schemas:
+    ErrorMessage:
+      type: string
+      description: Human-readable error message
+
+    AdminInstanceRef:
+      type: object
+      description: Reference to an admin instance
+      required: [adminId, token]
+      properties:
+        adminId:
+          type: string
+          description: Admin instance id returned by `POST /admin/create`
+        token:
+          type: string
+          description: Ownership token returned by `POST /admin/create`
+
+    AdminGroupIdRequest:
+      allOf:
+        - $ref: '#/components/schemas/AdminInstanceRef'
+        - type: object
+          required: [groupId]
+          properties:
+            groupId:
+              type: string
+              minLength: 1
+            includeAuthorizedOperations:
+              type: boolean
+              description: Include ACL operations authorized for the caller
+
+    AdminGroupIdsRequest:
+      allOf:
+        - $ref: '#/components/schemas/AdminInstanceRef'
+        - type: object
+          required: [groupIds]
+          properties:
+            groupIds:
+              type: array
+              minItems: 1
+              items:
+                type: string
+                minLength: 1
+
+    TopicPartition:
+      type: object
+      required: [topic, partition]
+      properties:
+        topic:
+          type: string
+          minLength: 1
+        partition:
+          type: integer
+          minimum: 0
+
+    Node:
+      type: object
+      description: Kafka broker node
+      properties:
+        id: {type: integer}
+        host: {type: string}
+        port: {type: integer}
+        rack: {type: string, nullable: true}
+        fenced: {type: boolean}
+
+    PartitionInfo:
+      type: object
+      properties:
+        partition: {type: integer}
+        leader: {$ref: '#/components/schemas/Node'}
+        replicas:
+          type: array
+          items: {$ref: '#/components/schemas/Node'}
+        isr:
+          type: array
+          description: In-sync replica broker ids
+          items: {type: integer, nullable: true}
+        elr:
+          type: array
+          description: Eligible leader replica broker ids
+          items: {type: integer, nullable: true}
+        lastKnownElr:
+          type: array
+          description: Last known eligible leader replica broker ids
+          items: {type: integer, nullable: true}
+
+    ConfigEntry:
+      type: object
+      properties:
+        name: {type: string}
+        value: {type: string, nullable: true}
+        source:
+          type: string
+          description: Config source (e.g. `DYNAMIC_TOPIC_CONFIG`, `DEFAULT_CONFIG`)
+        default: {type: boolean}
+        sensitive: {type: boolean}
+        readOnly: {type: boolean}
+        type:
+          type: string
+          description: Config data type (e.g. `STRING`, `INT`, `LONG`, `BOOLEAN`, `LIST`, `PASSWORD`)
+        documentation: {type: string, nullable: true}
+
+    AdminConfigResponse:
+      type: array
+      items: {$ref: '#/components/schemas/ConfigEntry'}
+
+    AdminCreateRequest:
+      type: object
+      required: [name, config]
+      properties:
+        name:
+          type: string
+          description: Human-readable instance name
+          minLength: 1
+        config:
+          type: object
+          description: Arbitrary Kafka client properties (`bootstrap.servers`, SASL, etc.)
+          minProperties: 1
+          additionalProperties: {type: string}
+        expirationTimeout:
+          type: integer
+          description: Instance expiration timeout in milliseconds (1 second to 24 hours)
+          minimum: 1000
+          maximum: 86400000
+
+    AdminCreateResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Admin instance id
+        token:
+          type: string
+          description: Ownership token
+
+    AdminListResponse:
+      type: array
+      items:
+        type: object
+        properties:
+          id: {type: string}
+          name: {type: string}
+          owner: {type: string}
+          username: {type: string, nullable: true}
+          expiresAt:
+            type: integer
+            format: int64
+            description: Expiration timestamp, epoch millis
+
+    AdminTopicNameRequest:
+      allOf:
+        - $ref: '#/components/schemas/AdminInstanceRef'
+        - type: object
+          required: [topicName]
+          properties:
+            topicName:
+              type: string
+              minLength: 1
+
+    AdminListTopicsRequest:
+      allOf:
+        - $ref: '#/components/schemas/AdminInstanceRef'
+        - type: object
+          properties:
+            includeInternal:
+              type: boolean
+              description: Include internal topics
+            pattern:
+              type: string
+              description: Regex to filter topic names
+
+    AdminListTopicsResponse:
+      type: array
+      items:
+        type: object
+        properties:
+          id:
+            type: string
+            description: Kafka topic UUID as a base64url string
+          name: {type: string}
+          internal: {type: boolean}
+
+    AdminDescribeTopicRequest:
+      allOf:
+        - $ref: '#/components/schemas/AdminInstanceRef'
+        - type: object
+          properties:
+            topicName: {type: string}
+            topicId:
+              type: string
+              description: Kafka topic UUID as a base64url string
+            includeAuthorizedOperations: {type: boolean}
+      description: Exactly one of `topicName` and `topicId` must be provided.
+
+    AdminDescribeTopicResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Topic UUID as a base64url string
+        name: {type: string}
+        internal: {type: boolean}
+        authorizedOperations:
+          type: array
+          nullable: true
+          items: {$ref: '#/components/schemas/AclOperation'}
+        partitions:
+          type: array
+          items: {$ref: '#/components/schemas/PartitionInfo'}
+
+    AdminCreateTopicRequest:
+      allOf:
+        - $ref: '#/components/schemas/AdminInstanceRef'
+        - type: object
+          required: [topicName]
+          properties:
+            topicName:
+              type: string
+              minLength: 1
+            numPartitions:
+              type: integer
+              exclusiveMinimum: 0
+              description: Omit to use the broker default
+            replicationFactor:
+              type: integer
+              exclusiveMinimum: 0
+              description: Omit to use the broker default
+            validateOnly:
+              type: boolean
+              description: |
+                When true, the topic is validated but not actually created.
+                Default: false.
+            retryOnQuotaViolation:
+              type: boolean
+              description: |
+                Whether to retry the creation when a quota violation occurs.
+                Default: true.
+
+    AdminCreateTopicResponse:
+      type: object
+      properties:
+        topicId:
+          type: string
+          description: Created topic UUID as a base64url string
+        numPartitions: {type: integer, nullable: true}
+        replicationFactor: {type: integer, nullable: true}
+        config: {$ref: '#/components/schemas/AdminConfigResponse'}
+
+    TopicSpec:
+      type: object
+      required: [topicName]
+      properties:
+        topicName:
+          type: string
+          minLength: 1
+        numPartitions:
+          type: integer
+          exclusiveMinimum: 0
+          description: Omit to use the broker default
+        replicationFactor:
+          type: integer
+          exclusiveMinimum: 0
+          description: Omit to use the broker default
+
+    AdminCreateTopicsRequest:
+      allOf:
+        - $ref: '#/components/schemas/AdminInstanceRef'
+        - type: object
+          required: [topics]
+          properties:
+            topics:
+              type: array
+              minItems: 1
+              items: {$ref: '#/components/schemas/TopicSpec'}
+            validateOnly:
+              type: boolean
+              description: |
+                When true, topics are validated but not actually created; the
+                response reports per-topic validation errors. Default: false.
+            retryOnQuotaViolation:
+              type: boolean
+              description: |
+                Whether to retry the creation when a quota violation occurs.
+                Default: true.
+
+    TopicCreationResult:
+      allOf:
+        - $ref: '#/components/schemas/AdminCreateTopicResponse'
+        - type: object
+          properties:
+            success:
+              type: boolean
+              description: Whether this topic was created
+            errorMessage:
+              type: string
+              nullable: true
+              description: Error message when `success` is false
+            topicName: {type: string}
+
+    AdminCreateTopicsResponse:
+      type: array
+      items: {$ref: '#/components/schemas/TopicCreationResult'}
+
+    AdminDeleteTopicRequest:
+      allOf:
+        - $ref: '#/components/schemas/AdminInstanceRef'
+        - type: object
+          properties:
+            topicName:
+              type: string
+            topicId:
+              type: string
+              description: Kafka topic UUID as a base64url string
+      description: |
+        Specify `topicName` or `topicId`. When both are provided, `topicId` is used.
+
+    AdminDeleteTopicsRequest:
+      allOf:
+        - $ref: '#/components/schemas/AdminInstanceRef'
+        - type: object
+          properties:
+            topicNames:
+              type: array
+              minItems: 1
+              items:
+                type: string
+                minLength: 1
+            topicIds:
+              type: array
+              minItems: 1
+              description: Kafka topic UUIDs as base64url strings
+              items:
+                type: string
+      description: |
+        Specify `topicNames` or `topicIds`. When both are provided, `topicIds` is used.
+
+    TopicDeletionResult:
+      type: object
+      properties:
+        topicId:
+          type: string
+          nullable: true
+          description: Topic UUID as a base64url string, present when deleting by ids
+        topicName:
+          type: string
+          nullable: true
+          description: Topic name, present when deleting by names
+        success:
+          type: boolean
+          description: Whether this topic was deleted
+        errorMessage:
+          type: string
+          nullable: true
+          description: Error message when `success` is false
+
+    AdminDeleteTopicsResponse:
+      type: array
+      items: {$ref: '#/components/schemas/TopicDeletionResult'}
+
+    AdminCreatePartitionsRequest:
+      allOf:
+        - $ref: '#/components/schemas/AdminInstanceRef'
+        - type: object
+          required: [topicName, increaseTo]
+          properties:
+            topicName:
+              type: string
+              minLength: 1
+            increaseTo:
+              type: integer
+              description: New total partition count (must be greater than the current count)
+              exclusiveMinimum: 0
+
+    AdminDescribeBrokerConfigsRequest:
+      allOf:
+        - $ref: '#/components/schemas/AdminInstanceRef'
+        - type: object
+          required: [brokerId]
+          properties:
+            brokerId:
+              type: integer
+              minimum: 0
+
+    AdminSetTopicConfigRequest:
+      allOf:
+        - $ref: '#/components/schemas/AdminInstanceRef'
+        - type: object
+          required: [topicName, configName, newValue]
+          properties:
+            topicName:
+              type: string
+              minLength: 1
+            configName:
+              type: string
+              minLength: 1
+            newValue:
+              type: string
+              description: May be an empty string
+
+    AdminDeleteTopicConfigRequest:
+      allOf:
+        - $ref: '#/components/schemas/AdminInstanceRef'
+        - type: object
+          required: [topicName, configName]
+          properties:
+            topicName:
+              type: string
+              minLength: 1
+            configName:
+              type: string
+              minLength: 1
+
+    AdminDescribeClusterResponse:
+      type: object
+      properties:
+        clusterId: {type: string}
+        controller: {$ref: '#/components/schemas/Node'}
+        nodes:
+          type: array
+          items: {$ref: '#/components/schemas/Node'}
+        authorizedOperations:
+          type: array
+          nullable: true
+          items: {$ref: '#/components/schemas/AclOperation'}
+
+    AdminDescribeLogDirsRequest:
+      allOf:
+        - $ref: '#/components/schemas/AdminInstanceRef'
+        - type: object
+          required: [brokerIds]
+          properties:
+            brokerIds:
+              type: array
+              minItems: 1
+              items:
+                type: integer
+                minimum: 0
+
+    TopicPartitionReplicaInfo:
+      type: object
+      properties:
+        topic: {type: string}
+        partition: {type: integer}
+        size:
+          type: integer
+          format: int64
+          description: Replica size in bytes
+        offsetLag: {type: integer, format: int64}
+        future:
+          type: boolean
+          description: Whether this is a future replica
+
+    LogDirDescription:
+      type: object
+      properties:
+        path: {type: string}
+        errorMessage:
+          type: string
+          nullable: true
+          description: Error querying this log dir, if any
+        replicaInfos:
+          type: array
+          items: {$ref: '#/components/schemas/TopicPartitionReplicaInfo'}
+
+    BrokersLogDirsDescription:
+      type: object
+      properties:
+        brokerId: {type: integer, nullable: true}
+        logDirs:
+          type: array
+          items: {$ref: '#/components/schemas/LogDirDescription'}
+
+    AdminDescribeLogDirsResponse:
+      type: array
+      items: {$ref: '#/components/schemas/BrokersLogDirsDescription'}
+
+    AdminDescribeUserScramCredentialsRequest:
+      allOf:
+        - $ref: '#/components/schemas/AdminInstanceRef'
+        - type: object
+          required: [users]
+          properties:
+            users:
+              type: array
+              minItems: 1
+              items:
+                type: string
+                minLength: 1
+
+    ScramCredentialInfo:
+      type: object
+      properties:
+        scramMechanism: {$ref: '#/components/schemas/ScramMechanism'}
+        iterations: {type: integer}
+
+    ScramCredentialDescription:
+      type: object
+      properties:
+        name:
+          type: string
+          description: User name
+        credentialInfos:
+          type: array
+          items: {$ref: '#/components/schemas/ScramCredentialInfo'}
+
+    AdminDescribeUserScramCredentialsResponse:
+      type: array
+      items: {$ref: '#/components/schemas/ScramCredentialDescription'}
+
+    AdminUpsertUserScramCredentialsRequest:
+      allOf:
+        - $ref: '#/components/schemas/AdminInstanceRef'
+        - type: object
+          required: [user, mechanism, password]
+          properties:
+            user:
+              type: string
+              minLength: 1
+            mechanism: {$ref: '#/components/schemas/ScramMechanism'}
+            password:
+              type: string
+              description: May be an empty string
+            iterations:
+              type: integer
+              description: Omit to use the broker default
+
+    AdminDeleteUserScramCredentialsRequest:
+      allOf:
+        - $ref: '#/components/schemas/AdminInstanceRef'
+        - type: object
+          required: [user, mechanism]
+          properties:
+            user:
+              type: string
+              minLength: 1
+            mechanism: {$ref: '#/components/schemas/ScramMechanism'}
+
+    ScramMechanism:
+      type: string
+      enum: [SCRAM-SHA-256, SCRAM-SHA-512]
+
+    ResourceType:
+      type: string
+      enum: [UNKNOWN, ANY, TOPIC, GROUP, CLUSTER, TRANSACTIONAL_ID, DELEGATION_TOKEN]
+
+    PatternType:
+      type: string
+      enum: [UNKNOWN, ANY, MATCH, LITERAL, PREFIXED]
+
+    AclOperation:
+      type: string
+      enum: [UNKNOWN, ANY, ALL, READ, WRITE, CREATE, DELETE, ALTER, DESCRIBE,
+             CLUSTER_ACTION, DESCRIBE_CONFIGS, ALTER_CONFIGS, IDEMPOTENT_WRITE,
+             CREATE_TOKENS, DESCRIBE_TOKENS]
+
+    AclPermissionType:
+      type: string
+      enum: [UNKNOWN, ANY, DENY, ALLOW]
+
+    AclResourcePattern:
+      type: object
+      properties:
+        resourceType: {type: string}
+        name: {type: string, nullable: true}
+        patternType: {type: string}
+
+    AclAccessControlEntry:
+      type: object
+      properties:
+        principal: {type: string}
+        host: {type: string}
+        operation: {type: string}
+        permissionType: {type: string}
+
+    AclBinding:
+      type: object
+      required: [pattern, entry]
+      properties:
+        pattern: {$ref: '#/components/schemas/AclResourcePattern'}
+        entry: {$ref: '#/components/schemas/AclAccessControlEntry'}
+
+    AclResourcePatternFilter:
+      type: object
+      required: [resourceType, patternType]
+      properties:
+        resourceType: {$ref: '#/components/schemas/ResourceType'}
+        name:
+          type: string
+          nullable: true
+          description: Omit to match any name
+        patternType: {$ref: '#/components/schemas/PatternType'}
+
+    AclAccessControlEntryFilter:
+      type: object
+      required: [operation, permissionType]
+      properties:
+        principal:
+          type: string
+          nullable: true
+          description: Omit to match any principal
+        host:
+          type: string
+          nullable: true
+          description: Omit to match any host
+        operation: {$ref: '#/components/schemas/AclOperation'}
+        permissionType: {$ref: '#/components/schemas/AclPermissionType'}
+
+    AclBindingFilter:
+      type: object
+      properties:
+        patternFilter: {$ref: '#/components/schemas/AclResourcePatternFilter'}
+        entryFilter: {$ref: '#/components/schemas/AclAccessControlEntryFilter'}
+
+    AdminDescribeAclsRequest:
+      allOf:
+        - $ref: '#/components/schemas/AdminInstanceRef'
+        - type: object
+          properties:
+            filter: {$ref: '#/components/schemas/AclBindingFilter'}
+
+    AdminDescribeAclsResponse:
+      type: array
+      items: {$ref: '#/components/schemas/AclBinding'}
+
+    AdminCreateAclsRequest:
+      allOf:
+        - $ref: '#/components/schemas/AdminInstanceRef'
+        - type: object
+          required: [acls]
+          properties:
+            acls:
+              type: array
+              minItems: 1
+              items: {$ref: '#/components/schemas/AclBinding'}
+
+    AdminDeleteAclsRequest:
+      allOf:
+        - $ref: '#/components/schemas/AdminInstanceRef'
+        - type: object
+          required: [filters]
+          properties:
+            filters:
+              type: array
+              minItems: 1
+              items: {$ref: '#/components/schemas/AclBindingFilter'}
+
+    AdminDescribeProducersRequest:
+      allOf:
+        - $ref: '#/components/schemas/AdminInstanceRef'
+        - type: object
+          required: [partitions]
+          properties:
+            partitions:
+              type: array
+              minItems: 1
+              items: {$ref: '#/components/schemas/TopicPartition'}
+
+    ProducerState:
+      type: object
+      properties:
+        producerId: {type: integer, format: int64}
+        producerEpoch: {type: integer}
+        lastSequence: {type: integer}
+        lastTimestamp:
+          type: integer
+          format: int64
+          description: Epoch millis
+        currentTransactionStartOffset:
+          type: integer
+          format: int64
+          nullable: true
+          description: Present only while a transaction is open
+        coordinatorEpoch:
+          type: integer
+          nullable: true
+
+    PartitionProducerState:
+      type: object
+      properties:
+        topic: {type: string}
+        partition: {type: integer}
+        activeProducers:
+          type: array
+          items: {$ref: '#/components/schemas/ProducerState'}
+
+    AdminDescribeProducersResponse:
+      type: array
+      items: {$ref: '#/components/schemas/PartitionProducerState'}
+
+    AdminAbortTransactionRequest:
+      allOf:
+        - $ref: '#/components/schemas/AdminInstanceRef'
+        - type: object
+          required: [partition, producerId, producerEpoch, coordinatorEpoch]
+          properties:
+            partition: {$ref: '#/components/schemas/TopicPartition'}
+            producerId:
+              type: integer
+              format: int64
+            producerEpoch:
+              type: integer
+              description: Kafka `short` range (0..32767)
+            coordinatorEpoch: {type: integer}
+
+    GroupListing:
+      type: object
+      properties:
+        groupId: {type: string}
+        type:
+          type: string
+          nullable: true
+          description: Group type (`consumer`, `classic`, `share`, `streams`)
+        protocol:
+          type: string
+          nullable: true
+        groupState:
+          type: string
+          nullable: true
+        simpleConsumerGroup: {type: boolean}
+
+    AdminListGroupsRequest:
+      allOf:
+        - $ref: '#/components/schemas/AdminInstanceRef'
+        - type: object
+          properties:
+            withTypes:
+              type: array
+              description: Filter by group types
+              items: {type: string}
+            withProtocolTypes:
+              type: array
+              description: Filter by protocol types
+              items: {type: string}
+            inStates:
+              type: array
+              description: Filter by group states
+              items: {type: string}
+
+    AdminListGroupsResponse:
+      type: array
+      items: {$ref: '#/components/schemas/GroupListing'}
+
+    GroupMemberDescription:
+      type: object
+      properties:
+        consumerId: {type: string}
+        groupInstanceId: {type: string, nullable: true}
+        clientId: {type: string}
+        host: {type: string}
+        assignment:
+          type: array
+          items: {$ref: '#/components/schemas/TopicPartition'}
+        targetAssignment:
+          type: array
+          nullable: true
+          items: {$ref: '#/components/schemas/TopicPartition'}
+        memberEpoch: {type: integer, nullable: true}
+        upgraded: {type: boolean, nullable: true}
+
+    AdminDescribeClassicGroupResponse:
+      type: object
+      properties:
+        groupId: {type: string}
+        protocol: {type: string, nullable: true}
+        protocolData: {type: string, nullable: true}
+        members:
+          type: array
+          items: {$ref: '#/components/schemas/GroupMemberDescription'}
+        state: {type: string, nullable: true}
+        coordinator: {$ref: '#/components/schemas/Node'}
+        simpleConsumerGroup: {type: boolean}
+        authorizedOperations:
+          type: array
+          nullable: true
+          items: {$ref: '#/components/schemas/AclOperation'}
+
+    AdminDescribeConsumerGroupResponse:
+      type: object
+      properties:
+        groupId: {type: string}
+        simpleConsumerGroup: {type: boolean}
+        members:
+          type: array
+          items: {$ref: '#/components/schemas/GroupMemberDescription'}
+        partitionAssignor: {type: string, nullable: true}
+        type: {type: string, nullable: true}
+        groupState: {type: string, nullable: true}
+        coordinator: {$ref: '#/components/schemas/Node'}
+        authorizedOperations:
+          type: array
+          nullable: true
+          items: {$ref: '#/components/schemas/AclOperation'}
+        groupEpoch: {type: integer, nullable: true}
+        targetAssignmentEpoch: {type: integer, nullable: true}
+
+    ShareGroupMemberDescription:
+      type: object
+      properties:
+        consumerId: {type: string}
+        clientId: {type: string}
+        host: {type: string}
+        assignment:
+          type: array
+          items: {$ref: '#/components/schemas/TopicPartition'}
+        memberEpoch: {type: integer}
+
+    AdminDescribeShareGroupResponse:
+      type: object
+      properties:
+        groupId: {type: string}
+        members:
+          type: array
+          items: {$ref: '#/components/schemas/ShareGroupMemberDescription'}
+        groupState: {type: string, nullable: true}
+        coordinator: {$ref: '#/components/schemas/Node'}
+        groupEpoch: {type: integer}
+        targetAssignmentEpoch: {type: integer}
+        authorizedOperations:
+          type: array
+          nullable: true
+          items: {$ref: '#/components/schemas/AclOperation'}
+
+    StreamsGroupTaskIds:
+      type: object
+      properties:
+        subtopologyId: {type: string}
+        partitions:
+          type: array
+          items: {type: integer}
+
+    StreamsGroupMemberAssignment:
+      type: object
+      properties:
+        activeTasks:
+          type: array
+          items: {$ref: '#/components/schemas/StreamsGroupTaskIds'}
+        standbyTasks:
+          type: array
+          items: {$ref: '#/components/schemas/StreamsGroupTaskIds'}
+        warmupTasks:
+          type: array
+          items: {$ref: '#/components/schemas/StreamsGroupTaskIds'}
+
+    StreamsGroupTaskOffset:
+      type: object
+      properties:
+        subtopologyId: {type: string}
+        partition: {type: integer}
+        offset: {type: integer, format: int64}
+
+    StreamsGroupEndpoint:
+      type: object
+      properties:
+        host: {type: string}
+        port: {type: integer}
+
+    StreamsGroupMemberDescription:
+      type: object
+      properties:
+        memberId: {type: string}
+        memberEpoch: {type: integer}
+        instanceId: {type: string, nullable: true}
+        rackId: {type: string, nullable: true}
+        clientId: {type: string}
+        clientHost: {type: string}
+        topologyEpoch: {type: integer}
+        processId: {type: string}
+        userEndpoint:
+          allOf:
+            - $ref: '#/components/schemas/StreamsGroupEndpoint'
+          nullable: true
+        clientTags:
+          type: object
+          additionalProperties: {type: string}
+          nullable: true
+        taskOffsets:
+          type: array
+          items: {$ref: '#/components/schemas/StreamsGroupTaskOffset'}
+        taskEndOffsets:
+          type: array
+          items: {$ref: '#/components/schemas/StreamsGroupTaskOffset'}
+        assignment: {$ref: '#/components/schemas/StreamsGroupMemberAssignment'}
+        targetAssignment: {$ref: '#/components/schemas/StreamsGroupMemberAssignment'}
+        classic:
+          type: boolean
+          description: Whether the member runs in classic (pre-KIP-1071) mode
+
+    StreamsGroupTopicInfo:
+      type: object
+      properties:
+        partitions: {type: integer}
+        replicationFactor: {type: integer}
+        topicConfigs:
+          type: object
+          additionalProperties: {type: string}
+
+    StreamsGroupSubtopologyDescription:
+      type: object
+      properties:
+        subtopologyId: {type: string}
+        sourceTopics:
+          type: array
+          items: {type: string}
+        repartitionSinkTopics:
+          type: array
+          items: {type: string}
+        stateChangelogTopics:
+          type: object
+          additionalProperties: {$ref: '#/components/schemas/StreamsGroupTopicInfo'}
+        repartitionSourceTopics:
+          type: object
+          additionalProperties: {$ref: '#/components/schemas/StreamsGroupTopicInfo'}
+
+    AdminDescribeStreamsGroupResponse:
+      type: object
+      properties:
+        groupId: {type: string}
+        groupEpoch: {type: integer}
+        targetAssignmentEpoch: {type: integer}
+        topologyEpoch: {type: integer}
+        subtopologies:
+          type: array
+          items: {$ref: '#/components/schemas/StreamsGroupSubtopologyDescription'}
+        members:
+          type: array
+          items: {$ref: '#/components/schemas/StreamsGroupMemberDescription'}
+        groupState: {type: string, nullable: true}
+        coordinator: {$ref: '#/components/schemas/Node'}
+        authorizedOperations:
+          type: array
+          nullable: true
+          items: {$ref: '#/components/schemas/AclOperation'}
+
+    AdminListConsumerGroupOffsetsRequest:
+      allOf:
+        - $ref: '#/components/schemas/AdminInstanceRef'
+        - type: object
+          required: [groupId]
+          properties:
+            groupId:
+              type: string
+              minLength: 1
+            requireStable:
+              type: boolean
+              description: When true, fails while a transaction is in progress
+
+    TopicPartitionOffsetMetadata:
+      type: object
+      properties:
+        topic: {type: string}
+        partition: {type: integer}
+        offset: {type: integer, format: int64}
+        leaderEpoch: {type: integer, nullable: true}
+        metadata: {type: string, nullable: true}
+
+    AdminListConsumerGroupOffsetsResponse:
+      type: array
+      items: {$ref: '#/components/schemas/TopicPartitionOffsetMetadata'}
+
+    AdminAlterConsumerGroupOffsetsRequest:
+      allOf:
+        - $ref: '#/components/schemas/AdminInstanceRef'
+        - type: object
+          required: [groupId, offsets]
+          properties:
+            groupId:
+              type: string
+              minLength: 1
+            offsets:
+              type: array
+              minItems: 1
+              items:
+                type: object
+                required: [topic, partition, offset]
+                properties:
+                  topic:
+                    type: string
+                    minLength: 1
+                  partition:
+                    type: integer
+                    minimum: 0
+                  offset:
+                    type: integer
+                    format: int64
+                    minimum: 0
+                  metadata: {type: string}
+
+    AdminDeleteConsumerGroupOffsetsRequest:
+      allOf:
+        - $ref: '#/components/schemas/AdminInstanceRef'
+        - type: object
+          required: [groupId, partitions]
+          properties:
+            groupId:
+              type: string
+              minLength: 1
+            partitions:
+              type: array
+              minItems: 1
+              items: {$ref: '#/components/schemas/TopicPartition'}
+
+    AdminRemoveMembersFromConsumerGroupRequest:
+      allOf:
+        - $ref: '#/components/schemas/AdminInstanceRef'
+        - type: object
+          required: [groupId]
+          properties:
+            groupId:
+              type: string
+              minLength: 1
+            members:
+              type: array
+              description: Member ids to remove; omit to remove all members
+              items: {type: string}
+            reason:
+              type: string
+              description: Reason recorded in the broker log
+
+    AdminListOffsetsRequest:
+      allOf:
+        - $ref: '#/components/schemas/AdminInstanceRef'
+        - type: object
+          required: [partitions]
+          properties:
+            partitions:
+              type: array
+              minItems: 1
+              items: {$ref: '#/components/schemas/TopicPartition'}
+            isolationLevel: {$ref: '#/components/schemas/IsolationLevel'}
+
+    AdminListTimestampOffsetsRequest:
+      allOf:
+        - $ref: '#/components/schemas/AdminListOffsetsRequest'
+        - type: object
+          required: [timestamp]
+          properties:
+            timestamp:
+              type: integer
+              format: int64
+              exclusiveMinimum: 0
+              description: Epoch millis
+
+    IsolationLevel:
+      type: string
+      enum: [READ_UNCOMMITTED, READ_COMMITTED]
+
+    OffsetListing:
+      type: object
+      properties:
+        topic: {type: string}
+        partition: {type: integer}
+        offset: {type: integer, format: int64}
+        timestamp:
+          type: integer
+          format: int64
+          description: Epoch millis of the offset, `-1` if unknown
+        leaderEpoch: {type: integer, nullable: true}
+
+    AdminListOffsetsResponse:
+      type: array
+      items: {$ref: '#/components/schemas/OffsetListing'}
+
+    ProducerInstanceRef:
+      type: object
+      description: Reference to a producer instance
+      required: [producerId, token]
+      properties:
+        producerId:
+          type: string
+          description: Producer instance id returned by `POST /producer/create`
+        token:
+          type: string
+          description: Ownership token returned by `POST /producer/create`
+
+    ConsumerInstanceRef:
+      type: object
+      description: Reference to a consumer instance
+      required: [consumerId, token]
+      properties:
+        consumerId:
+          type: string
+          description: Consumer instance id returned by `POST /consumer/create`
+        token:
+          type: string
+          description: Ownership token returned by `POST /consumer/create`
+
+    ProducerCreateRequest:
+      type: object
+      required: [name, config]
+      properties:
+        name:
+          type: string
+          description: Human-readable instance name
+          minLength: 1
+        config:
+          type: object
+          description: Arbitrary Kafka client properties (`bootstrap.servers`, SASL, `transactional.id`, etc.)
+          minProperties: 1
+          additionalProperties: {type: string}
+        expirationTimeout:
+          type: integer
+          description: Instance expiration timeout in milliseconds (1 second to 24 hours)
+          minimum: 1000
+          maximum: 86400000
+
+    ProducerCreateResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Producer instance id
+        token:
+          type: string
+          description: Ownership token
+
+    ProducerListResponse:
+      type: array
+      items:
+        type: object
+        properties:
+          id: {type: string}
+          name: {type: string}
+          owner: {type: string}
+          username: {type: string, nullable: true}
+          expiresAt:
+            type: integer
+            format: int64
+            description: Expiration timestamp, epoch millis
+
+    ProducerSendStringRequest:
+      type: object
+      required: [producerId, token, topic]
+      properties:
+        producerId:
+          type: string
+        token:
+          type: string
+        topic:
+          type: string
+          minLength: 1
+        partition:
+          type: integer
+          minimum: 0
+          description: Omit to let Kafka choose the partition
+        headers:
+          type: object
+          additionalProperties: {type: string}
+        key:
+          type: string
+          nullable: true
+        value:
+          type: string
+          nullable: true
+
+    ProducerSendResponse:
+      type: object
+      properties:
+        topic: {type: string}
+        partition: {type: integer}
+        offset: {type: integer, format: int64}
+        timestamp:
+          type: integer
+          format: int64
+          description: Epoch millis
+        serializedKeySize: {type: integer}
+        serializedValueSize: {type: integer}
+
+    ProducerGetPartitionsRequest:
+      allOf:
+        - $ref: '#/components/schemas/ProducerInstanceRef'
+        - type: object
+          required: [topic]
+          properties:
+            topic:
+              type: string
+              minLength: 1
+
+    ProducerPartitionsResponse:
+      type: array
+      items:
+        type: object
+        properties:
+          partition: {type: integer}
+
+    ConsumerCreateRequest:
+      type: object
+      required: [name, config]
+      properties:
+        name:
+          type: string
+          description: Human-readable instance name
+          minLength: 1
+        config:
+          type: object
+          description: Arbitrary Kafka client properties (`bootstrap.servers`, `group.id`, etc.)
+          minProperties: 1
+          additionalProperties: {type: string}
+        expirationTimeout:
+          type: integer
+          description: Instance expiration timeout in milliseconds (1 second to 24 hours)
+          minimum: 1000
+          maximum: 86400000
+
+    ConsumerCreateResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Consumer instance id
+        token:
+          type: string
+          description: Ownership token
+
+    ConsumerListResponse:
+      type: array
+      items:
+        type: object
+        properties:
+          id: {type: string}
+          name: {type: string}
+          owner: {type: string}
+          username: {type: string, nullable: true}
+          expiresAt:
+            type: integer
+            format: int64
+            description: Expiration timestamp, epoch millis
+
+    ConsumerPollRequest:
+      allOf:
+        - $ref: '#/components/schemas/ConsumerInstanceRef'
+        - type: object
+          required: [timeout]
+          properties:
+            timeout:
+              type: integer
+              format: int64
+              minimum: 0
+              description: Poll timeout in milliseconds
+
+    ConsumerPollStringResponse:
+      type: array
+      description: |
+        JSON poll result. Keys, values and header values are decoded as UTF-8
+        strings. Use the binary response format for non-UTF-8 payloads.
+      items:
+        type: object
+        properties:
+          timestamp:
+            type: integer
+            format: int64
+            description: Epoch millis
+          topic: {type: string}
+          partition: {type: integer}
+          offset: {type: integer, format: int64}
+          headers:
+            type: array
+            items:
+              type: object
+              properties:
+                key: {type: string}
+                value: {type: string, nullable: true}
+          key: {type: string, nullable: true}
+          value: {type: string, nullable: true}
+
+    ConsumerSeekRequest:
+      allOf:
+        - $ref: '#/components/schemas/ConsumerInstanceRef'
+        - type: object
+          required: [topic, partition, offset]
+          properties:
+            topic:
+              type: string
+              minLength: 1
+            partition:
+              type: integer
+              minimum: 0
+            offset:
+              type: integer
+              format: int64
+              minimum: 0
+
+    ConsumerPartitionsRequest:
+      allOf:
+        - $ref: '#/components/schemas/ConsumerInstanceRef'
+        - type: object
+          required: [partitions]
+          properties:
+            partitions:
+              type: array
+              minItems: 1
+              items: {$ref: '#/components/schemas/TopicPartition'}
+
+    ConsumerGetPositionRequest:
+      allOf:
+        - $ref: '#/components/schemas/ConsumerInstanceRef'
+        - type: object
+          required: [topic, partition]
+          properties:
+            topic:
+              type: string
+              minLength: 1
+            partition:
+              type: integer
+              minimum: 0
+
+    ConsumerPositionResponse:
+      type: object
+      properties:
+        offset: {type: integer, format: int64}
+
+    ConsumerAssignmentResponse:
+      type: array
+      items: {$ref: '#/components/schemas/TopicPartition'}
+
+    ConsumerSubscribeRequest:
+      allOf:
+        - $ref: '#/components/schemas/ConsumerInstanceRef'
+        - type: object
+          properties:
+            topics:
+              type: array
+              description: Topic names to subscribe to
+              items: {type: string}
+            pattern:
+              type: string
+              description: Regex to subscribe to matching topics
+
+    ConsumerSubscriptionResponse:
+      type: array
+      items: {type: string}
+
+    ConsumerGetPartitionsRequest:
+      allOf:
+        - $ref: '#/components/schemas/ConsumerInstanceRef'
+        - type: object
+          required: [topic]
+          properties:
+            topic:
+              type: string
+              minLength: 1
+
+    ConsumerPartitionsResponse:
+      type: array
+      items:
+        type: object
+        properties:
+          partition: {type: integer}
+
+    ConsumerListPartitionsResponse:
+      type: object
+      deprecated: true
+      properties:
+        topic: {type: string}
+        partitions:
+          type: array
+          items:
+            type: object
+            properties:
+              partition: {type: integer}
+
+    ConsumerListTopicsRequest:
+      allOf:
+        - $ref: '#/components/schemas/ConsumerInstanceRef'
+        - type: object
+          properties:
+            pattern:
+              type: string
+              description: Regex to filter topic names
+
+    ConsumerTopicsResponse:
+      type: array
+      items:
+        type: object
+        properties:
+          topic: {type: string}
+          partitions:
+            type: array
+            items:
+              type: object
+              properties:
+                partition: {type: integer}
+
+    ConsumerGroupMetadataResponse:
+      type: object
+      properties:
+        groupId: {type: string}
+        generationId: {type: integer}
+        memberId: {type: string}
+        groupInstanceId: {type: string, nullable: true}
+
+    ConsumerCommittedResponse:
+      type: array
+      items:
+        type: object
+        properties:
+          topic: {type: string}
+          offsets:
+            type: array
+            items:
+              type: object
+              properties:
+                partition: {type: integer}
+                offset:
+                  type: integer
+                  format: int64
+                  nullable: true
+                  description: Null when no committed offset exists
+                metadata: {type: string, nullable: true}
+
+    ConsumerOffsetsResponse:
+      type: array
+      items:
+        type: object
+        properties:
+          topic: {type: string}
+          offsets:
+            type: array
+            items:
+              type: object
+              properties:
+                partition: {type: integer}
+                offset:
+                  type: integer
+                  format: int64
+                  nullable: true
+
+
+
+
+
+
