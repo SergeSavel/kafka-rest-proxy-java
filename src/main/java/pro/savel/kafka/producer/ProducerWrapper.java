@@ -43,7 +43,6 @@ public class ProducerWrapper extends ClientWrapper {
 
     @Override
     public void close() {
-        producer.flush();
         producer.close(CLOSE_TIMEOUT);
     }
 }

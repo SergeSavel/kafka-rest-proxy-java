@@ -19,6 +19,8 @@ import org.junit.jupiter.api.Test;
 import pro.savel.kafka.common.exceptions.NotFoundException;
 
 import java.util.Properties;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -26,8 +28,10 @@ class ClientProviderTest {
 
     // Test stub — concrete ClientWrapper
     static class TestWrapper extends ClientWrapper {
-        boolean closed = false;
+        volatile boolean closed = false;
+        volatile boolean closedOnVirtualThread = false;
         final boolean shouldThrow;
+        final CountDownLatch closedLatch = new CountDownLatch(1);
 
         TestWrapper(String id, String name, int expirationTimeout) {
             this(id, name, expirationTimeout, false);
@@ -43,11 +47,39 @@ class ClientProviderTest {
             if (shouldThrow)
                 throw new RuntimeException("close failed");
             closed = true;
+            closedOnVirtualThread = Thread.currentThread().isVirtual();
+            closedLatch.countDown();
+        }
+
+        boolean awaitClosed() throws InterruptedException {
+            return closedLatch.await(1, TimeUnit.SECONDS);
         }
     }
 
     // Test stub — concrete ClientProvider
     static class TestProvider extends ClientProvider<TestWrapper> {
+    }
+
+    static class BlockingTestWrapper extends TestWrapper {
+        private final CountDownLatch closeStarted;
+        private final CountDownLatch allowClose;
+
+        BlockingTestWrapper(String id, CountDownLatch closeStarted, CountDownLatch allowClose) {
+            super(id, id, 60_000);
+            this.closeStarted = closeStarted;
+            this.allowClose = allowClose;
+        }
+
+        @Override
+        public void close() {
+            closeStarted.countDown();
+            try {
+                allowClose.await();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+            super.close();
+        }
     }
 
     private TestProvider provider = new TestProvider();
@@ -93,6 +125,7 @@ class ClientProviderTest {
         provider.addItem(wrapper);
         provider.removeItem("id-1");
         assertTrue(wrapper.closed);
+        assertTrue(wrapper.closedOnVirtualThread);
         assertTrue(provider.getItems().isEmpty());
     }
 
@@ -128,12 +161,29 @@ class ClientProviderTest {
         assertTrue(good.closed);
     }
 
+    @Test
+    void close_startsWrapperCloseOperationsConcurrently() throws InterruptedException {
+        var closeStarted = new CountDownLatch(2);
+        var allowClose = new CountDownLatch(1);
+        provider.addItem(new BlockingTestWrapper("a", closeStarted, allowClose));
+        provider.addItem(new BlockingTestWrapper("b", closeStarted, allowClose));
+
+        var closeThread = Thread.startVirtualThread(provider::close);
+        try {
+            assertTrue(closeStarted.await(1, TimeUnit.SECONDS));
+        } finally {
+            allowClose.countDown();
+        }
+        closeThread.join(1_000);
+        assertFalse(closeThread.isAlive());
+    }
+
 //endregion
 
 //region retireClients (expiration)
 
     @Test
-    void retireClients_expired_removesWrapper() {
+    void retireClients_expired_removesWrapper() throws InterruptedException {
         var wrapper = new TestWrapper("id-1", "test", 1); // 1ms expiration
         provider.addItem(wrapper);
 
@@ -141,8 +191,9 @@ class ClientProviderTest {
         try { Thread.sleep(50); } catch (InterruptedException ignored) { Thread.currentThread().interrupt(); }
 
         provider.retireClients();
-        assertTrue(wrapper.closed);
         assertTrue(provider.getItems().isEmpty());
+        assertTrue(wrapper.awaitClosed());
+        assertTrue(wrapper.closedOnVirtualThread);
     }
 
     @Test

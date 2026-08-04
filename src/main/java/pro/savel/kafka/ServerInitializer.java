@@ -38,9 +38,12 @@ import pro.savel.kafka.producer.ProducerRequestDecoder;
 import pro.savel.kafka.producer.ProducerRequestProcessor;
 import pro.savel.kafka.producer.ProducerResponseEncoder;
 
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 class ServerInitializer extends ChannelInitializer<SocketChannel> implements AutoCloseable {
+
+    private static final long CLIENT_SHUTDOWN_TIMEOUT_SECONDS = 40;
 
     private static final ObjectMapper objectMapper = new ObjectMapper()
             .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, true)
@@ -105,8 +108,18 @@ class ServerInitializer extends ChannelInitializer<SocketChannel> implements Aut
     @Override
     public void close() {
         blockingTaskExecutor.close();
-        producerRequestProcessor.close();
-        consumerRequestProcessor.close();
-        adminRequestProcessor.close();
+
+        var closeExecutor = Executors.newVirtualThreadPerTaskExecutor();
+        closeExecutor.submit(producerRequestProcessor::close);
+        closeExecutor.submit(consumerRequestProcessor::close);
+        closeExecutor.submit(adminRequestProcessor::close);
+        closeExecutor.shutdown();
+        try {
+            if (!closeExecutor.awaitTermination(CLIENT_SHUTDOWN_TIMEOUT_SECONDS, TimeUnit.SECONDS))
+                closeExecutor.shutdownNow();
+        } catch (InterruptedException e) {
+            closeExecutor.shutdownNow();
+            Thread.currentThread().interrupt();
+        }
     }
 }
