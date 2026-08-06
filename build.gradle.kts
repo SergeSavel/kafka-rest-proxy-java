@@ -29,6 +29,7 @@ dependencies {
     implementation("io.netty:netty-transport")
     implementation("io.netty:netty-transport-classes-epoll")
     implementation("io.netty:netty-codec-http")
+    implementation("io.netty:netty-handler")
     runtimeOnly("io.netty:netty-transport-native-epoll:$nettyVersion:linux-x86_64")
     runtimeOnly("io.netty:netty-transport-native-epoll:$nettyVersion:linux-aarch_64")
     implementation("org.apache.kafka:kafka-clients:4.1.2")

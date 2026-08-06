@@ -16,15 +16,19 @@ package pro.savel.kafka.consumer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.netty.channel.*;
+import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpResponse;
+import io.netty.handler.codec.http.HttpChunkedInput;
 import io.netty.handler.codec.http.HttpHeaderValues;
+import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.util.ReferenceCountUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import pro.savel.kafka.common.HttpUtils;
 import pro.savel.kafka.common.contract.Serde;
+import pro.savel.kafka.consumer.responses.ConsumerPollResponse;
 
 import java.io.IOException;
 
@@ -34,9 +38,13 @@ public class ConsumerResponseEncoder extends ChannelOutboundHandlerAdapter {
     private static final Logger logger = LoggerFactory.getLogger(ConsumerResponseEncoder.class);
 
     private final ObjectMapper objectMapper;
+    private final int responseChunkBytes;
 
-    public ConsumerResponseEncoder(ObjectMapper objectMapper) {
+    public ConsumerResponseEncoder(ObjectMapper objectMapper, int responseChunkBytes) {
+        if (responseChunkBytes <= 0)
+            throw new IllegalArgumentException("responseChunkBytes must be greater than 0");
         this.objectMapper = objectMapper;
+        this.responseChunkBytes = responseChunkBytes;
     }
 
     @Override
@@ -46,11 +54,10 @@ public class ConsumerResponseEncoder extends ChannelOutboundHandlerAdapter {
                 if (logger.isDebugEnabled()) {
                     logger.debug("Encoding consumer response.");
                 }
-                var httpResponse = createHttpResponse(ctx, bearer);
-                var future = ctx.write(httpResponse, promise);
-                if (!bearer.isConnectionKeepAlive()) {
-                    future.addListener(ChannelFutureListener.CLOSE);
-                }
+                if (bearer.getResponse() instanceof ConsumerPollResponse pollResponse)
+                    writePollResponse(ctx, bearer, pollResponse, promise);
+                else
+                    writeFullResponse(ctx, bearer, promise);
             } catch (Exception e) {
                 var message = "An error occurred during consumer response serialization.";
                 logger.error(message, e);
@@ -62,6 +69,37 @@ public class ConsumerResponseEncoder extends ChannelOutboundHandlerAdapter {
         } else {
             ctx.write(msg, promise);
         }
+    }
+
+    private void writeFullResponse(ChannelHandlerContext ctx, ConsumerResponseBearer bearer, ChannelPromise promise)
+            throws IOException {
+        var httpResponse = createHttpResponse(ctx, bearer);
+        var future = ctx.write(httpResponse, promise);
+        if (!bearer.isConnectionKeepAlive())
+            future.addListener(ChannelFutureListener.CLOSE);
+    }
+
+    private void writePollResponse(ChannelHandlerContext ctx, ConsumerResponseBearer bearer,
+                                   ConsumerPollResponse pollResponse, ChannelPromise promise) {
+        var httpResponse = new DefaultHttpResponse(HttpVersion.HTTP_1_1, bearer.getStatus());
+        if (bearer.getSerializeTo() == Serde.JSON)
+            httpResponse.headers().set(HttpUtils.ASCII_CONTENT_TYPE, HttpUtils.ASCII_APPLICATION_JSON_CHARSET_UTF8);
+        else if (bearer.getSerializeTo() == Serde.BINARY)
+            httpResponse.headers().set(HttpUtils.ASCII_CONTENT_TYPE, HttpUtils.ASCII_APPLICATION_OCTET_STREAM);
+        else
+            throw new IllegalStateException("Unexpected serde: " + bearer.getSerializeTo());
+        HttpUtil.setTransferEncodingChunked(httpResponse, true);
+        if (!bearer.isConnectionKeepAlive())
+            httpResponse.headers().set(HttpUtils.ASCII_CONNECTION, HttpHeaderValues.CLOSE);
+
+        ctx.write(httpResponse);
+        var input = new ConsumerPollChunkedInput(
+                objectMapper, pollResponse, bearer.getSerializeTo(), responseChunkBytes);
+        var future = ctx.write(new HttpChunkedInput(input), promise.unvoid());
+        future.addListener(result -> {
+            if (!result.isSuccess() || !bearer.isConnectionKeepAlive())
+                ctx.close();
+        });
     }
 
     private FullHttpResponse createHttpResponse(ChannelHandlerContext ctx, ConsumerResponseBearer bearer)

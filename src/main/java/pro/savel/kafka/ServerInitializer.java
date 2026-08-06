@@ -24,6 +24,7 @@ import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.timeout.ReadTimeoutHandler;
 import io.netty.handler.timeout.WriteTimeoutHandler;
+import io.netty.handler.stream.ChunkedWriteHandler;
 import jakarta.validation.Validation;
 import jakarta.validation.ValidatorFactory;
 import org.hibernate.validator.messageinterpolation.ParameterMessageInterpolator;
@@ -77,7 +78,7 @@ class ServerInitializer extends ChannelInitializer<SocketChannel> implements Aut
             new AdminRequestProcessor(blockingTaskExecutor, new AdminProvider());
 
     private final ProducerResponseEncoder producerResponseEncoder = new ProducerResponseEncoder(objectMapper);
-    private final ConsumerResponseEncoder consumerResponseEncoder = new ConsumerResponseEncoder(objectMapper);
+    private final ConsumerResponseEncoder consumerResponseEncoder;
     private final AdminResponseEncoder adminResponseEncoder = new AdminResponseEncoder(objectMapper);
 
     private final DefaultInboundHandler defaultInboundHandler = new DefaultInboundHandler();
@@ -85,6 +86,7 @@ class ServerInitializer extends ChannelInitializer<SocketChannel> implements Aut
 
     ServerInitializer(ServerConfig config) {
         this.config = config;
+        consumerResponseEncoder = new ConsumerResponseEncoder(objectMapper, config.responseChunkBytes());
     }
 
     public void initialize() {
@@ -102,6 +104,7 @@ class ServerInitializer extends ChannelInitializer<SocketChannel> implements Aut
         pipeline.addLast(new JsonRequestSizeLimitHandler(config.maxJsonRequestBytes()));
         pipeline.addLast(new HttpObjectAggregator(config.maxRequestBytes()));
         pipeline.addLast(new HttpRequestFlowControlHandler());
+        pipeline.addLast(new ChunkedWriteHandler());
         pipeline.addLast(healthRequestDecoder);
         pipeline.addLast(versionRequestDecoder);
         pipeline.addLast(basicAuthenticationHandler);

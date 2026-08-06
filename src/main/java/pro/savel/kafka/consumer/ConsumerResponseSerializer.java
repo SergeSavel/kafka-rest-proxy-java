@@ -55,35 +55,7 @@ public class ConsumerResponseSerializer {
                  var generator = objectMapper.getFactory().createGenerator((OutputStream) outputStream)) {
                 generator.writeStartArray();
                 for (var message : response) {
-                    if (message == null) {
-                        generator.writeNull();
-                        continue;
-                    }
-                    generator.writeStartObject();
-                    generator.writeNumberField("timestamp", message.getTimestamp());
-                    generator.writeStringField("topic", message.getTopic());
-                    generator.writeNumberField("partition", message.getPartition());
-                    generator.writeNumberField("offset", message.getOffset());
-                    generator.writeFieldName("headers");
-                    if (message.getHeaders() == null) {
-                        generator.writeNull();
-                    } else {
-                        generator.writeStartArray();
-                        for (var header : message.getHeaders()) {
-                            if (header == null) {
-                                generator.writeNull();
-                                continue;
-                            }
-                            generator.writeStartObject();
-                            generator.writeStringField("key", header.getKey());
-                            writeUtf8Field(generator, "value", header.getValue());
-                            generator.writeEndObject();
-                        }
-                        generator.writeEndArray();
-                    }
-                    writeUtf8Field(generator, "key", message.getKey());
-                    writeUtf8Field(generator, "value", message.getValue());
-                    generator.writeEndObject();
+                    writePollJsonMessage(generator, message);
                 }
                 generator.writeEndArray();
             }
@@ -92,6 +64,55 @@ public class ConsumerResponseSerializer {
             buf.release();
             throw e;
         }
+    }
+
+    static ByteBuf serializePollJsonMessage(ObjectMapper objectMapper, ByteBufAllocator allocator,
+                                            ConsumerPollResponse.Message message, boolean first) throws IOException {
+        var buf = allocator.buffer();
+        try {
+            buf.writeByte(first ? '[' : ',');
+            try (var outputStream = new ByteBufOutputStream(buf);
+                 var generator = objectMapper.getFactory().createGenerator((OutputStream) outputStream)) {
+                writePollJsonMessage(generator, message);
+            }
+            return buf;
+        } catch (IOException | RuntimeException e) {
+            buf.release();
+            throw e;
+        }
+    }
+
+    private static void writePollJsonMessage(JsonGenerator generator, ConsumerPollResponse.Message message)
+            throws IOException {
+        if (message == null) {
+            generator.writeNull();
+            return;
+        }
+        generator.writeStartObject();
+        generator.writeNumberField("timestamp", message.getTimestamp());
+        generator.writeStringField("topic", message.getTopic());
+        generator.writeNumberField("partition", message.getPartition());
+        generator.writeNumberField("offset", message.getOffset());
+        generator.writeFieldName("headers");
+        if (message.getHeaders() == null) {
+            generator.writeNull();
+        } else {
+            generator.writeStartArray();
+            for (var header : message.getHeaders()) {
+                if (header == null) {
+                    generator.writeNull();
+                    continue;
+                }
+                generator.writeStartObject();
+                generator.writeStringField("key", header.getKey());
+                writeUtf8Field(generator, "value", header.getValue());
+                generator.writeEndObject();
+            }
+            generator.writeEndArray();
+        }
+        writeUtf8Field(generator, "key", message.getKey());
+        writeUtf8Field(generator, "value", message.getValue());
+        generator.writeEndObject();
     }
 
     private static void writeUtf8Field(JsonGenerator generator, String name, byte[] value)
@@ -108,41 +129,62 @@ public class ConsumerResponseSerializer {
         try {
             buf.writeShort(1); //version
             buf.writeInt(response.size());
-            for (ConsumerPollResponse.Message message : response) {
-                writeBytes(buf, message.getTopic());
-                buf.writeInt(message.getPartition());
-                buf.writeLong(message.getOffset());
-                buf.writeLong(message.getTimestamp());
-                var headers = message.getHeaders();
-                buf.writeInt(headers == null ? 0 : headers.size());
-                if (headers != null) {
-                    for (ConsumerPollResponse.Message.Header header : headers) {
-                        writeBytes(buf, header.getKey());
-                        if (header.getValue() == null)
-                            buf.writeByte(1); // is null
-                        else {
-                            buf.writeByte(0); // is not null
-                            writeBytes(buf, header.getValue());
-                        }
-                    }
-                }
-                if (message.getKey() == null)
-                    buf.writeByte(1); // is null
-                else {
-                    buf.writeByte(0); // is not null
-                    writeBytes(buf, message.getKey());
-                }
-                if (message.getValue() == null)
-                    buf.writeByte(1); // is null
-                else {
-                    buf.writeByte(0); // is not null
-                    writeBytes(buf, message.getValue());
-                }
-            }
+            for (ConsumerPollResponse.Message message : response)
+                writePollBinaryMessage(buf, message);
             return buf;
         } catch (Exception e) {
             buf.release();
             throw e;
+        }
+    }
+
+    static ByteBuf serializePollBinaryHeader(ByteBufAllocator allocator, int messageCount) {
+        var buf = allocator.buffer(Short.BYTES + Integer.BYTES);
+        buf.writeShort(1); // version
+        buf.writeInt(messageCount);
+        return buf;
+    }
+
+    static ByteBuf serializePollBinaryMessage(ByteBufAllocator allocator, ConsumerPollResponse.Message message) {
+        var buf = allocator.buffer(calculatePollBinaryMessageCapacity(message));
+        try {
+            writePollBinaryMessage(buf, message);
+            return buf;
+        } catch (RuntimeException e) {
+            buf.release();
+            throw e;
+        }
+    }
+
+    private static void writePollBinaryMessage(ByteBuf buf, ConsumerPollResponse.Message message) {
+        writeBytes(buf, message.getTopic());
+        buf.writeInt(message.getPartition());
+        buf.writeLong(message.getOffset());
+        buf.writeLong(message.getTimestamp());
+        var headers = message.getHeaders();
+        buf.writeInt(headers == null ? 0 : headers.size());
+        if (headers != null) {
+            for (ConsumerPollResponse.Message.Header header : headers) {
+                writeBytes(buf, header.getKey());
+                if (header.getValue() == null)
+                    buf.writeByte(1); // is null
+                else {
+                    buf.writeByte(0); // is not null
+                    writeBytes(buf, header.getValue());
+                }
+            }
+        }
+        if (message.getKey() == null)
+            buf.writeByte(1); // is null
+        else {
+            buf.writeByte(0); // is not null
+            writeBytes(buf, message.getKey());
+        }
+        if (message.getValue() == null)
+            buf.writeByte(1); // is null
+        else {
+            buf.writeByte(0); // is not null
+            writeBytes(buf, message.getValue());
         }
     }
 
@@ -159,23 +201,27 @@ public class ConsumerResponseSerializer {
 
     private static int calculatePollBinaryCapacity(ConsumerPollResponse response) {
         long capacity = Short.BYTES + Integer.BYTES;
-        for (var message : response) {
-            capacity += serializedStringSize(message.getTopic())
-                    + Integer.BYTES + Long.BYTES + Long.BYTES + Integer.BYTES;
-            if (message.getHeaders() != null) {
-                for (var header : message.getHeaders()) {
-                    capacity += serializedStringSize(header.getKey()) + Byte.BYTES;
-                    if (header.getValue() != null)
-                        capacity += serializedBytesSize(header.getValue());
-                }
+        for (var message : response)
+            capacity += calculatePollBinaryMessageCapacity(message);
+        return Math.toIntExact(capacity);
+    }
+
+    private static int calculatePollBinaryMessageCapacity(ConsumerPollResponse.Message message) {
+        long capacity = serializedStringSize(message.getTopic())
+                + Integer.BYTES + Long.BYTES + Long.BYTES + Integer.BYTES;
+        if (message.getHeaders() != null) {
+            for (var header : message.getHeaders()) {
+                capacity += serializedStringSize(header.getKey()) + Byte.BYTES;
+                if (header.getValue() != null)
+                    capacity += serializedBytesSize(header.getValue());
             }
-            capacity += Byte.BYTES;
-            if (message.getKey() != null)
-                capacity += serializedBytesSize(message.getKey());
-            capacity += Byte.BYTES;
-            if (message.getValue() != null)
-                capacity += serializedBytesSize(message.getValue());
         }
+        capacity += Byte.BYTES;
+        if (message.getKey() != null)
+            capacity += serializedBytesSize(message.getKey());
+        capacity += Byte.BYTES;
+        if (message.getValue() != null)
+            capacity += serializedBytesSize(message.getValue());
         return Math.toIntExact(capacity);
     }
 

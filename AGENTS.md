@@ -10,6 +10,7 @@ HTTP Request
   → JsonRequestSizeLimitHandler(4MB JSON)
   → HttpObjectAggregator(32MB)
   → HttpRequestFlowControlHandler (one active request per connection)
+  → ChunkedWriteHandler (writability-aware consumer poll streaming)
   → HealthRequestDecoder
   → VersionRequestDecoder
   → BasicAuthenticationHandler (optional, users.json)
@@ -37,7 +38,8 @@ HTTP Request
 
 - **Decoders** parse JSON/binary requests into typed Request DTOs, pass via `RequestBearer`
 - **Processors** handle business logic; producer/consumer use `BlockingTaskExecutor` (virtual threads) for blocking Kafka calls; producer `send()` uses Kafka callback (non-blocking); admin uses `KafkaFuture.whenComplete()` callbacks (non-blocking)
-- **Encoders** serialize Response DTOs to JSON/binary HTTP responses
+- **Encoders** serialize Response DTOs to JSON/binary HTTP responses; consumer poll responses are streamed in bounded
+  chunks and paused by `ChunkedWriteHandler` when the channel is not writable
 - **Response classes** use static factory methods `of()` for mapping from Kafka types
 - **`ClientProvider<T>`** manages instance lifecycle: creation, expiration (1s scheduled timer), removal. Shared by producer, consumer, admin
 - **`ClientWrapper`** wraps a Kafka client instance with id, token, owner, expiration timestamp
