@@ -46,6 +46,11 @@ public class AdminResponseEncoder extends ChannelOutboundHandlerAdapter {
                 if (logger.isDebugEnabled()) {
                     logger.debug("Encoding admin response.");
                 }
+                if (bearer.getResponse() != null && bearer.getSerializeTo() == Serde.BINARY) {
+                    promise.setSuccess();
+                    HttpUtils.writeNotAcceptableAndClose(ctx, "Binary response format is not supported.");
+                    return;
+                }
                 var httpResponse = createHttpResponse(ctx, bearer);
                 var future = ctx.write(httpResponse, promise);
                 if (!bearer.isConnectionKeepAlive()) {

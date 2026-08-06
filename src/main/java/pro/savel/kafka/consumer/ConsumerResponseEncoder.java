@@ -56,7 +56,10 @@ public class ConsumerResponseEncoder extends ChannelOutboundHandlerAdapter {
                 }
                 if (bearer.getResponse() instanceof ConsumerPollResponse pollResponse)
                     writePollResponse(ctx, bearer, pollResponse, promise);
-                else
+                else if (bearer.getResponse() != null && bearer.getSerializeTo() == Serde.BINARY) {
+                    promise.setSuccess();
+                    HttpUtils.writeNotAcceptableAndClose(ctx, "Binary response format is not supported.");
+                } else
                     writeFullResponse(ctx, bearer, promise);
             } catch (Exception e) {
                 var message = "An error occurred during consumer response serialization.";

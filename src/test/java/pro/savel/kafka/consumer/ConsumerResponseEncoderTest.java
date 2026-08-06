@@ -24,6 +24,7 @@ import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
+import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.stream.ChunkedWriteHandler;
 import io.netty.util.ReferenceCountUtil;
@@ -37,7 +38,9 @@ import pro.savel.kafka.HttpRequestFlowControlHandler;
 import pro.savel.kafka.common.RequestBearer;
 import pro.savel.kafka.common.contract.Serde;
 import pro.savel.kafka.consumer.requests.ConsumerPollRequest;
+import pro.savel.kafka.consumer.requests.ConsumerTouchRequest;
 import pro.savel.kafka.consumer.responses.ConsumerPollResponse;
+import pro.savel.kafka.consumer.responses.ConsumerSubscriptionResponse;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -45,6 +48,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import static io.netty.handler.codec.http.HttpMethod.POST;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -90,6 +94,23 @@ class ConsumerResponseEncoderTest {
         assertTrue(channel.config().isAutoRead());
         assertTrue(body.toString(StandardCharsets.UTF_8).contains("\"value\":\"payload\""));
         body.release();
+        channel.finishAndReleaseAll();
+    }
+
+    @Test
+    void nonPollResponse_withBinarySerde_returnsNotAcceptable() {
+        var channel = new EmbeddedChannel(new ConsumerResponseEncoder(new ObjectMapper(), 64 * 1024));
+        var bearer = new ConsumerResponseBearer(
+                new RequestBearer(new ConsumerTouchRequest(), Serde.BINARY, true),
+                HttpResponseStatus.OK,
+                ConsumerSubscriptionResponse.of(List.of()));
+        assertTrue(channel.writeOutbound(bearer));
+
+        FullHttpResponse response = channel.readOutbound();
+        assertEquals(HttpResponseStatus.NOT_ACCEPTABLE, response.status());
+        assertEquals("Binary response format is not supported.",
+                response.content().toString(StandardCharsets.UTF_8));
+        response.release();
         channel.finishAndReleaseAll();
     }
 

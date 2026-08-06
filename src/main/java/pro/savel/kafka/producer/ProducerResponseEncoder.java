@@ -25,6 +25,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import pro.savel.kafka.common.HttpUtils;
 import pro.savel.kafka.common.contract.Serde;
+import pro.savel.kafka.producer.responses.ProducerSendResponse;
 
 import java.io.IOException;
 
@@ -45,6 +46,12 @@ public class ProducerResponseEncoder extends ChannelOutboundHandlerAdapter {
             try {
                 if (logger.isDebugEnabled()) {
                     logger.debug("Encoding producer response.");
+                }
+                if (bearer.getResponse() != null && bearer.getSerializeTo() == Serde.BINARY
+                        && !(bearer.getResponse() instanceof ProducerSendResponse)) {
+                    promise.setSuccess();
+                    HttpUtils.writeNotAcceptableAndClose(ctx, "Binary response format is not supported.");
+                    return;
                 }
                 var httpResponse = createHttpResponse(ctx, bearer);
                 var future = ctx.write(httpResponse, promise);

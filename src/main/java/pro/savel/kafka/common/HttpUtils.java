@@ -78,6 +78,10 @@ public abstract class HttpUtils {
         writeHttpResponseAndClose(ctx, HttpResponseStatus.METHOD_NOT_ALLOWED, message);
     }
 
+    public static void writeNotAcceptableAndClose(ChannelHandlerContext ctx, String message) {
+        writeHttpResponseAndClose(ctx, HttpResponseStatus.NOT_ACCEPTABLE, message);
+    }
+
     public static void writeUnauthorizedAndClose(ChannelHandlerContext ctx) {
         writeUnauthorizedAndClose(ctx, null);
     }
