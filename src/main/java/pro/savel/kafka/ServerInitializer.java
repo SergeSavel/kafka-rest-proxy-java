@@ -27,13 +27,16 @@ import io.netty.handler.timeout.WriteTimeoutHandler;
 import jakarta.validation.Validation;
 import jakarta.validation.ValidatorFactory;
 import org.hibernate.validator.messageinterpolation.ParameterMessageInterpolator;
+import pro.savel.kafka.admin.AdminProvider;
 import pro.savel.kafka.admin.AdminRequestDecoder;
 import pro.savel.kafka.admin.AdminRequestProcessor;
 import pro.savel.kafka.admin.AdminResponseEncoder;
 import pro.savel.kafka.common.BlockingTaskExecutor;
+import pro.savel.kafka.consumer.ConsumerProvider;
 import pro.savel.kafka.consumer.ConsumerRequestDecoder;
 import pro.savel.kafka.consumer.ConsumerRequestProcessor;
 import pro.savel.kafka.consumer.ConsumerResponseEncoder;
+import pro.savel.kafka.producer.ProducerProvider;
 import pro.savel.kafka.producer.ProducerRequestDecoder;
 import pro.savel.kafka.producer.ProducerRequestProcessor;
 import pro.savel.kafka.producer.ProducerResponseEncoder;
@@ -66,9 +69,12 @@ class ServerInitializer extends ChannelInitializer<SocketChannel> implements Aut
     private final DefaultRequestDecoder defaultRequestDecoder = new DefaultRequestDecoder();
 
     private final BlockingTaskExecutor blockingTaskExecutor = new BlockingTaskExecutor();
-    private final ProducerRequestProcessor producerRequestProcessor = new ProducerRequestProcessor(blockingTaskExecutor);
-    private final ConsumerRequestProcessor consumerRequestProcessor = new ConsumerRequestProcessor(blockingTaskExecutor);
-    private final AdminRequestProcessor adminRequestProcessor = new AdminRequestProcessor(blockingTaskExecutor);
+    private final ProducerRequestProcessor producerRequestProcessor =
+            new ProducerRequestProcessor(blockingTaskExecutor, new ProducerProvider());
+    private final ConsumerRequestProcessor consumerRequestProcessor =
+            new ConsumerRequestProcessor(blockingTaskExecutor, new ConsumerProvider());
+    private final AdminRequestProcessor adminRequestProcessor =
+            new AdminRequestProcessor(blockingTaskExecutor, new AdminProvider());
 
     private final ProducerResponseEncoder producerResponseEncoder = new ProducerResponseEncoder(objectMapper);
     private final ConsumerResponseEncoder consumerResponseEncoder = new ConsumerResponseEncoder(objectMapper);

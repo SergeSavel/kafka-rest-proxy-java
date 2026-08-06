@@ -62,11 +62,12 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
 
     private static final Logger logger = LoggerFactory.getLogger(AdminRequestProcessor.class);
 
-    private final AdminProvider provider = new AdminProvider();
+    private final AdminProvider provider;
     private final BlockingTaskExecutor blockingTaskExecutor;
 
-    public AdminRequestProcessor(BlockingTaskExecutor blockingTaskExecutor) {
+    public AdminRequestProcessor(BlockingTaskExecutor blockingTaskExecutor, AdminProvider provider) {
         this.blockingTaskExecutor = blockingTaskExecutor;
+        this.provider = provider;
     }
 
     // region Overrides

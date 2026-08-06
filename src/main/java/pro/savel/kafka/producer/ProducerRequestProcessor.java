@@ -41,11 +41,12 @@ public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter imple
 
     private static final Logger logger = LoggerFactory.getLogger(ProducerRequestProcessor.class);
 
-    private final ProducerProvider provider = new ProducerProvider();
+    private final ProducerProvider provider;
     private final BlockingTaskExecutor blockingTaskExecutor;
 
-    public ProducerRequestProcessor(BlockingTaskExecutor blockingTaskExecutor) {
+    public ProducerRequestProcessor(BlockingTaskExecutor blockingTaskExecutor, ProducerProvider provider) {
         this.blockingTaskExecutor = blockingTaskExecutor;
+        this.provider = provider;
     }
 
 //region Overrides

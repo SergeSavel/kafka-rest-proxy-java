@@ -18,8 +18,6 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import org.apache.kafka.clients.consumer.CloseOptions;
 import org.apache.kafka.clients.consumer.Consumer;
-import org.apache.kafka.clients.consumer.KafkaConsumer;
-import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 import pro.savel.kafka.common.ClientWrapper;
 
 import java.util.Properties;
@@ -32,10 +30,9 @@ public class ConsumerWrapper extends ClientWrapper {
     private final Consumer<byte[], byte[]> consumer;
     private final String token = UUID.randomUUID().toString();
 
-    protected ConsumerWrapper(String name, Properties config, int expirationTimeout, String owner) {
+    ConsumerWrapper(String name, Properties config, Consumer<byte[], byte[]> consumer, int expirationTimeout, String owner) {
         super(UUID.randomUUID().toString(), name, config, expirationTimeout, owner);
-        var deserializer = new ByteArrayDeserializer();
-        consumer = new KafkaConsumer<>(config, deserializer, deserializer);
+        this.consumer = consumer;
     }
 
     @Override

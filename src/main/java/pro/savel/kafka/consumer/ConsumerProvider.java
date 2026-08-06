@@ -14,16 +14,34 @@
 
 package pro.savel.kafka.consumer;
 
+import org.apache.kafka.clients.consumer.Consumer;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 import pro.savel.kafka.common.ClientProvider;
 import pro.savel.kafka.common.exceptions.BadRequestException;
 import pro.savel.kafka.common.exceptions.NotFoundException;
 
 import java.util.Properties;
+import java.util.function.Function;
 
 public class ConsumerProvider extends ClientProvider<ConsumerWrapper> {
 
+    private final Function<Properties, Consumer<byte[], byte[]>> clientFactory;
+
+    public ConsumerProvider() {
+        this(config -> {
+            var deserializer = new ByteArrayDeserializer();
+            return new KafkaConsumer<>(config, deserializer, deserializer);
+        });
+    }
+
+    public ConsumerProvider(Function<Properties, Consumer<byte[], byte[]>> clientFactory) {
+        this.clientFactory = clientFactory;
+    }
+
     public ConsumerWrapper createConsumer(String name, Properties config, int expirationTimeout, String owner) {
-        var wrapper = new ConsumerWrapper(name, config, expirationTimeout, owner);
+        var consumer = clientFactory.apply(config);
+        var wrapper = new ConsumerWrapper(name, config, consumer, expirationTimeout, owner);
         addItem(wrapper);
         return wrapper;
     }

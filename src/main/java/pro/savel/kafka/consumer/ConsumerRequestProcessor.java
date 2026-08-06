@@ -40,11 +40,12 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
 
     private static final Logger logger = LoggerFactory.getLogger(ConsumerRequestProcessor.class);
 
-    private final ConsumerProvider provider = new ConsumerProvider();
+    private final ConsumerProvider provider;
     private final BlockingTaskExecutor blockingTaskExecutor;
 
-    public ConsumerRequestProcessor(BlockingTaskExecutor blockingTaskExecutor) {
+    public ConsumerRequestProcessor(BlockingTaskExecutor blockingTaskExecutor, ConsumerProvider provider) {
         this.blockingTaskExecutor = blockingTaskExecutor;
+        this.provider = provider;
     }
 
     // region Overrides

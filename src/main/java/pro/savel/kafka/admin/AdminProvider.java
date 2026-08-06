@@ -14,16 +14,29 @@
 
 package pro.savel.kafka.admin;
 
+import org.apache.kafka.clients.admin.Admin;
 import pro.savel.kafka.common.ClientProvider;
 import pro.savel.kafka.common.exceptions.BadRequestException;
 import pro.savel.kafka.common.exceptions.NotFoundException;
 
 import java.util.Properties;
+import java.util.function.Function;
 
 public class AdminProvider extends ClientProvider<AdminWrapper> {
 
+    private final Function<Properties, Admin> clientFactory;
+
+    public AdminProvider() {
+        this(Admin::create);
+    }
+
+    public AdminProvider(Function<Properties, Admin> clientFactory) {
+        this.clientFactory = clientFactory;
+    }
+
     public AdminWrapper createAdmin(String name, Properties config, int expirationTimeout, String owner) {
-        var wrapper = new AdminWrapper(name, config, expirationTimeout, owner);
+        var admin = clientFactory.apply(config);
+        var wrapper = new AdminWrapper(name, config, admin, expirationTimeout, owner);
         addItem(wrapper);
         return wrapper;
     }

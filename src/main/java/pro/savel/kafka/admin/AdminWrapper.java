@@ -29,9 +29,9 @@ public class AdminWrapper extends ClientWrapper {
     private final Admin admin;
     private final String token = UUID.randomUUID().toString();
 
-    protected AdminWrapper(String name, Properties config, int expirationTimeout, String owner) {
+    AdminWrapper(String name, Properties config, Admin admin, int expirationTimeout, String owner) {
         super(UUID.randomUUID().toString(), name, config, expirationTimeout, owner);
-        admin = Admin.create(config);
+        this.admin = admin;
     }
 
     @Override

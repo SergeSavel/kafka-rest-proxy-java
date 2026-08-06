@@ -14,16 +14,34 @@
 
 package pro.savel.kafka.producer;
 
+import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.Producer;
+import org.apache.kafka.common.serialization.ByteArraySerializer;
 import pro.savel.kafka.common.ClientProvider;
 import pro.savel.kafka.common.exceptions.BadRequestException;
 import pro.savel.kafka.common.exceptions.NotFoundException;
 
 import java.util.Properties;
+import java.util.function.Function;
 
 public class ProducerProvider extends ClientProvider<ProducerWrapper> {
 
+    private final Function<Properties, Producer<byte[], byte[]>> clientFactory;
+
+    public ProducerProvider() {
+        this(config -> {
+            var serializer = new ByteArraySerializer();
+            return new KafkaProducer<>(config, serializer, serializer);
+        });
+    }
+
+    public ProducerProvider(Function<Properties, Producer<byte[], byte[]>> clientFactory) {
+        this.clientFactory = clientFactory;
+    }
+
     public ProducerWrapper createProducer(String name, Properties config, int expirationTimeout, String owner) {
-        var wrapper = new ProducerWrapper(name, config, expirationTimeout, owner);
+        var producer = clientFactory.apply(config);
+        var wrapper = new ProducerWrapper(name, config, producer, expirationTimeout, owner);
         addItem(wrapper);
         return wrapper;
     }
