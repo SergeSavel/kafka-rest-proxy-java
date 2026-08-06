@@ -26,12 +26,12 @@ HTTP Request
 
 ### Modules
 
-| Package    | Purpose                                                                                                                |
-|------------|------------------------------------------------------------------------------------------------------------------------|
-| `producer` | Producer lifecycle, send, partitions, transactions                                                                     |
+| Package    | Purpose                                                                                                                          |
+|------------|----------------------------------------------------------------------------------------------------------------------------------|
+| `producer` | Producer lifecycle, send, partitions, transactions                                                                               |
 | `consumer` | Consumer lifecycle, poll, commit, seek, seek-to-beginning, seek-to-end, subscribe, assign, position, offsets, partitions, topics |
-| `admin`    | Topics, configs, ACLs, groups, offsets, SCRAM, cluster                                                                 |
-| `common`   | Shared contracts, exceptions, HTTP utils, client lifecycle (`ClientProvider`, `ClientWrapper`, `BlockingTaskExecutor`) |
+| `admin`    | Topics, configs, ACLs, groups, offsets, SCRAM, cluster                                                                           |
+| `common`   | Shared contracts, exceptions, HTTP utils, client lifecycle (`ClientProvider`, `ClientWrapper`, `BlockingTaskExecutor`)           |
 
 ### Key patterns
 
