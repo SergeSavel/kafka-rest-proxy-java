@@ -41,6 +41,7 @@ HTTP Request
 - **Response classes** use static factory methods `of()` for mapping from Kafka types (replacing Mapper classes)
 - **`ClientProvider<T>`** manages instance lifecycle: creation, expiration (1s scheduled timer), removal. Shared by producer, consumer, admin
 - **`ClientWrapper`** wraps a Kafka client instance with id, token, owner, expiration timestamp
+- **`*Provider`** classes take an injectable client factory (`Function<Properties, Client>`, defaulting to the real Kafka client) and pass the built client into `*Wrapper`; `*RequestProcessor` takes its `*Provider` via constructor injection
 - **`HttpStatusException`** — base class for gateway-specific exceptions; each subclass defines its own HTTP status code, handled uniformly in `CommonErrors`
 
 ## Build & Run
