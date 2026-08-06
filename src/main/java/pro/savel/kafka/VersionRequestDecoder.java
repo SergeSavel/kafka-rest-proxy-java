@@ -65,8 +65,8 @@ public class VersionRequestDecoder extends ChannelInboundHandlerAdapter {
 
     private void decodeRoot(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException {
         if (httpRequest.method() == HttpMethod.GET) {
-            var pkg = VersionRequestDecoder.class.getPackage();
-            HttpUtils.writeOkAndClose(ctx, pkg.getImplementationVersion());
+            var version = VersionRequestDecoder.class.getPackage().getImplementationVersion();
+            HttpUtils.writeOkAndClose(ctx, version != null ? version : "unknown");
         } else {
             throw new BadRequestException("Unsupported HTTP method.");
         }
