@@ -246,34 +246,12 @@ The API is documented as an OpenAPI 3.1 specification in [`docs/api/openapi.yaml
 
 ## Instance Lifecycle
 
-Each `create` request returns a UUID **token** — proof of ownership. All subsequent operations on that instance require
+Each `create` request returns a string **token** — proof of ownership. All subsequent operations on that instance require
 the token.
 
 Instances auto-expire after `expirationTimeout` (configurable per instance, 1 second to 24 hours). The expiration timer
 is reset on every request to the instance (poll, send, seek, describe, etc.). Use `/touch` when you
 need to keep an instance alive without performing any operation.
-
-## Architecture
-
-```
-HTTP Request
-  → HttpServerCodec → HttpVersionHandler → ReadTimeoutHandler(300s) → WriteTimeoutHandler(300s)
-  → JsonRequestSizeLimitHandler(4MB JSON)
-  → HttpObjectAggregator(32MB)
-  → HttpRequestFlowControlHandler (one active request per connection)
-  → HealthRequestDecoder
-  → VersionRequestDecoder
-  → BasicAuthenticationHandler (optional)
-  → ProducerRequestDecoder → ConsumerRequestDecoder → AdminRequestDecoder
-  → DefaultRequestDecoder (404 fallback)
-  → ProducerResponseEncoder → ConsumerResponseEncoder → AdminResponseEncoder
-  → ProducerRequestProcessor → ConsumerRequestProcessor → AdminRequestProcessor
-  → DefaultInboundHandler
-```
-
-- **Producer/Consumer** blocking Kafka calls are offloaded to virtual threads via `BlockingTaskExecutor`
-- **Producer send** uses Kafka callback (non-blocking)
-- **Admin** uses `KafkaFuture.whenComplete()` callbacks (non-blocking)
 
 ## License
 
