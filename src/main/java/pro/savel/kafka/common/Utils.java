@@ -41,7 +41,8 @@ public abstract class Utils {
     public static String rootErrorMessage(Throwable throwable) {
         String result = null;
         while (throwable != null) {
-            result = throwable.getMessage();
+            if (throwable.getMessage() != null)
+                result = throwable.getMessage();
             throwable = throwable.getCause();
         }
         return result;

@@ -70,6 +70,40 @@ class UtilsTest {
 
 //endregion
 
+//region rootErrorMessage
+
+    @Test
+    void rootErrorMessage_nullThrowable_returnsNull() {
+        assertNull(Utils.rootErrorMessage(null));
+    }
+
+    @Test
+    void rootErrorMessage_singleMessage_returnsMessage() {
+        assertEquals("error", Utils.rootErrorMessage(new RuntimeException("error")));
+    }
+
+    @Test
+    void rootErrorMessage_chainedCauses_returnsDeepestMessage() {
+        var root = new RuntimeException("root cause");
+        var top = new RuntimeException("top", root);
+        assertEquals("root cause", Utils.rootErrorMessage(top));
+    }
+
+    @Test
+    void rootErrorMessage_deepestMessageNull_returnsLastNonNull() {
+        var root = new NullPointerException();
+        var top = new RuntimeException("top", root);
+        assertEquals("top", Utils.rootErrorMessage(top));
+    }
+
+    @Test
+    void rootErrorMessage_allNullMessages_returnsNull() {
+        var ex = new RuntimeException((String) null, new NullPointerException());
+        assertNull(Utils.rootErrorMessage(ex));
+    }
+
+//endregion
+
 //region combineConstraintViolationMessage (single)
 
     @Test
