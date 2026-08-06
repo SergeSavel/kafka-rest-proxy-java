@@ -73,6 +73,10 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
         provider.close();
     }
 
+    public void close(ShutdownDeadline deadline) {
+        provider.close(deadline);
+    }
+
     // endregion
 
     @SuppressWarnings("deprecation")

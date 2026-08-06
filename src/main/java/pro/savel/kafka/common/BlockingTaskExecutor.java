@@ -19,6 +19,7 @@ import io.netty.channel.ChannelHandlerContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.Duration;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
@@ -70,13 +71,14 @@ public class BlockingTaskExecutor implements AutoCloseable {
 
     @Override
     public void close() {
-        executor.shutdown();
+        close(ShutdownDeadline.after(Duration.ofSeconds(40)));
+    }
+
+    public void close(ShutdownDeadline deadline) {
+        executor.shutdownNow();
         try {
-            if (!executor.awaitTermination(30, TimeUnit.SECONDS)) {
-                executor.shutdownNow();
-                if (!executor.awaitTermination(10, TimeUnit.SECONDS))
-                    logger.warn("Failed to terminate blocking task executor.");
-            }
+            if (!executor.awaitTermination(deadline.remainingNanos(), TimeUnit.NANOSECONDS))
+                logger.warn("Failed to terminate blocking task executor before shutdown deadline.");
         } catch (InterruptedException e) {
             executor.shutdownNow();
             Thread.currentThread().interrupt();

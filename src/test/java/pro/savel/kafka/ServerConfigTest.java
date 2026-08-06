@@ -43,7 +43,7 @@ class ServerConfigTest {
         assertThrows(IllegalArgumentException.class, () -> config("0.0.0.0", 8086, 0, 1024, 300, 300, 32, 0));
         assertThrows(IllegalArgumentException.class, () -> config("0.0.0.0", 8086, 0, 1024, 300, 300, 4, 5));
         assertThrows(IllegalArgumentException.class, () -> new ServerConfig(
-                "0.0.0.0", 8086, 0, 1024, 300, 300, 32, 4, 0, true));
+                "0.0.0.0", 8086, 0, 1024, 300, 300, 32, 4, 64 * 1024, 0, true));
     }
 
     private static ServerConfig config(
@@ -65,6 +65,7 @@ class ServerConfigTest {
                 maxRequestBytes,
                 maxJsonRequestBytes,
                 64 * 1024,
+                60,
                 true);
     }
 }

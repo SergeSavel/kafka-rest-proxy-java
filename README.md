@@ -54,6 +54,7 @@ KAFKA_GATEWAY_OPTS="-Dhost=127.0.0.1 -Dport=9090" ./build/install/kafka-gateway/
 | `-Dnetty.maxRequestBytes`        | `33554432` | Maximum request body size                                     |
 | `-Dnetty.maxJsonRequestBytes`    | `4194304`  | Maximum JSON request body size                                |
 | `-Dnetty.responseChunkBytes`     | `65536`    | Chunk size for streamed consumer poll responses               |
+| `-Dshutdown.timeoutSeconds`      | `60`       | Common deadline for graceful shutdown                         |
 | `-Dnetty.epoll`                  | `true`     | Use native epoll on Linux when available                      |
 | `-Dclient.close.parallelism`     | `32`       | Maximum concurrent close operations per client type           |
 
@@ -75,7 +76,7 @@ The service runs as user `kafka-gateway` from `/opt/kafka-gateway/` with:
 
 - Default bind address and port configured via `KAFKA_GATEWAY_OPTS` (`-Dhost=127.0.0.1 -Dport=8086`)
 - `LimitNOFILE=65536`
-- `TimeoutStopSec=120` (graceful shutdown)
+- `TimeoutStopSec=120` (greater than the default 60-second application shutdown deadline)
 
 ### TLS
 

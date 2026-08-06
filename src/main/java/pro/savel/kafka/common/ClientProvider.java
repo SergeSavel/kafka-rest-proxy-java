@@ -18,6 +18,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import pro.savel.kafka.common.exceptions.NotFoundException;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.concurrent.CompletableFuture;
@@ -36,7 +37,7 @@ public abstract class ClientProvider<Wrapper extends ClientWrapper> implements A
     private static final int DEFAULT_CLOSE_PARALLELISM = 32;
     private static final int CLOSE_PARALLELISM = Math.max(1,
             Integer.getInteger("client.close.parallelism", DEFAULT_CLOSE_PARALLELISM));
-    private static final long RETIRER_SHUTDOWN_TIMEOUT_SECONDS = 5;
+    private static final Duration DEFAULT_SHUTDOWN_TIMEOUT = Duration.ofSeconds(35);
 
     protected final ConcurrentHashMap<String, Wrapper> wrappers = new ConcurrentHashMap<>();
     private final ExecutorService closeExecutor = Executors.newVirtualThreadPerTaskExecutor();
@@ -59,8 +60,12 @@ public abstract class ClientProvider<Wrapper extends ClientWrapper> implements A
 
     @Override
     public void close() {
+        close(ShutdownDeadline.after(DEFAULT_SHUTDOWN_TIMEOUT));
+    }
+
+    public void close(ShutdownDeadline deadline) {
         retirer.shutdownNow();
-        awaitRetirerTermination();
+        awaitRetirerTermination(deadline);
 
         var detachedWrappers = new ArrayList<Wrapper>(wrappers.size());
         wrappers.forEach((id, wrapper) -> {
@@ -71,7 +76,7 @@ public abstract class ClientProvider<Wrapper extends ClientWrapper> implements A
 
         closeExecutor.shutdown();
         try {
-            if (!closeExecutor.awaitTermination(ClientWrapper.CLOSE_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS)) {
+            if (!closeExecutor.awaitTermination(deadline.remainingNanos(), TimeUnit.NANOSECONDS)) {
                 logger.warn("Timed out waiting for Kafka clients to close.");
                 closeExecutor.shutdownNow();
             }
@@ -81,9 +86,9 @@ public abstract class ClientProvider<Wrapper extends ClientWrapper> implements A
         }
     }
 
-    private void awaitRetirerTermination() {
+    private void awaitRetirerTermination(ShutdownDeadline deadline) {
         try {
-            if (!retirer.awaitTermination(RETIRER_SHUTDOWN_TIMEOUT_SECONDS, TimeUnit.SECONDS))
+            if (!retirer.awaitTermination(deadline.remainingNanos(), TimeUnit.NANOSECONDS))
                 logger.warn("Failed to terminate client retirer.");
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();

@@ -27,7 +27,7 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.concurrent.CountDownLatch;
+import java.time.Duration;
 
 public class Application
 {
@@ -39,9 +39,11 @@ public class Application
         var transport = selectTransport(config.epollEnabled());
         var bossGroup = new MultiThreadIoEventLoopGroup(1, transport.ioHandlerFactory());
         var workerGroup = new MultiThreadIoEventLoopGroup(config.workerThreads(), transport.ioHandlerFactory());
-        var shutdownLatch = new CountDownLatch(1);
+        var initializer = new ServerInitializer(config);
+        ServerLifecycle lifecycle = null;
+        Thread shutdownHook = null;
 
-        try (var initializer = new ServerInitializer(config))
+        try
         {
             initializer.initialize();
 
@@ -56,24 +58,26 @@ public class Application
             logger.info("Server started on {}:{} using {} transport and {} worker threads.",
                     config.host(), config.port(), transport.name(), workerGroup.executorCount());
 
-            Runtime.getRuntime().addShutdownHook(new Thread(() ->
-            {
-                logger.info("Server is shutting down...");
-                bossGroup.shutdownGracefully();
-                workerGroup.shutdownGracefully();
-                bossGroup.terminationFuture().syncUninterruptibly();
-                workerGroup.terminationFuture().syncUninterruptibly();
-                logger.info("Shutdown completed.");
-                shutdownLatch.countDown();
-            }));
-
+            lifecycle = new ServerLifecycle(channel, initializer, bossGroup, workerGroup,
+                    Duration.ofSeconds(config.shutdownTimeoutSeconds()));
+            var lifecycleForHook = lifecycle;
+            shutdownHook = new Thread(lifecycleForHook::close, "kafka-gateway-shutdown");
+            Runtime.getRuntime().addShutdownHook(shutdownHook);
             channel.closeFuture().sync();
-            shutdownLatch.await();
         }
         finally
         {
-            bossGroup.shutdownGracefully();
-            workerGroup.shutdownGracefully();
+            if (lifecycle == null)
+                lifecycle = new ServerLifecycle(null, initializer, bossGroup, workerGroup,
+                        Duration.ofSeconds(config.shutdownTimeoutSeconds()));
+            lifecycle.close();
+            if (shutdownHook != null) {
+                try {
+                    Runtime.getRuntime().removeShutdownHook(shutdownHook);
+                } catch (IllegalStateException ignored) {
+                    // JVM shutdown is already in progress.
+                }
+            }
         }
     }
 

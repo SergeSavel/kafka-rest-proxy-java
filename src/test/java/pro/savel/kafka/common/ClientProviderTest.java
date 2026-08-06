@@ -18,6 +18,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import pro.savel.kafka.common.exceptions.NotFoundException;
 
+import java.time.Duration;
 import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -78,6 +79,34 @@ class ClientProviderTest {
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }
+            super.close();
+        }
+    }
+
+    static class UninterruptibleBlockingTestWrapper extends TestWrapper {
+        private final CountDownLatch closeStarted;
+        private final CountDownLatch allowClose;
+
+        UninterruptibleBlockingTestWrapper(String id, CountDownLatch closeStarted, CountDownLatch allowClose) {
+            super(id, id, 60_000);
+            this.closeStarted = closeStarted;
+            this.allowClose = allowClose;
+        }
+
+        @Override
+        public void close() {
+            closeStarted.countDown();
+            var interrupted = false;
+            while (true) {
+                try {
+                    allowClose.await();
+                    break;
+                } catch (InterruptedException e) {
+                    interrupted = true;
+                }
+            }
+            if (interrupted)
+                Thread.currentThread().interrupt();
             super.close();
         }
     }
@@ -157,7 +186,7 @@ class ClientProviderTest {
         provider.addItem(good);
         provider.addItem(bad);
 
-        assertDoesNotThrow(provider::close);
+        assertDoesNotThrow(() -> provider.close());
         assertTrue(good.closed);
     }
 
@@ -176,6 +205,23 @@ class ClientProviderTest {
         }
         closeThread.join(1_000);
         assertFalse(closeThread.isAlive());
+    }
+
+    @Test
+    void close_returnsAtDeadlineWhenWrapperIgnoresInterruption() throws InterruptedException {
+        var closeStarted = new CountDownLatch(1);
+        var allowClose = new CountDownLatch(1);
+        var wrapper = new UninterruptibleBlockingTestWrapper("a", closeStarted, allowClose);
+        provider.addItem(wrapper);
+
+        var closeThread = Thread.startVirtualThread(
+                () -> provider.close(ShutdownDeadline.after(Duration.ofMillis(100))));
+        assertTrue(closeStarted.await(1, TimeUnit.SECONDS));
+        closeThread.join(1_000);
+
+        assertFalse(closeThread.isAlive());
+        allowClose.countDown();
+        assertTrue(wrapper.awaitClosed());
     }
 
 //endregion

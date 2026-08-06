@@ -24,6 +24,7 @@ record ServerConfig(
         int maxRequestBytes,
         int maxJsonRequestBytes,
         int responseChunkBytes,
+        int shutdownTimeoutSeconds,
         boolean epollEnabled) {
 
     private static final int DEFAULT_MAX_REQUEST_BYTES = 32 * 1024 * 1024;
@@ -42,6 +43,7 @@ record ServerConfig(
         requirePositive("netty.maxRequestBytes", maxRequestBytes);
         requirePositive("netty.maxJsonRequestBytes", maxJsonRequestBytes);
         requirePositive("netty.responseChunkBytes", responseChunkBytes);
+        requirePositive("shutdown.timeoutSeconds", shutdownTimeoutSeconds);
         if (maxJsonRequestBytes > maxRequestBytes)
             throw new IllegalArgumentException("netty.maxJsonRequestBytes must not exceed netty.maxRequestBytes");
     }
@@ -57,6 +59,7 @@ record ServerConfig(
                 Integer.getInteger("netty.maxRequestBytes", DEFAULT_MAX_REQUEST_BYTES),
                 Integer.getInteger("netty.maxJsonRequestBytes", DEFAULT_MAX_JSON_REQUEST_BYTES),
                 Integer.getInteger("netty.responseChunkBytes", 64 * 1024),
+                Integer.getInteger("shutdown.timeoutSeconds", 60),
                 Boolean.parseBoolean(System.getProperty("netty.epoll", "true")));
     }
 

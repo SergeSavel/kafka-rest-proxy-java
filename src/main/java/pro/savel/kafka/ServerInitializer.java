@@ -19,20 +19,25 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.group.DefaultChannelGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.timeout.ReadTimeoutHandler;
 import io.netty.handler.timeout.WriteTimeoutHandler;
 import io.netty.handler.stream.ChunkedWriteHandler;
+import io.netty.util.concurrent.GlobalEventExecutor;
 import jakarta.validation.Validation;
 import jakarta.validation.ValidatorFactory;
 import org.hibernate.validator.messageinterpolation.ParameterMessageInterpolator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import pro.savel.kafka.admin.AdminProvider;
 import pro.savel.kafka.admin.AdminRequestDecoder;
 import pro.savel.kafka.admin.AdminRequestProcessor;
 import pro.savel.kafka.admin.AdminResponseEncoder;
 import pro.savel.kafka.common.BlockingTaskExecutor;
+import pro.savel.kafka.common.ShutdownDeadline;
 import pro.savel.kafka.consumer.ConsumerProvider;
 import pro.savel.kafka.consumer.ConsumerRequestDecoder;
 import pro.savel.kafka.consumer.ConsumerRequestProcessor;
@@ -43,11 +48,12 @@ import pro.savel.kafka.producer.ProducerRequestProcessor;
 import pro.savel.kafka.producer.ProducerResponseEncoder;
 
 import java.util.concurrent.Executors;
+import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
 class ServerInitializer extends ChannelInitializer<SocketChannel> implements AutoCloseable {
 
-    private static final long CLIENT_SHUTDOWN_TIMEOUT_SECONDS = 40;
+    private static final Logger logger = LoggerFactory.getLogger(ServerInitializer.class);
 
     private static final ObjectMapper objectMapper = new ObjectMapper()
             .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, true)
@@ -82,6 +88,8 @@ class ServerInitializer extends ChannelInitializer<SocketChannel> implements Aut
     private final AdminResponseEncoder adminResponseEncoder = new AdminResponseEncoder(objectMapper);
 
     private final DefaultInboundHandler defaultInboundHandler = new DefaultInboundHandler();
+    private final DefaultChannelGroup channels =
+            new DefaultChannelGroup("http-channels", GlobalEventExecutor.INSTANCE, true);
     private final ServerConfig config;
 
     ServerInitializer(ServerConfig config) {
@@ -95,6 +103,7 @@ class ServerInitializer extends ChannelInitializer<SocketChannel> implements Aut
 
     @Override
     protected void initChannel(SocketChannel channel) {
+        channels.add(channel);
 
         ChannelPipeline pipeline = channel.pipeline();
         pipeline.addLast(new HttpServerCodec());
@@ -123,16 +132,26 @@ class ServerInitializer extends ChannelInitializer<SocketChannel> implements Aut
 
     @Override
     public void close() {
-        blockingTaskExecutor.close();
+        close(ShutdownDeadline.after(Duration.ofSeconds(config.shutdownTimeoutSeconds())));
+    }
+
+    void close(ShutdownDeadline deadline) {
+        var channelCloseFuture = channels.close();
+        if (!channelCloseFuture.awaitUninterruptibly(deadline.remainingNanos(), TimeUnit.NANOSECONDS))
+            logger.warn("Timed out waiting for HTTP channels to close.");
+
+        blockingTaskExecutor.close(deadline);
 
         var closeExecutor = Executors.newVirtualThreadPerTaskExecutor();
-        closeExecutor.submit(producerRequestProcessor::close);
-        closeExecutor.submit(consumerRequestProcessor::close);
-        closeExecutor.submit(adminRequestProcessor::close);
+        closeExecutor.submit(() -> producerRequestProcessor.close(deadline));
+        closeExecutor.submit(() -> consumerRequestProcessor.close(deadline));
+        closeExecutor.submit(() -> adminRequestProcessor.close(deadline));
         closeExecutor.shutdown();
         try {
-            if (!closeExecutor.awaitTermination(CLIENT_SHUTDOWN_TIMEOUT_SECONDS, TimeUnit.SECONDS))
+            if (!closeExecutor.awaitTermination(deadline.remainingNanos(), TimeUnit.NANOSECONDS)) {
+                logger.warn("Timed out waiting for Kafka client providers to close.");
                 closeExecutor.shutdownNow();
+            }
         } catch (InterruptedException e) {
             closeExecutor.shutdownNow();
             Thread.currentThread().interrupt();
