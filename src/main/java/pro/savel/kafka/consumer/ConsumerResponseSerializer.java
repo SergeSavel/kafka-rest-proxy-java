@@ -95,7 +95,8 @@ public class ConsumerResponseSerializer {
         generator.writeNumberField("offset", message.getOffset());
         generator.writeFieldName("headers");
         if (message.getHeaders() == null) {
-            generator.writeNull();
+            generator.writeStartArray();
+            generator.writeEndArray();
         } else {
             generator.writeStartArray();
             for (var header : message.getHeaders()) {
