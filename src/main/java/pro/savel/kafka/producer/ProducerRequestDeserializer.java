@@ -33,7 +33,7 @@ public class ProducerRequestDeserializer {
         if (version == 1)
             return deserializeBinarySendV1(buf);
         else
-            throw new IllegalArgumentException("Unsupported version: " + version);
+            throw new BadRequestException("Unsupported version: " + version);
     }
 
     private static ProducerSendRequest deserializeBinarySendV1(ByteBuf buf) throws BadRequestException {
@@ -102,6 +102,7 @@ public class ProducerRequestDeserializer {
     }
 
     private static short readPositiveShort(ByteBuf buf) throws BadRequestException {
+        requireReadable(buf, Short.BYTES);
         var value = buf.readShort();
         if (value < 0)
             throw new BadRequestException("Illegal value in binary content");
@@ -109,6 +110,7 @@ public class ProducerRequestDeserializer {
     }
 
     private static int readPositiveInt(ByteBuf buf) throws BadRequestException {
+        requireReadable(buf, Integer.BYTES);
         var value = buf.readInt();
         if (value < 0)
             throw new BadRequestException("Illegal value in binary content");
@@ -116,11 +118,17 @@ public class ProducerRequestDeserializer {
     }
 
     private static boolean readBoolean(ByteBuf buf) throws BadRequestException {
+        requireReadable(buf, Byte.BYTES);
         var value = buf.readByte();
         if (value == 0)
             return false;
         else if (value == 1)
             return true;
         throw new BadRequestException("Illegal value in binary content");
+    }
+
+    private static void requireReadable(ByteBuf buf, int bytes) throws BadRequestException {
+        if (buf.readableBytes() < bytes)
+            throw new BadRequestException("Binary content length exceeds available data");
     }
 }
