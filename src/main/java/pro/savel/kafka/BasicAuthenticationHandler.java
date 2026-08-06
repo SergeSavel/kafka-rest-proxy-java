@@ -116,7 +116,7 @@ public class BasicAuthenticationHandler extends ChannelInboundHandlerAdapter {
             if (authHeader == null)
                 throw new UnauthenticatedException("Missing Authorization header.");
 
-            if (!authHeader.startsWith("Basic "))
+            if (!authHeader.regionMatches(true, 0, "Basic ", 0, 6))
                 throw new UnauthenticatedException("Invalid Authorization header.");
 
             var base64Credentials = authHeader.substring(6);

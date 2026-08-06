@@ -206,6 +206,24 @@ class BasicAuthenticationHandlerTest {
     }
 
     @Test
+    void authenticate_lowercaseScheme_passesThrough(@TempDir Path tempDir) throws IOException {
+        var usersFile = tempDir.resolve("users.json");
+        Files.writeString(usersFile, """
+                [{"username":"admin","password":"secret"}]
+                """);
+
+        var handler = new BasicAuthenticationHandler(objectMapper);
+        handler.initialize(usersFile.toString());
+
+        var channel = new EmbeddedChannel(handler, new ChannelInboundHandlerAdapter());
+        var request = getRequest();
+        var encoded = Base64.getEncoder().encodeToString("admin:secret".getBytes(StandardCharsets.UTF_8));
+        request.headers().set(HttpHeaderNames.AUTHORIZATION, "basic " + encoded);
+        assertTrue(channel.writeInbound(request));
+        channel.close();
+    }
+
+    @Test
     void authenticate_noColonInCredentials_returns401(@TempDir Path tempDir) throws IOException {
         var usersFile = tempDir.resolve("users.json");
         Files.writeString(usersFile, """
