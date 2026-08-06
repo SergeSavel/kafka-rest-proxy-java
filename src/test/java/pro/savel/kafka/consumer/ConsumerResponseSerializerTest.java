@@ -210,6 +210,30 @@ class ConsumerResponseSerializerTest {
     }
 
     @Test
+    void serializeBinary_nullHeaders_writesZeroHeaderCountInsteadOfThrowing() throws Exception {
+        var record = createRecord("t", 0, 0L, 0L, null, null, new RecordHeaders());
+        var response = ConsumerPollResponse.of(createRecords(List.of(record)));
+        var message = response.get(0);
+        var headersField = ConsumerPollResponse.Message.class.getDeclaredField("headers");
+        headersField.setAccessible(true);
+        headersField.set(message, null);
+
+        var buf = ConsumerResponseSerializer.serializeBinary(allocator, response);
+        assertNotNull(buf);
+
+        buf.readShort();   // version
+        buf.readInt();      // size
+        buf.readInt();      // topic len
+        buf.skipBytes(1);   // topic
+        buf.readInt();      // partition
+        buf.readLong();     // offset
+        buf.readLong();     // timestamp
+        assertEquals(0, buf.readInt());  // headers count, despite headers being null
+
+        buf.release();
+    }
+
+    @Test
     void serializeBinary_unsupportedType_throwsException() {
         ConsumerResponse unsupported = new ConsumerResponse() {};
         assertThrows(IllegalArgumentException.class,

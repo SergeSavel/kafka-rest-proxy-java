@@ -113,14 +113,17 @@ public class ConsumerResponseSerializer {
                 buf.writeInt(message.getPartition());
                 buf.writeLong(message.getOffset());
                 buf.writeLong(message.getTimestamp());
-                buf.writeInt(message.getHeaders().size());
-                for (ConsumerPollResponse.Message.Header header : message.getHeaders()) {
-                    writeBytes(buf, header.getKey());
-                    if (header.getValue() == null)
-                        buf.writeByte(1); // is null
-                    else {
-                        buf.writeByte(0); // is not null
-                        writeBytes(buf, header.getValue());
+                var headers = message.getHeaders();
+                buf.writeInt(headers == null ? 0 : headers.size());
+                if (headers != null) {
+                    for (ConsumerPollResponse.Message.Header header : headers) {
+                        writeBytes(buf, header.getKey());
+                        if (header.getValue() == null)
+                            buf.writeByte(1); // is null
+                        else {
+                            buf.writeByte(0); // is not null
+                            writeBytes(buf, header.getValue());
+                        }
                     }
                 }
                 if (message.getKey() == null)
@@ -159,10 +162,12 @@ public class ConsumerResponseSerializer {
         for (var message : response) {
             capacity += serializedStringSize(message.getTopic())
                     + Integer.BYTES + Long.BYTES + Long.BYTES + Integer.BYTES;
-            for (var header : message.getHeaders()) {
-                capacity += serializedStringSize(header.getKey()) + Byte.BYTES;
-                if (header.getValue() != null)
-                    capacity += serializedBytesSize(header.getValue());
+            if (message.getHeaders() != null) {
+                for (var header : message.getHeaders()) {
+                    capacity += serializedStringSize(header.getKey()) + Byte.BYTES;
+                    if (header.getValue() != null)
+                        capacity += serializedBytesSize(header.getValue());
+                }
             }
             capacity += Byte.BYTES;
             if (message.getKey() != null)
