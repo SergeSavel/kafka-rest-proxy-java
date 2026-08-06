@@ -114,6 +114,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AdminListResponse'
+              example:
+                - id: 550e8400-e29b-41d4-a716-446655440000
+                  name: reporting-admin
+                  owner: null
+                  username: null
+                  expiresAt: 1754572800000
         '401': {$ref: '#/components/responses/Unauthorized'}
         '500': {$ref: '#/components/responses/InternalServerError'}
 
@@ -131,12 +137,20 @@ paths:
         content:
           application/json:
             schema: {$ref: '#/components/schemas/AdminCreateRequest'}
+            example:
+              name: reporting-admin
+              config:
+                bootstrap.servers: kafka-1:9092,kafka-2:9092
+              expirationTimeout: 600000
       responses:
         '201':
           description: Instance created
           content:
             application/json:
               schema: {$ref: '#/components/schemas/AdminCreateResponse'}
+              example:
+                id: 550e8400-e29b-41d4-a716-446655440000
+                token: 9f2c1b3a-7d4e-4e8f-b6a1-2d5c3e9f8a7b
         '400': {$ref: '#/components/responses/BadRequest'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '500': {$ref: '#/components/responses/InternalServerError'}
@@ -177,12 +191,21 @@ paths:
         content:
           application/json:
             schema: {$ref: '#/components/schemas/AdminListTopicsRequest'}
+            example:
+              adminId: 550e8400-e29b-41d4-a716-446655440000
+              token: 9f2c1b3a-7d4e-4e8f-b6a1-2d5c3e9f8a7b
+              includeInternal: false
+              pattern: orders.*
       responses:
         '200':
           description: Topic listings
           content:
             application/json:
               schema: {$ref: '#/components/schemas/AdminListTopicsResponse'}
+              example:
+                - id: AAGmXYcZQpGqkKp0m9VUzQ
+                  name: orders
+                  internal: false
         '400': {$ref: '#/components/responses/BadRequest'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '404': {$ref: '#/components/responses/NotFound'}
@@ -199,12 +222,28 @@ paths:
         content:
           application/json:
             schema: {$ref: '#/components/schemas/AdminDescribeTopicRequest'}
+            example:
+              adminId: 550e8400-e29b-41d4-a716-446655440000
+              token: 9f2c1b3a-7d4e-4e8f-b6a1-2d5c3e9f8a7b
+              topicName: orders
       responses:
         '200':
           description: Topic description
           content:
             application/json:
               schema: {$ref: '#/components/schemas/AdminDescribeTopicResponse'}
+              example:
+                id: AAGmXYcZQpGqkKp0m9VUzQ
+                name: orders
+                internal: false
+                authorizedOperations: null
+                partitions:
+                  - partition: 0
+                    leader: {id: 1, host: kafka-1, port: 9092, rack: null, fenced: false}
+                    replicas:
+                      - {id: 1, host: kafka-1, port: 9092, rack: null, fenced: false}
+                      - {id: 2, host: kafka-2, port: 9092, rack: null, fenced: false}
+                    isr: [1, 2]
         '400': {$ref: '#/components/responses/BadRequest'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '404': {$ref: '#/components/responses/NotFound'}
@@ -248,12 +287,29 @@ paths:
         content:
           application/json:
             schema: {$ref: '#/components/schemas/AdminCreateTopicsRequest'}
+            example:
+              adminId: 550e8400-e29b-41d4-a716-446655440000
+              token: 9f2c1b3a-7d4e-4e8f-b6a1-2d5c3e9f8a7b
+              topics:
+                - topicName: orders
+                  numPartitions: 3
+                  replicationFactor: 2
+                - topicName: payments
       responses:
         '200':
           description: Per-topic creation results
           content:
             application/json:
               schema: {$ref: '#/components/schemas/AdminCreateTopicsResponse'}
+              example:
+                - topicName: orders
+                  success: true
+                  topicId: AAGmXYcZQpGqkKp0m9VUzQ
+                  numPartitions: 3
+                  replicationFactor: 2
+                - topicName: payments
+                  success: false
+                  errorMessage: Topic 'payments' already exists.
         '400': {$ref: '#/components/responses/BadRequest'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '404': {$ref: '#/components/responses/NotFound'}
@@ -295,12 +351,22 @@ paths:
         content:
           application/json:
             schema: {$ref: '#/components/schemas/AdminDeleteTopicsRequest'}
+            example:
+              adminId: 550e8400-e29b-41d4-a716-446655440000
+              token: 9f2c1b3a-7d4e-4e8f-b6a1-2d5c3e9f8a7b
+              topicNames: [legacy-orders, legacy-payments]
       responses:
         '200':
           description: Per-topic deletion results
           content:
             application/json:
               schema: {$ref: '#/components/schemas/AdminDeleteTopicsResponse'}
+              example:
+                - topicName: legacy-orders
+                  success: true
+                - topicName: legacy-payments
+                  success: false
+                  errorMessage: Topic 'legacy-payments' does not exist.
         '400': {$ref: '#/components/responses/BadRequest'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '404': {$ref: '#/components/responses/NotFound'}
@@ -687,12 +753,22 @@ paths:
         content:
           application/json:
             schema: {$ref: '#/components/schemas/AdminListConsumerGroupOffsetsRequest'}
+            example:
+              adminId: 550e8400-e29b-41d4-a716-446655440000
+              token: 9f2c1b3a-7d4e-4e8f-b6a1-2d5c3e9f8a7b
+              groupId: orders-group
       responses:
         '200':
           description: Committed offsets
           content:
             application/json:
               schema: {$ref: '#/components/schemas/AdminListConsumerGroupOffsetsResponse'}
+              example:
+                - topic: orders
+                  partition: 0
+                  offset: 1542
+                  leaderEpoch: 3
+                  metadata: ""
         '400': {$ref: '#/components/responses/BadRequest'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '404': {$ref: '#/components/responses/NotFound'}
@@ -954,6 +1030,12 @@ paths:
           content:
             application/json:
               schema: {$ref: '#/components/schemas/ProducerListResponse'}
+              example:
+                - id: 6ba7b810-9dad-11d1-80b4-00c04fd430c8
+                  name: orders-producer
+                  owner: null
+                  username: null
+                  expiresAt: 1754572800000
         '401': {$ref: '#/components/responses/Unauthorized'}
         '500': {$ref: '#/components/responses/InternalServerError'}
 
@@ -971,12 +1053,21 @@ paths:
         content:
           application/json:
             schema: {$ref: '#/components/schemas/ProducerCreateRequest'}
+            example:
+              name: orders-producer
+              config:
+                bootstrap.servers: kafka-1:9092,kafka-2:9092
+                acks: all
+              expirationTimeout: 600000
       responses:
         '201':
           description: Instance created
           content:
             application/json:
               schema: {$ref: '#/components/schemas/ProducerCreateResponse'}
+              example:
+                id: 6ba7b810-9dad-11d1-80b4-00c04fd430c8
+                token: f47ac10b-58cc-4372-a567-0e02b2c3d479
         '400': {$ref: '#/components/responses/BadRequest'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '500': {$ref: '#/components/responses/InternalServerError'}
@@ -1036,6 +1127,15 @@ paths:
         content:
           application/json:
             schema: {$ref: '#/components/schemas/ProducerSendStringRequest'}
+            example:
+              producerId: 6ba7b810-9dad-11d1-80b4-00c04fd430c8
+              token: f47ac10b-58cc-4372-a567-0e02b2c3d479
+              topic: orders
+              partition: 0
+              headers:
+                source: order-service
+              key: order-1001
+              value: '{"orderId":1001,"total":59.90}'
           application/octet-stream:
             schema:
               type: string
@@ -1067,6 +1167,13 @@ paths:
           content:
             application/json:
               schema: {$ref: '#/components/schemas/ProducerSendResponse'}
+              example:
+                topic: orders
+                partition: 0
+                offset: 1542
+                timestamp: 1754572345123
+                serializedKeySize: 10
+                serializedValueSize: 31
             application/octet-stream:
               schema:
                 type: string
@@ -1152,6 +1259,12 @@ paths:
           content:
             application/json:
               schema: {$ref: '#/components/schemas/ConsumerListResponse'}
+              example:
+                - id: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+                  name: orders-consumer
+                  owner: null
+                  username: null
+                  expiresAt: 1754572800000
         '401': {$ref: '#/components/responses/Unauthorized'}
         '500': {$ref: '#/components/responses/InternalServerError'}
 
@@ -1172,12 +1285,22 @@ paths:
         content:
           application/json:
             schema: {$ref: '#/components/schemas/ConsumerCreateRequest'}
+            example:
+              name: orders-consumer
+              config:
+                bootstrap.servers: kafka-1:9092,kafka-2:9092
+                group.id: orders-group
+                auto.offset.reset: earliest
+              expirationTimeout: 600000
       responses:
         '201':
           description: Instance created
           content:
             application/json:
               schema: {$ref: '#/components/schemas/ConsumerCreateResponse'}
+              example:
+                id: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+                token: 1b4e28ba-2fa1-11d2-883f-0016d3cca427
         '400': {$ref: '#/components/responses/BadRequest'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '500': {$ref: '#/components/responses/InternalServerError'}
@@ -1246,12 +1369,26 @@ paths:
         content:
           application/json:
             schema: {$ref: '#/components/schemas/ConsumerPollRequest'}
+            example:
+              consumerId: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+              token: 1b4e28ba-2fa1-11d2-883f-0016d3cca427
+              timeout: 1000
       responses:
         '200':
           description: Polled messages
           content:
             application/json:
               schema: {$ref: '#/components/schemas/ConsumerPollStringResponse'}
+              example:
+                - timestamp: 1754572345123
+                  topic: orders
+                  partition: 0
+                  offset: 1542
+                  headers:
+                    - key: source
+                      value: order-service
+                  key: order-1001
+                  value: '{"orderId":1001,"total":59.90}'
             application/octet-stream:
               schema:
                 type: string
@@ -1511,6 +1648,15 @@ paths:
           content:
             application/json:
               schema: {$ref: '#/components/schemas/ConsumerCommittedResponse'}
+              example:
+                - topic: orders
+                  offsets:
+                    - partition: 0
+                      offset: 1542
+                      metadata: ""
+                    - partition: 1
+                      offset: null
+                      metadata: null
         '400': {$ref: '#/components/responses/BadRequest'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '404': {$ref: '#/components/responses/NotFound'}
@@ -1602,36 +1748,63 @@ components:
       content:
         application/json:
           schema: {$ref: '#/components/schemas/AdminInstanceRef'}
+          example:
+            adminId: 550e8400-e29b-41d4-a716-446655440000
+            token: 9f2c1b3a-7d4e-4e8f-b6a1-2d5c3e9f8a7b
     AdminGroupIdRequest:
       required: true
       content:
         application/json:
           schema: {$ref: '#/components/schemas/AdminGroupIdRequest'}
+          example:
+            adminId: 550e8400-e29b-41d4-a716-446655440000
+            token: 9f2c1b3a-7d4e-4e8f-b6a1-2d5c3e9f8a7b
+            groupId: orders-group
     AdminGroupIdsRequest:
       required: true
       content:
         application/json:
           schema: {$ref: '#/components/schemas/AdminGroupIdsRequest'}
+          example:
+            adminId: 550e8400-e29b-41d4-a716-446655440000
+            token: 9f2c1b3a-7d4e-4e8f-b6a1-2d5c3e9f8a7b
+            groupIds: [orders-group, billing-group]
     AdminListOffsetsRequest:
       required: true
       content:
         application/json:
           schema: {$ref: '#/components/schemas/AdminListOffsetsRequest'}
+          example:
+            adminId: 550e8400-e29b-41d4-a716-446655440000
+            token: 9f2c1b3a-7d4e-4e8f-b6a1-2d5c3e9f8a7b
+            partitions:
+              - {topic: orders, partition: 0}
     ProducerInstanceRef:
       required: true
       content:
         application/json:
           schema: {$ref: '#/components/schemas/ProducerInstanceRef'}
+          example:
+            producerId: 6ba7b810-9dad-11d1-80b4-00c04fd430c8
+            token: f47ac10b-58cc-4372-a567-0e02b2c3d479
     ConsumerInstanceRef:
       required: true
       content:
         application/json:
           schema: {$ref: '#/components/schemas/ConsumerInstanceRef'}
+          example:
+            consumerId: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+            token: 1b4e28ba-2fa1-11d2-883f-0016d3cca427
     ConsumerPartitionsRequest:
       required: true
       content:
         application/json:
           schema: {$ref: '#/components/schemas/ConsumerPartitionsRequest'}
+          example:
+            consumerId: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+            token: 1b4e28ba-2fa1-11d2-883f-0016d3cca427
+            partitions:
+              - {topic: orders, partition: 0}
 
   schemas:
     ErrorMessage:
