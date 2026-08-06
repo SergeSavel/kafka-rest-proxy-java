@@ -56,7 +56,11 @@ distributions {
         contents {
             from("LICENSE")
             from("NOTICE")
+            from("README.md")
             from("kafka-gateway.service")
+            from("docs") {
+                into("docs")
+            }
         }
     }
 }
