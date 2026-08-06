@@ -1042,7 +1042,8 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
         var request = (AdminListOffsetsRequest) requestBearer.request();
         var admin = getAdmin(request.getAdminId(), request.getToken());
         var topicPartitionOffsets = request.getPartitions().stream()
-                .collect(Collectors.toMap(CommonRequestMapper::mapTopicPartition, topicPartition -> offsetSpec));
+                .collect(Collectors.toMap(CommonRequestMapper::mapTopicPartition, topicPartition -> offsetSpec,
+                        (existing, duplicate) -> existing));
         var options = new ListOffsetsOptions();
         if (request.getIsolationLevel() != null)
             try {

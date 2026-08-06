@@ -939,6 +939,29 @@ class AdminRequestProcessorTest {
     }
 
     @Test
+    void processListOffsets_duplicatePartitions_areDeduplicated() {
+        var wrapper = addWrapper();
+        var admin = wrapper.getAdmin();
+        var result = mock(ListOffsetsResult.class);
+        var tp = new org.apache.kafka.common.TopicPartition("topic-a", 0);
+        var info = new ListOffsetsResult.ListOffsetsResultInfo(0L, -1L, java.util.Optional.empty());
+        when(result.all()).thenReturn(KafkaFuture.completedFuture(Map.of(tp, info)));
+        when(admin.listOffsets(anyMap(), any(ListOffsetsOptions.class))).thenReturn(result);
+
+        var request = new AdminListEarliestOffsetsRequest();
+        request.setAdminId(wrapper.getId());
+        request.setToken(wrapper.getToken());
+        request.setPartitions(List.of(partition("topic-a", 0), partition("topic-a", 0)));
+
+        channel.writeInbound(bearer(request));
+
+        AdminResponseBearer response = channel.readOutbound();
+        assertEquals(HttpResponseStatus.OK, response.getStatus());
+        var body = (AdminListOffsetsResponse) response.getResponse();
+        assertEquals(1, body.size());
+    }
+
+    @Test
     void processListTimestampOffsets_invalidIsolationLevel_returnsBadRequest() {
         var wrapper = addWrapper();
 
