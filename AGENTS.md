@@ -38,7 +38,7 @@ HTTP Request
 - **Decoders** parse JSON/binary requests into typed Request DTOs, pass via `RequestBearer`
 - **Processors** handle business logic; producer/consumer use `BlockingTaskExecutor` (virtual threads) for blocking Kafka calls; producer `send()` uses Kafka callback (non-blocking); admin uses `KafkaFuture.whenComplete()` callbacks (non-blocking)
 - **Encoders** serialize Response DTOs to JSON/binary HTTP responses
-- **Response classes** use static factory methods `of()` for mapping from Kafka types (replacing Mapper classes)
+- **Response classes** use static factory methods `of()` for mapping from Kafka types
 - **`ClientProvider<T>`** manages instance lifecycle: creation, expiration (1s scheduled timer), removal. Shared by producer, consumer, admin
 - **`ClientWrapper`** wraps a Kafka client instance with id, token, owner, expiration timestamp
 - **`*Provider`** classes take an injectable client factory (`Function<Properties, Client>`, defaulting to the real Kafka client) and pass the built client into `*Wrapper`; `*RequestProcessor` takes its `*Provider` via constructor injection
@@ -79,7 +79,7 @@ These are intentional design choices — do not flag as issues:
 
 - **TLS via NGINX** — app is LAN-only, TLS termination is at the reverse proxy
 - **Arbitrary Kafka Properties** — create requests accept any `Properties` map; clients must be able to configure Kafka instances freely. Security boundary is at the network/broker level
-- **Token-based ownership** — UUID token returned on create = proof of ownership. Only the creator knows the token. No RBAC or role separation at the gateway level
+- **Token-based ownership** — string token returned on create = proof of ownership. Only the creator knows the token. No RBAC or role separation at the gateway level
 - **Basic Auth is optional** — rarely used; gateway is a transparent transport layer. Client rights are determined by Kafka broker ACLs/SASL per instance
 - **Sequential access guaranteed externally** — each KafkaConsumer instance must be called strictly sequentially by
   clients; server does not enforce per-instance synchronization. KafkaAdmin and KafkaProducer are thread-safe and may be
