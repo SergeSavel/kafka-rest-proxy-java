@@ -73,12 +73,6 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
         provider.close();
     }
 
-    @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-        logger.error("An error occurred while processing consumer request.", cause);
-        ctx.close();
-    }
-
     // endregion
 
     @SuppressWarnings("deprecation")

@@ -91,12 +91,6 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-        logger.error("An error occurred while processing admin request.", cause);
-        ctx.close();
-    }
-
-    @Override
     public void close() {
         provider.close();
     }

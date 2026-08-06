@@ -70,12 +70,6 @@ public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter imple
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-        logger.error("An error occurred while processing producer request.", cause);
-        ctx.close();
-    }
-
-    @Override
     public void close() {
         provider.close();
     }
