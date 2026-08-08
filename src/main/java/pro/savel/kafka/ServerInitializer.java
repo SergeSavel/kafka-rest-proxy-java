@@ -76,12 +76,15 @@ class ServerInitializer extends ChannelInitializer<SocketChannel> implements Aut
     private final DefaultRequestDecoder defaultRequestDecoder = new DefaultRequestDecoder();
 
     private final BlockingTaskExecutor blockingTaskExecutor = new BlockingTaskExecutor();
+    private final ProducerProvider producerProvider = new ProducerProvider();
+    private final ConsumerProvider consumerProvider = new ConsumerProvider();
+    private final AdminProvider adminProvider = new AdminProvider();
     private final ProducerRequestProcessor producerRequestProcessor =
-            new ProducerRequestProcessor(blockingTaskExecutor, new ProducerProvider());
+            new ProducerRequestProcessor(blockingTaskExecutor, producerProvider);
     private final ConsumerRequestProcessor consumerRequestProcessor =
-            new ConsumerRequestProcessor(blockingTaskExecutor, new ConsumerProvider());
+            new ConsumerRequestProcessor(blockingTaskExecutor, consumerProvider);
     private final AdminRequestProcessor adminRequestProcessor =
-            new AdminRequestProcessor(blockingTaskExecutor, new AdminProvider());
+            new AdminRequestProcessor(blockingTaskExecutor, adminProvider);
 
     private final ProducerResponseEncoder producerResponseEncoder = new ProducerResponseEncoder(objectMapper);
     private final ConsumerResponseEncoder consumerResponseEncoder;
@@ -143,9 +146,9 @@ class ServerInitializer extends ChannelInitializer<SocketChannel> implements Aut
         blockingTaskExecutor.close(deadline);
 
         var closeExecutor = Executors.newVirtualThreadPerTaskExecutor();
-        closeExecutor.submit(() -> producerRequestProcessor.close(deadline));
-        closeExecutor.submit(() -> consumerRequestProcessor.close(deadline));
-        closeExecutor.submit(() -> adminRequestProcessor.close(deadline));
+        closeExecutor.submit(() -> producerProvider.close(deadline));
+        closeExecutor.submit(() -> consumerProvider.close(deadline));
+        closeExecutor.submit(() -> adminProvider.close(deadline));
         closeExecutor.shutdown();
         try {
             if (!closeExecutor.awaitTermination(deadline.remainingNanos(), TimeUnit.NANOSECONDS)) {

@@ -74,10 +74,6 @@ public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter imple
         provider.close();
     }
 
-    public void close(ShutdownDeadline deadline) {
-        provider.close(deadline);
-    }
-
 //endregion
 
     public void processRequest(ChannelHandlerContext ctx, RequestBearer requestBearer) {
