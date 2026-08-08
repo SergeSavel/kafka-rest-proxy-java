@@ -310,6 +310,29 @@ class AdminRequestProcessorTest {
     }
 
     @Test
+    void processDescribeTopic_multipleResultEntries_writesOnlyOneResponse() {
+        var wrapper = addWrapper();
+        var admin = wrapper.getAdmin();
+        var result = mock(DescribeTopicsResult.class);
+        var descriptionA = new TopicDescription("topic-a", false, List.of(), Set.of(), Uuid.randomUuid());
+        var descriptionB = new TopicDescription("topic-b", false, List.of(), Set.of(), Uuid.randomUuid());
+        when(result.allTopicNames()).thenReturn(KafkaFuture.completedFuture(
+                Map.of("topic-a", descriptionA, "topic-b", descriptionB)));
+        when(admin.describeTopics(any(TopicCollection.class), any(DescribeTopicsOptions.class))).thenReturn(result);
+
+        var request = new AdminDescribeTopicRequest();
+        request.setAdminId(wrapper.getId());
+        request.setToken(wrapper.getToken());
+        request.setTopicName("topic-a");
+
+        channel.writeInbound(bearer(request));
+
+        AdminResponseBearer response = channel.readOutbound();
+        assertEquals(HttpResponseStatus.OK, response.getStatus());
+        assertNull(channel.readOutbound(), "only one response should be written per request");
+    }
+
+    @Test
     void processDescribeTopic_notFound_returnsNotFound() {
         var wrapper = addWrapper();
         var admin = wrapper.getAdmin();

@@ -346,6 +346,7 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
                 for (TopicDescription topicDescription : topicNames.values()) {
                     var response = AdminDescribeTopicResponse.of(topicDescription);
                     ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
+                    break;
                 }
             } else if (!handleError(ctx, error)) {
                 logger.error("Unable to get topic description.", error);
