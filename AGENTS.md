@@ -82,6 +82,7 @@ HTTP Request
 These are intentional design choices — do not flag as issues:
 
 - **TLS via NGINX** — app is LAN-only, TLS termination is at the reverse proxy
+- **HTTP/1.1 only** — `HttpVersionHandler` rejects HTTP/1.0 and HTTP/2 with 505
 - **Arbitrary Kafka Properties** — create requests accept any `Properties` map; clients must be able to configure Kafka instances freely. Security boundary is at the network/broker level
 - **Token-based ownership** — string token returned on create = proof of ownership. Only the creator knows the token. No RBAC or role separation at the gateway level
 - **Basic Auth is optional** — rarely used; gateway is a transparent transport layer. Client rights are determined by Kafka broker ACLs/SASL per instance
