@@ -353,6 +353,49 @@ class AdminRequestProcessorTest {
     }
 
     @Test
+    void processDescribeTopic_byId_success_returnsDescription() {
+        var wrapper = addWrapper();
+        var admin = wrapper.getAdmin();
+        var result = mock(DescribeTopicsResult.class);
+        var topicId = Uuid.randomUuid();
+        var description = new TopicDescription("topic-a", false, List.of(), Set.of(), topicId);
+        when(result.allTopicIds()).thenReturn(KafkaFuture.completedFuture(Map.of(topicId, description)));
+        when(admin.describeTopics(any(TopicCollection.class), any(DescribeTopicsOptions.class))).thenReturn(result);
+
+        var request = new AdminDescribeTopicRequest();
+        request.setAdminId(wrapper.getId());
+        request.setToken(wrapper.getToken());
+        request.setTopicId(topicId.toString());
+
+        channel.writeInbound(bearer(request));
+
+        AdminResponseBearer response = channel.readOutbound();
+        assertEquals(HttpResponseStatus.OK, response.getStatus());
+        var body = (AdminDescribeTopicResponse) response.getResponse();
+        assertEquals("topic-a", body.getName());
+    }
+
+    @Test
+    void processDescribeTopic_byId_notFound_returnsNotFound() {
+        var wrapper = addWrapper();
+        var admin = wrapper.getAdmin();
+        var result = mock(DescribeTopicsResult.class);
+        when(result.allTopicIds()).thenReturn(KafkaFuture.completedFuture(Map.of()));
+        when(admin.describeTopics(any(TopicCollection.class), any(DescribeTopicsOptions.class))).thenReturn(result);
+
+        var request = new AdminDescribeTopicRequest();
+        request.setAdminId(wrapper.getId());
+        request.setToken(wrapper.getToken());
+        request.setTopicId(Uuid.randomUuid().toString());
+
+        channel.writeInbound(bearer(request));
+
+        FullHttpResponse response = channel.readOutbound();
+        assertEquals(HttpResponseStatus.NOT_FOUND, response.status());
+        response.release();
+    }
+
+    @Test
     void processCreateTopic_success_returnsTopicInfo() {
         var wrapper = addWrapper();
         var admin = wrapper.getAdmin();

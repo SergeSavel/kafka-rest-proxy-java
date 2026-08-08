@@ -335,15 +335,17 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
             topicCollection = org.apache.kafka.common.TopicCollection
                     .ofTopicNames(Collections.singleton(request.getTopicName()));
         else
-            throw new IllegalArgumentException("Topic name or id must be specified");
+            throw new IllegalArgumentException("Topic id or name must be specified");
         var describeResult = admin.describeTopics(topicCollection, options);
-        describeResult.allTopicNames().whenComplete((topicNames, error) -> {
+        KafkaFuture<? extends Map<?, TopicDescription>> descriptions =
+                request.getTopicId() != null ? describeResult.allTopicIds() : describeResult.allTopicNames();
+        descriptions.whenComplete((topicDescriptions, error) -> {
             if (error == null) {
-                if (topicNames.isEmpty()) {
+                if (topicDescriptions.isEmpty()) {
                     HttpUtils.writeNotFoundAndClose(ctx, "Topic not found.");
                     return;
                 }
-                for (TopicDescription topicDescription : topicNames.values()) {
+                for (TopicDescription topicDescription : topicDescriptions.values()) {
                     var response = AdminDescribeTopicResponse.of(topicDescription);
                     ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
                     break;
