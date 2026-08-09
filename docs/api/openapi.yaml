@@ -469,6 +469,23 @@ paths:
         '404': {$ref: '#/components/responses/NotFound'}
         '500': {$ref: '#/components/responses/InternalServerError'}
 
+  /admin/alter-group-config:
+    post:
+      tags: [configs]
+      summary: Set (incrementally alter) a single consumer group config entry
+      operationId: adminAlterGroupConfig
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/AdminAlterGroupConfigRequest'}
+      responses:
+        '200': {description: "Config entry set, empty body"}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+
   /admin/set-topic-config:
     post:
       deprecated: true
@@ -2240,6 +2257,22 @@ components:
             groupId:
               type: string
               minLength: 1
+
+    AdminAlterGroupConfigRequest:
+      allOf:
+        - $ref: '#/components/schemas/AdminInstanceRef'
+        - type: object
+          required: [groupId, configName, newValue]
+          properties:
+            groupId:
+              type: string
+              minLength: 1
+            configName:
+              type: string
+              minLength: 1
+            newValue:
+              type: string
+              description: May be an empty string
 
     AdminAlterTopicConfigRequest:
       allOf:

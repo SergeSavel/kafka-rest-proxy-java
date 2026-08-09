@@ -25,6 +25,7 @@ import pro.savel.kafka.admin.requests.acls.AdminDeleteAclsRequest;
 import pro.savel.kafka.admin.requests.acls.AdminDescribeAclsRequest;
 import pro.savel.kafka.admin.requests.cluster.AdminDescribeClusterRequest;
 import pro.savel.kafka.admin.requests.cluster.AdminDescribeLogDirsRequest;
+import pro.savel.kafka.admin.requests.config.AdminAlterGroupConfigRequest;
 import pro.savel.kafka.admin.requests.config.AdminAlterTopicConfigRequest;
 import pro.savel.kafka.admin.requests.config.AdminDeleteTopicConfigRequest;
 import pro.savel.kafka.admin.requests.config.AdminDescribeBrokerConfigsRequest;
@@ -95,6 +96,8 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
             processList(ctx, requestBearer);
         else if (requestClass == AdminAlterTopicConfigRequest.class)
             processAlterTopicConfig(ctx, requestBearer);
+        else if (requestClass == AdminAlterGroupConfigRequest.class)
+            processAlterGroupConfig(ctx, requestBearer);
         else if (requestClass == AdminDeleteTopicConfigRequest.class)
             processDeleteTopicConfig(ctx, requestBearer);
         else if (requestClass == AdminDescribeUserScramCredentialsRequest.class)
@@ -495,6 +498,17 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         processIncrementalAlterConfigs(ctx, requestBearer, admin, configs);
     }
 
+    private void processAlterGroupConfig(ChannelHandlerContext ctx, RequestBearer requestBearer) {
+        var request = (AdminAlterGroupConfigRequest) requestBearer.request();
+        var admin = getAdmin(request.getAdminId(), request.getToken());
+        var configResource = new ConfigResource(ConfigResource.Type.GROUP, request.getGroupId());
+        var configEntry = new ConfigEntry(request.getConfigName(), request.getNewValue());
+        var alterConfigOp = new AlterConfigOp(configEntry, AlterConfigOp.OpType.SET);
+        Collection<AlterConfigOp> alterConfigOps = Collections.singleton(alterConfigOp);
+        var configs = Collections.singletonMap(configResource, alterConfigOps);
+        processIncrementalAlterConfigs(ctx, requestBearer, admin, configs);
+    }
+
     private void processDeleteTopicConfig(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (AdminDeleteTopicConfigRequest) requestBearer.request();
         var admin = getAdmin(request.getAdminId(), request.getToken());
@@ -514,7 +528,7 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
                 var responseBearer = new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, null);
                 ctx.writeAndFlush(responseBearer);
             } else if (!handleError(ctx, error)) {
-                logger.error("Unable to alter topic config.", error);
+                logger.error("Unable to alter config.", error);
                 HttpUtils.writeInternalServerErrorAndClose(ctx, error.getMessage());
             }
         });
