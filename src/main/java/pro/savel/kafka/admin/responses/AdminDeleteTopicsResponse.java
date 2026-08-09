@@ -17,6 +17,7 @@ package pro.savel.kafka.admin.responses;
 import lombok.Getter;
 import org.apache.kafka.common.KafkaFuture;
 import org.apache.kafka.common.Uuid;
+import pro.savel.kafka.admin.AdminResponseMapper;
 import pro.savel.kafka.common.Utils;
 
 import java.util.ArrayList;
@@ -57,8 +58,7 @@ public class AdminDeleteTopicsResponse extends ArrayList<AdminDeleteTopicsRespon
             if (topicDeletionResult == null)
                 return null;
             var result = new TopicDeletionResult();
-            if (topicId != null)
-                result.topicId = topicId.toString();
+            result.topicId = AdminResponseMapper.mapUuid(topicId);
             try {
                 var ignore = topicDeletionResult.get();
             } catch (Exception e) {
