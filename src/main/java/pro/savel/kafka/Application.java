@@ -64,7 +64,7 @@ public class Application
                     .childHandler(initializer);
 
             var channel = bootstrap.bind(config.host(), config.port()).sync().channel();
-            logger.info("Server started on {}:{} using {} transport and {} worker threads.",
+            logger.info("Server started on {}:{} using {} transport and {} event loop threads.",
                     config.host(), config.port(), transport.name(), workerGroup.executorCount());
 
             shutdownTask = new FutureTask<>(() -> {
