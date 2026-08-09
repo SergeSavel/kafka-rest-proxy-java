@@ -48,10 +48,9 @@ import pro.savel.kafka.producer.ProducerRequestProcessor;
 import pro.savel.kafka.producer.ProducerResponseEncoder;
 
 import java.util.concurrent.Executors;
-import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
-class ServerInitializer extends ChannelInitializer<SocketChannel> implements AutoCloseable {
+class ServerInitializer extends ChannelInitializer<SocketChannel> {
 
     private static final Logger logger = LoggerFactory.getLogger(ServerInitializer.class);
 
@@ -131,11 +130,6 @@ class ServerInitializer extends ChannelInitializer<SocketChannel> implements Aut
         pipeline.addLast(consumerRequestProcessor);
         pipeline.addLast(adminRequestProcessor);
         pipeline.addLast(defaultInboundHandler);
-    }
-
-    @Override
-    public void close() {
-        close(ShutdownDeadline.after(Duration.ofSeconds(config.shutdownTimeoutSeconds())));
     }
 
     void close(ShutdownDeadline deadline) {

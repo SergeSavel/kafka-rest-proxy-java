@@ -37,7 +37,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.function.Consumer;
 
 @ChannelHandler.Sharable
-public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter implements AutoCloseable {
+public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter {
 
     private static final Logger logger = LoggerFactory.getLogger(ProducerRequestProcessor.class);
 
@@ -67,11 +67,6 @@ public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter imple
         } else {
             ctx.fireChannelRead(msg);
         }
-    }
-
-    @Override
-    public void close() {
-        provider.close();
     }
 
 //endregion

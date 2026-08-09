@@ -26,12 +26,13 @@ import io.netty.channel.epoll.EpollIoHandler;
 import io.netty.channel.epoll.EpollServerSocketChannel;
 import io.netty.channel.nio.NioIoHandler;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.util.concurrent.Future;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import pro.savel.kafka.common.ShutdownDeadline;
 
 import java.time.Duration;
-import java.util.List;
+import java.util.Arrays;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
@@ -47,6 +48,7 @@ public class Application
         var bossGroup = new MultiThreadIoEventLoopGroup(1, transport.ioHandlerFactory());
         var workerGroup = new MultiThreadIoEventLoopGroup(config.workerThreads(), transport.ioHandlerFactory());
         var initializer = new ServerInitializer(config);
+        var shutdownTimeout = Duration.ofSeconds(config.shutdownTimeoutSeconds());
         FutureTask<Void> shutdownTask = null;
         Thread shutdownHook = null;
 
@@ -65,50 +67,42 @@ public class Application
             logger.info("Server started on {}:{} using {} transport and {} worker threads.",
                     config.host(), config.port(), transport.name(), workerGroup.executorCount());
 
-            var shutdownTimeout = Duration.ofSeconds(config.shutdownTimeoutSeconds());
             shutdownTask = new FutureTask<>(() -> {
                 shutdown(channel, initializer, bossGroup, workerGroup, shutdownTimeout);
                 return null;
             });
-            var taskForHook = shutdownTask;
-            shutdownHook = new Thread(() -> runShutdown(taskForHook), "kafka-gateway-shutdown");
+            var task = shutdownTask;
+            shutdownHook = new Thread(task, "kafka-gateway-shutdown");
             Runtime.getRuntime().addShutdownHook(shutdownHook);
             channel.closeFuture().sync();
         }
         finally
         {
-            if (shutdownTask == null)
-                shutdown(null, initializer, bossGroup, workerGroup,
-                        Duration.ofSeconds(config.shutdownTimeoutSeconds()));
+            if (shutdownTask != null)
+                awaitShutdown(shutdownTask);
             else
-                runShutdown(shutdownTask);
-            if (shutdownHook != null) {
-                try {
+                shutdown(null, initializer, bossGroup, workerGroup, shutdownTimeout);
+            if (shutdownHook != null)
+                try
+                {
                     Runtime.getRuntime().removeShutdownHook(shutdownHook);
-                } catch (IllegalStateException ignored) {
+                }
+                catch (IllegalStateException ignored)
+                {
                     // JVM shutdown is already in progress.
                 }
-            }
         }
     }
 
-    private static void runShutdown(FutureTask<Void> shutdownTask) {
+    private static void awaitShutdown(FutureTask<Void> shutdownTask) {
         shutdownTask.run();
-
-        var interrupted = false;
-        while (true) {
-            try {
-                shutdownTask.get();
-                break;
-            } catch (InterruptedException e) {
-                interrupted = true;
-            } catch (ExecutionException e) {
-                logger.error("Server shutdown failed.", e.getCause());
-                break;
-            }
-        }
-        if (interrupted)
+        try {
+            shutdownTask.get();
+        } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
+        } catch (ExecutionException e) {
+            logger.error("Server shutdown failed.", e.getCause());
+        }
     }
 
     private static void shutdown(Channel serverChannel, ServerInitializer initializer,
@@ -117,9 +111,10 @@ public class Application
         var deadline = ShutdownDeadline.after(timeout);
         logger.info("Server is shutting down...");
 
-        runShutdownStep(() -> closeServerChannel(serverChannel, deadline));
+        runShutdownStep(() -> awaitClose(serverChannel == null ? null : serverChannel.close(),
+                deadline, "the server channel to close"));
         runShutdownStep(() -> initializer.close(deadline));
-        runShutdownStep(() -> shutdownEventLoops(List.of(bossGroup, workerGroup), deadline));
+        runShutdownStep(() -> shutdownEventLoops(deadline, bossGroup, workerGroup));
 
         if (deadline.isExpired())
             logger.warn("Server shutdown exceeded its {} second deadline.", timeout.toSeconds());
@@ -136,23 +131,18 @@ public class Application
         }
     }
 
-    private static void closeServerChannel(Channel channel, ShutdownDeadline deadline) {
-        if (channel == null)
-            return;
-        var closeFuture = channel.close();
-        if (!closeFuture.awaitUninterruptibly(deadline.remainingNanos(), TimeUnit.NANOSECONDS))
-            logger.warn("Timed out waiting for the server channel to close.");
+    private static void awaitClose(Future<?> future, ShutdownDeadline deadline, String what) {
+        if (future != null && !future.awaitUninterruptibly(deadline.remainingNanos(), TimeUnit.NANOSECONDS))
+            logger.warn("Timed out waiting for {}.", what);
     }
 
-    private static void shutdownEventLoops(List<EventLoopGroup> groups, ShutdownDeadline deadline) {
-        var terminationFutures = groups.stream()
+    private static void shutdownEventLoops(ShutdownDeadline deadline, EventLoopGroup... groups) {
+        var terminationFutures = Arrays.stream(groups)
                 .map(group -> group.shutdownGracefully(
                         0, Math.max(1, deadline.remainingNanos()), TimeUnit.NANOSECONDS))
                 .toList();
-        for (var future : terminationFutures) {
-            if (!future.awaitUninterruptibly(deadline.remainingNanos(), TimeUnit.NANOSECONDS))
-                logger.warn("Timed out waiting for a Netty event loop group to terminate.");
-        }
+        for (var terminationFuture : terminationFutures)
+            awaitClose(terminationFuture, deadline, "a Netty event loop group to terminate");
     }
 
     private static Transport selectTransport(boolean epollEnabled) {

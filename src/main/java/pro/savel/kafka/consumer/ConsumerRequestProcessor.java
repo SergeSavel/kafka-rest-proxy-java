@@ -36,7 +36,7 @@ import java.util.regex.PatternSyntaxException;
 import java.util.stream.Collectors;
 
 @ChannelHandler.Sharable
-public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter implements AutoCloseable {
+public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter {
 
     private static final Logger logger = LoggerFactory.getLogger(ConsumerRequestProcessor.class);
 
@@ -66,11 +66,6 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter imple
         } else {
             ctx.fireChannelRead(msg);
         }
-    }
-
-    @Override
-    public void close() {
-        provider.close();
     }
 
     // endregion

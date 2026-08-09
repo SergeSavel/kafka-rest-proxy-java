@@ -58,7 +58,7 @@ import java.util.regex.PatternSyntaxException;
 import java.util.stream.Collectors;
 
 @ChannelHandler.Sharable
-public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implements AutoCloseable {
+public class AdminRequestProcessor extends ChannelInboundHandlerAdapter {
 
     private static final Logger logger = LoggerFactory.getLogger(AdminRequestProcessor.class);
 
@@ -88,11 +88,6 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter implemen
         } else {
             ctx.fireChannelRead(msg);
         }
-    }
-
-    @Override
-    public void close() {
-        provider.close();
     }
 
     // endregion
