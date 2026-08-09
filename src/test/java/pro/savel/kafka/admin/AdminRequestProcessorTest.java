@@ -405,7 +405,6 @@ class AdminRequestProcessorTest {
         when(result.topicId("topic-a")).thenReturn(KafkaFuture.completedFuture(Uuid.randomUuid()));
         when(result.numPartitions("topic-a")).thenReturn(KafkaFuture.completedFuture(3));
         when(result.replicationFactor("topic-a")).thenReturn(KafkaFuture.completedFuture(1));
-        when(result.config("topic-a")).thenReturn(KafkaFuture.completedFuture(new Config(List.of())));
         when(admin.createTopics(anyCollection(), any(CreateTopicsOptions.class))).thenReturn(result);
 
         var request = new AdminCreateTopicRequest();

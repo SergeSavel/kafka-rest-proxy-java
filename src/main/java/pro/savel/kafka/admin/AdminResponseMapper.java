@@ -17,11 +17,18 @@ package pro.savel.kafka.admin;
 import org.apache.kafka.common.ClassicGroupState;
 import org.apache.kafka.common.GroupState;
 import org.apache.kafka.common.GroupType;
+import org.apache.kafka.common.Uuid;
 import org.apache.kafka.common.acl.AclOperation;
 
 import java.util.*;
 
 public class AdminResponseMapper {
+
+    public static String mapUuid(Uuid source) {
+        if (source == null)
+            return null;
+        return source.toString();
+    }
 
     public static Set<String> mapAclOperations(Set<AclOperation> source) {
         if (source == null)

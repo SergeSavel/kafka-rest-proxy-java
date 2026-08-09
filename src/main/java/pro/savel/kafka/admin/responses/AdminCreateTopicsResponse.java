@@ -18,9 +18,12 @@ import lombok.Getter;
 import org.apache.kafka.clients.admin.Config;
 import org.apache.kafka.common.KafkaFuture;
 import org.apache.kafka.common.Uuid;
+import pro.savel.kafka.admin.AdminResponseMapper;
 import pro.savel.kafka.common.Utils;
 
 import java.util.ArrayList;
+import java.util.Map;
+import java.util.concurrent.ExecutionException;
 
 public class AdminCreateTopicsResponse extends ArrayList<AdminCreateTopicResponse> implements AdminResponse {
 
@@ -39,7 +42,7 @@ public class AdminCreateTopicsResponse extends ArrayList<AdminCreateTopicRespons
             super();
         }
 
-        private static CreationResult of(String topicName, KafkaFuture<Void> statusFuture, KafkaFuture<Uuid> idFuture, KafkaFuture<Integer> numPartitionsFuture, KafkaFuture<Integer> replicationFactorFuture, KafkaFuture<Config> configFuture) {
+        private static CreationResult of(String topicName, KafkaFuture<Void> statusFuture, KafkaFuture<Uuid> idFuture, KafkaFuture<Integer> numPartitionsFuture, KafkaFuture<Integer> replicationFactorFuture) throws ExecutionException, InterruptedException {
             var result = new CreationResult();
             result.topicName = topicName;
             try {
@@ -49,28 +52,28 @@ public class AdminCreateTopicsResponse extends ArrayList<AdminCreateTopicRespons
                 result.errorMessage = Utils.rootErrorMessage(e);
                 return result;
             }
-            var topicId = get(idFuture);
-            if (topicId != null)
-                result.topicId = topicId.toString();
-            result.numPartitions = get(numPartitionsFuture);
-            result.replicationFactor = get(replicationFactorFuture);
-            result.config = AdminConfigResponse.of(get(configFuture));
+            result.topicId = AdminResponseMapper.mapUuid(idFuture.get());
+            result.numPartitions = numPartitionsFuture.get();
+            result.replicationFactor = replicationFactorFuture.get();
             return result;
         }
     }
 
-    public static AdminCreateTopicsResponse of(org.apache.kafka.clients.admin.CreateTopicsResult source) {
+    public static AdminCreateTopicsResponse of(org.apache.kafka.clients.admin.CreateTopicsResult source) throws ExecutionException, InterruptedException {
         if (source == null)
             return null;
         var result = new AdminCreateTopicsResponse(source.values().size());
-        source.values().forEach((topicName, statusFuture) -> result.add(CreationResult.of(
-                topicName,
-                statusFuture,
-                source.topicId(topicName),
-                source.numPartitions(topicName),
-                source.replicationFactor(topicName),
-                source.config(topicName)
-        )));
+        for (Map.Entry<String, KafkaFuture<Void>> entry : source.values().entrySet()) {
+            var topicName = entry.getKey();
+            var statusFuture = entry.getValue();
+            result.add(CreationResult.of(
+                    topicName,
+                    statusFuture,
+                    source.topicId(topicName),
+                    source.numPartitions(topicName),
+                    source.replicationFactor(topicName)
+            ));
+        }
         return result;
     }
 }

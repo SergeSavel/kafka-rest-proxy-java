@@ -15,9 +15,11 @@
 package pro.savel.kafka.admin.responses;
 
 import lombok.Getter;
-import org.apache.kafka.clients.admin.Config;
 import org.apache.kafka.common.KafkaFuture;
 import org.apache.kafka.common.Uuid;
+import pro.savel.kafka.admin.AdminResponseMapper;
+
+import java.util.concurrent.ExecutionException;
 
 @Getter
 public class AdminCreateTopicResponse implements AdminResponse {
@@ -25,27 +27,15 @@ public class AdminCreateTopicResponse implements AdminResponse {
     protected String topicId;
     protected Integer numPartitions;
     protected Integer replicationFactor;
-    protected AdminConfigResponse config;
 
     protected AdminCreateTopicResponse() {
     }
 
-    public static AdminCreateTopicResponse of(KafkaFuture<Uuid> idFuture, KafkaFuture<Integer> numPartitionsFuture, KafkaFuture<Integer> replicationFactorFuture, KafkaFuture<Config> configFuture) {
+    public static AdminCreateTopicResponse of(KafkaFuture<Uuid> idFuture, KafkaFuture<Integer> numPartitionsFuture, KafkaFuture<Integer> replicationFactorFuture) throws ExecutionException, InterruptedException {
         var result = new AdminCreateTopicResponse();
-        var topicId = get(idFuture);
-        if (topicId != null)
-            result.topicId = topicId.toString();
-        result.numPartitions = get(numPartitionsFuture);
-        result.replicationFactor = get(replicationFactorFuture);
-        result.config = AdminConfigResponse.of(get(configFuture));
+        result.topicId = AdminResponseMapper.mapUuid(idFuture.get());
+        result.numPartitions = numPartitionsFuture.get();
+        result.replicationFactor = replicationFactorFuture.get();
         return result;
-    }
-
-    protected static <T> T get(KafkaFuture<T> future) {
-        try {
-            return future.get();
-        } catch (Exception e) {
-            throw new RuntimeException("Unexpected error while constructing create topic response", e);
-        }
     }
 }

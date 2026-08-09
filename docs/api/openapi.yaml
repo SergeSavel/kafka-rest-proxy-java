@@ -2053,7 +2053,6 @@ components:
           description: Created topic UUID as a base64url string
         numPartitions: {type: integer, nullable: true}
         replicationFactor: {type: integer, nullable: true}
-        config: {$ref: '#/components/schemas/AdminConfigResponse'}
 
     TopicSpec:
       type: object

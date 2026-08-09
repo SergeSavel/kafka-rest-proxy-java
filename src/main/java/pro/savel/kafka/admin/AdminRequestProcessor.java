@@ -361,15 +361,19 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter {
         var createResult = admin.createTopics(Collections.singleton(newTopic), options);
         createResult.all().whenComplete((topics, error) -> {
             if (error == null) {
-                for (var topicName : createResult.values().keySet()) {
-                    var response = AdminCreateTopicResponse.of(
-                            createResult.topicId(topicName),
-                            createResult.numPartitions(topicName),
-                            createResult.replicationFactor(topicName),
-                            createResult.config(topicName)
-                    );
-                    ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
-                    return;
+                try {
+                    for (var topicName : createResult.values().keySet()) {
+                        var response = AdminCreateTopicResponse.of(
+                                createResult.topicId(topicName),
+                                createResult.numPartitions(topicName),
+                                createResult.replicationFactor(topicName)
+                        );
+                        ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
+                        return;
+                    }
+                } catch (Exception e) {
+                    logger.error("Unable to construct create topic response.", e);
+                    HttpUtils.writeInternalServerErrorAndClose(ctx, Utils.combineErrorMessage(e));
                 }
             } else if (!handleError(ctx, error)) {
                 logger.error("Unable to create topic.", error);
@@ -393,8 +397,13 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter {
             options.retryOnQuotaViolation(request.getRetryOnQuotaViolation());
         var createResult = admin.createTopics(newTopics, options);
         createResult.all().whenComplete((ignore1, ignore2) -> {
-            var response = AdminCreateTopicsResponse.of(createResult);
-            ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
+            try {
+                var response = AdminCreateTopicsResponse.of(createResult);
+                ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
+            } catch (Exception e) {
+                logger.error("Unable to construct create topics response.", e);
+                HttpUtils.writeInternalServerErrorAndClose(ctx, Utils.combineErrorMessage(e));
+            }
         });
     }
 

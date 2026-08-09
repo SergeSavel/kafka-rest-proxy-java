@@ -55,13 +55,25 @@ public class AdminConfigResponse extends ArrayList<AdminConfigResponse.Entry> im
             var result = new Entry();
             result.name = source.name();
             result.value = source.value();
-            result.source = source.source().name();
+            result.source = mapConfigEntrySource(source.source());
             result.isDefault = source.isDefault();
             result.isSensitive = source.isSensitive();
             result.isReadOnly = source.isReadOnly();
-            result.type = source.type().name();
+            result.type = mapConfigEntryType(source.type());
             result.documentation = source.documentation();
             return result;
+        }
+
+        private static String mapConfigEntrySource(ConfigEntry.ConfigSource source) {
+            if (source == null)
+                return null;
+            return source.name();
+        }
+
+        private static String mapConfigEntryType(ConfigEntry.ConfigType source) {
+            if (source == null)
+                return null;
+            return source.name();
         }
     }
 }
