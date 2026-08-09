@@ -444,23 +444,23 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         var request = (AdminDescribeBrokerConfigsRequest) requestBearer.request();
         var admin = getAdmin(request.getAdminId(), request.getToken());
         var resource = new ConfigResource(ConfigResource.Type.BROKER, String.valueOf(request.getBrokerId()));
-        processDescribeConfigs(ctx, requestBearer, admin, resource);
+        processDescribeConfigs(ctx, requestBearer, admin, resource, "Broker not found.");
     }
 
     private void processDescribeTopicConfigs(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (AdminDescribeTopicConfigsRequest) requestBearer.request();
         var admin = getAdmin(request.getAdminId(), request.getToken());
         var resource = new ConfigResource(ConfigResource.Type.TOPIC, request.getTopicName());
-        processDescribeConfigs(ctx, requestBearer, admin, resource);
+        processDescribeConfigs(ctx, requestBearer, admin, resource, "Topic not found.");
     }
 
     private void processDescribeConfigs(ChannelHandlerContext ctx, RequestBearer requestBearer, Admin admin,
-                                               ConfigResource resource) {
+                                               ConfigResource resource, String notFoundMessage) {
         var describeResult = admin.describeConfigs(Collections.singleton(resource));
         describeResult.all().whenComplete((configs, error) -> {
             if (error == null) {
                 if (configs.isEmpty()) {
-                    HttpUtils.writeNotFoundAndClose(ctx, "Broker not found.");
+                    HttpUtils.writeNotFoundAndClose(ctx, notFoundMessage);
                     return;
                 }
                 configs.values().forEach(config -> {
@@ -468,7 +468,7 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
                     ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
                 });
             } else if (!handleError(ctx, error)) {
-                logger.error("Unable to get broker config description.", error);
+                logger.error("Unable to describe configs.", error);
                 HttpUtils.writeInternalServerErrorAndClose(ctx, error.getMessage());
             }
         });
