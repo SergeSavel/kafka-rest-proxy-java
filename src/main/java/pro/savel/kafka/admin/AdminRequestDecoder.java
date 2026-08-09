@@ -34,6 +34,7 @@ import pro.savel.kafka.admin.requests.cluster.AdminDescribeClusterRequest;
 import pro.savel.kafka.admin.requests.cluster.AdminDescribeLogDirsRequest;
 import pro.savel.kafka.admin.requests.config.AdminDeleteTopicConfigRequest;
 import pro.savel.kafka.admin.requests.config.AdminDescribeBrokerConfigsRequest;
+import pro.savel.kafka.admin.requests.config.AdminDescribeGroupConfigsRequest;
 import pro.savel.kafka.admin.requests.config.AdminDescribeTopicConfigsRequest;
 import pro.savel.kafka.admin.requests.config.AdminSetTopicConfigRequest;
 import pro.savel.kafka.admin.requests.group.*;
@@ -107,6 +108,7 @@ public class AdminRequestDecoder extends ChannelInboundHandlerAdapter {
             case "/delete-topics" -> decodeDeleteTopics(ctx, httpRequest);
             case "/describe-topic-configs" -> decodeDescribeTopicConfigs(ctx, httpRequest);
             case "/describe-broker-configs" -> decodeDescribeBrokerConfigs(ctx, httpRequest);
+            case "/describe-group-configs" -> decodeDescribeGroupConfigs(ctx, httpRequest);
             case "/describe-cluster" -> decodeDescribeCluster(ctx, httpRequest);
             case "/describe-log-dirs" -> decodeDescribeLogDirs(ctx, httpRequest);
             case "/touch" -> decodeTouch(ctx, httpRequest);
@@ -256,6 +258,14 @@ public class AdminRequestDecoder extends ChannelInboundHandlerAdapter {
     private void decodeDescribeTopicConfigs(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
         if (httpRequest.method() == HttpMethod.POST) {
             decodeRequest(ctx, httpRequest, AdminDescribeTopicConfigsRequest.class);
+        } else {
+            throw new MethodNotAllowedException("Unsupported HTTP method.");
+        }
+    }
+
+    private void decodeDescribeGroupConfigs(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
+        if (httpRequest.method() == HttpMethod.POST) {
+            decodeRequest(ctx, httpRequest, AdminDescribeGroupConfigsRequest.class);
         } else {
             throw new MethodNotAllowedException("Unsupported HTTP method.");
         }

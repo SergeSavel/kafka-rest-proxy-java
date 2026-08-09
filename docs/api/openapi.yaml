@@ -431,6 +431,27 @@ paths:
         '404': {$ref: '#/components/responses/NotFound'}
         '500': {$ref: '#/components/responses/InternalServerError'}
 
+  /admin/describe-group-configs:
+    post:
+      tags: [configs]
+      summary: Describe the configuration of a consumer group
+      operationId: adminDescribeGroupConfigs
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/AdminDescribeGroupConfigsRequest'}
+      responses:
+        '200':
+          description: Config entries
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AdminConfigResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+
   /admin/set-topic-config:
     post:
       tags: [configs]
@@ -2191,6 +2212,16 @@ components:
             brokerId:
               type: integer
               minimum: 0
+
+    AdminDescribeGroupConfigsRequest:
+      allOf:
+        - $ref: '#/components/schemas/AdminInstanceRef'
+        - type: object
+          required: [groupId]
+          properties:
+            groupId:
+              type: string
+              minLength: 1
 
     AdminSetTopicConfigRequest:
       allOf:

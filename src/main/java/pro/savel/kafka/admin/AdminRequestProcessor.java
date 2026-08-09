@@ -27,6 +27,7 @@ import pro.savel.kafka.admin.requests.cluster.AdminDescribeClusterRequest;
 import pro.savel.kafka.admin.requests.cluster.AdminDescribeLogDirsRequest;
 import pro.savel.kafka.admin.requests.config.AdminDeleteTopicConfigRequest;
 import pro.savel.kafka.admin.requests.config.AdminDescribeBrokerConfigsRequest;
+import pro.savel.kafka.admin.requests.config.AdminDescribeGroupConfigsRequest;
 import pro.savel.kafka.admin.requests.config.AdminDescribeTopicConfigsRequest;
 import pro.savel.kafka.admin.requests.config.AdminSetTopicConfigRequest;
 import pro.savel.kafka.admin.requests.group.*;
@@ -78,6 +79,8 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
             processDescribeTopicConfigs(ctx, requestBearer);
         else if (requestClass == AdminDescribeBrokerConfigsRequest.class)
             processDescribeBrokerConfigs(ctx, requestBearer);
+        else if (requestClass == AdminDescribeGroupConfigsRequest.class)
+            processDescribeGroupConfigs(ctx, requestBearer);
         else if (requestClass == AdminDescribeClusterRequest.class)
             processDescribeCluster(ctx, requestBearer);
         else if (requestClass == AdminDescribeLogDirsRequest.class)
@@ -452,6 +455,13 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         var admin = getAdmin(request.getAdminId(), request.getToken());
         var resource = new ConfigResource(ConfigResource.Type.TOPIC, request.getTopicName());
         processDescribeConfigs(ctx, requestBearer, admin, resource, "Topic not found.");
+    }
+
+    private void processDescribeGroupConfigs(ChannelHandlerContext ctx, RequestBearer requestBearer) {
+        var request = (AdminDescribeGroupConfigsRequest) requestBearer.request();
+        var admin = getAdmin(request.getAdminId(), request.getToken());
+        var resource = new ConfigResource(ConfigResource.Type.GROUP, request.getGroupId());
+        processDescribeConfigs(ctx, requestBearer, admin, resource, "Group not found.");
     }
 
     private void processDescribeConfigs(ChannelHandlerContext ctx, RequestBearer requestBearer, Admin admin,

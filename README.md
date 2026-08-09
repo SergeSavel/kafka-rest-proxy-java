@@ -182,6 +182,7 @@ The API is documented as an OpenAPI 3.1 specification in [`docs/api/openapi.yaml
 |--------|----------------------------------|-------------------------|
 | POST   | `/admin/describe-topic-configs`  | Describe topic configs  |
 | POST   | `/admin/describe-broker-configs` | Describe broker configs |
+| POST   | `/admin/describe-group-configs`  | Describe group configs  |
 | POST   | `/admin/set-topic-config`        | Set topic config        |
 | POST   | `/admin/delete-topic-config`     | Delete topic config     |
 

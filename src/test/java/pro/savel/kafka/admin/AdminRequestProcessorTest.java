@@ -37,6 +37,7 @@ import pro.savel.kafka.admin.requests.acls.AdminDescribeAclsRequest;
 import pro.savel.kafka.admin.requests.cluster.AdminDescribeClusterRequest;
 import pro.savel.kafka.admin.requests.cluster.AdminDescribeLogDirsRequest;
 import pro.savel.kafka.admin.requests.config.AdminDeleteTopicConfigRequest;
+import pro.savel.kafka.admin.requests.config.AdminDescribeGroupConfigsRequest;
 import pro.savel.kafka.admin.requests.config.AdminDescribeTopicConfigsRequest;
 import pro.savel.kafka.admin.requests.config.AdminSetTopicConfigRequest;
 import pro.savel.kafka.admin.requests.group.*;
@@ -531,6 +532,31 @@ class AdminRequestProcessorTest {
         var body = (AdminConfigResponse) response.getResponse();
         assertEquals(1, body.size());
         assertEquals("retention.ms", body.get(0).getName());
+    }
+
+    @Test
+    void processDescribeGroupConfigs_success_returnsEntries() {
+        var wrapper = addWrapper();
+        var admin = wrapper.getAdmin();
+        var result = mock(DescribeConfigsResult.class);
+        var resource = new org.apache.kafka.common.config.ConfigResource(
+                org.apache.kafka.common.config.ConfigResource.Type.GROUP, "group-a");
+        var config = new Config(List.of(new ConfigEntry("session.timeout.ms", "30000")));
+        when(result.all()).thenReturn(KafkaFuture.completedFuture(Map.of(resource, config)));
+        when(admin.describeConfigs(anyCollection())).thenReturn(result);
+
+        var request = new AdminDescribeGroupConfigsRequest();
+        request.setAdminId(wrapper.getId());
+        request.setToken(wrapper.getToken());
+        request.setGroupId("group-a");
+
+        channel.writeInbound(bearer(request));
+
+        AdminResponseBearer response = channel.readOutbound();
+        assertEquals(HttpResponseStatus.OK, response.getStatus());
+        var body = (AdminConfigResponse) response.getResponse();
+        assertEquals(1, body.size());
+        assertEquals("session.timeout.ms", body.get(0).getName());
     }
 
     @Test
