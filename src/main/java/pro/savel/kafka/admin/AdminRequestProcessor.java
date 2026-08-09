@@ -27,6 +27,7 @@ import pro.savel.kafka.admin.requests.cluster.AdminDescribeClusterRequest;
 import pro.savel.kafka.admin.requests.cluster.AdminDescribeLogDirsRequest;
 import pro.savel.kafka.admin.requests.config.AdminAlterGroupConfigRequest;
 import pro.savel.kafka.admin.requests.config.AdminAlterTopicConfigRequest;
+import pro.savel.kafka.admin.requests.config.AdminDeleteGroupConfigRequest;
 import pro.savel.kafka.admin.requests.config.AdminDeleteTopicConfigRequest;
 import pro.savel.kafka.admin.requests.config.AdminDescribeBrokerConfigsRequest;
 import pro.savel.kafka.admin.requests.config.AdminDescribeGroupConfigsRequest;
@@ -100,6 +101,8 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
             processAlterGroupConfig(ctx, requestBearer);
         else if (requestClass == AdminDeleteTopicConfigRequest.class)
             processDeleteTopicConfig(ctx, requestBearer);
+        else if (requestClass == AdminDeleteGroupConfigRequest.class)
+            processDeleteGroupConfig(ctx, requestBearer);
         else if (requestClass == AdminDescribeUserScramCredentialsRequest.class)
             processDescribeUserScramCredentials(ctx, requestBearer);
         else if (requestClass == AdminUpsertUserScramCredentialsRequest.class)
@@ -515,8 +518,22 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         var configResource = new ConfigResource(ConfigResource.Type.TOPIC, request.getTopicName());
         var configEntry = new ConfigEntry(request.getConfigName(), null);
         var alterConfigOp = new AlterConfigOp(configEntry, AlterConfigOp.OpType.DELETE);
-        Collection<AlterConfigOp> alterConfigOps = Collections.singleton(alterConfigOp);
-        var configs = Collections.singletonMap(configResource, alterConfigOps);
+        processIncrementalAlterConfig(ctx, requestBearer, admin, configResource, alterConfigOp);
+    }
+
+    private void processDeleteGroupConfig(ChannelHandlerContext ctx, RequestBearer requestBearer) {
+        var request = (AdminDeleteGroupConfigRequest) requestBearer.request();
+        var admin = getAdmin(request.getAdminId(), request.getToken());
+        var configResource = new ConfigResource(ConfigResource.Type.GROUP, request.getGroupId());
+        var configEntry = new ConfigEntry(request.getConfigName(), null);
+        var alterConfigOp = new AlterConfigOp(configEntry, AlterConfigOp.OpType.DELETE);
+        processIncrementalAlterConfig(ctx, requestBearer, admin, configResource, alterConfigOp);
+    }
+
+    private void processIncrementalAlterConfig(ChannelHandlerContext ctx, RequestBearer requestBearer, Admin admin,
+                                               ConfigResource resource, AlterConfigOp op) {
+        Collection<AlterConfigOp> alterConfigOps = Collections.singleton(op);
+        var configs = Collections.singletonMap(resource, alterConfigOps);
         processIncrementalAlterConfigs(ctx, requestBearer, admin, configs);
     }
 

@@ -34,6 +34,7 @@ import pro.savel.kafka.admin.requests.cluster.AdminDescribeClusterRequest;
 import pro.savel.kafka.admin.requests.cluster.AdminDescribeLogDirsRequest;
 import pro.savel.kafka.admin.requests.config.AdminAlterGroupConfigRequest;
 import pro.savel.kafka.admin.requests.config.AdminAlterTopicConfigRequest;
+import pro.savel.kafka.admin.requests.config.AdminDeleteGroupConfigRequest;
 import pro.savel.kafka.admin.requests.config.AdminDeleteTopicConfigRequest;
 import pro.savel.kafka.admin.requests.config.AdminDescribeBrokerConfigsRequest;
 import pro.savel.kafka.admin.requests.config.AdminDescribeGroupConfigsRequest;
@@ -119,6 +120,7 @@ public class AdminRequestDecoder extends ChannelInboundHandlerAdapter {
             case "/alter-topic-config" -> decodeAlterTopicConfig(ctx, httpRequest);
             case "/alter-group-config" -> decodeAlterGroupConfig(ctx, httpRequest);
             case "/delete-topic-config" -> decodeDeleteTopicConfig(ctx, httpRequest);
+            case "/delete-group-config" -> decodeDeleteGroupConfig(ctx, httpRequest);
             case "/describe-user-scram-credentials" -> decodeDescribeUserScramCredentials(ctx, httpRequest);
             case "/upsert-user-scram-credentials" -> decodeUpsertUserScramCredentials(ctx, httpRequest);
             case "/delete-user-scram-credentials" -> decodeDeleteUserScramCredentials(ctx, httpRequest);
@@ -293,6 +295,14 @@ public class AdminRequestDecoder extends ChannelInboundHandlerAdapter {
     private void decodeDeleteTopicConfig(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
         if (httpRequest.method() == HttpMethod.POST) {
             decodeRequest(ctx, httpRequest, AdminDeleteTopicConfigRequest.class);
+        } else {
+            throw new MethodNotAllowedException("Unsupported HTTP method.");
+        }
+    }
+
+    private void decodeDeleteGroupConfig(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
+        if (httpRequest.method() == HttpMethod.POST) {
+            decodeRequest(ctx, httpRequest, AdminDeleteGroupConfigRequest.class);
         } else {
             throw new MethodNotAllowedException("Unsupported HTTP method.");
         }

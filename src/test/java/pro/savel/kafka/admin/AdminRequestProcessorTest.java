@@ -38,6 +38,7 @@ import pro.savel.kafka.admin.requests.cluster.AdminDescribeClusterRequest;
 import pro.savel.kafka.admin.requests.cluster.AdminDescribeLogDirsRequest;
 import pro.savel.kafka.admin.requests.config.AdminAlterGroupConfigRequest;
 import pro.savel.kafka.admin.requests.config.AdminAlterTopicConfigRequest;
+import pro.savel.kafka.admin.requests.config.AdminDeleteGroupConfigRequest;
 import pro.savel.kafka.admin.requests.config.AdminDeleteTopicConfigRequest;
 import pro.savel.kafka.admin.requests.config.AdminDescribeGroupConfigsRequest;
 import pro.savel.kafka.admin.requests.config.AdminDescribeTopicConfigsRequest;
@@ -615,6 +616,26 @@ class AdminRequestProcessorTest {
         request.setToken(wrapper.getToken());
         request.setTopicName("topic-a");
         request.setConfigName("retention.ms");
+
+        channel.writeInbound(bearer(request));
+
+        AdminResponseBearer response = channel.readOutbound();
+        assertEquals(HttpResponseStatus.OK, response.getStatus());
+    }
+
+    @Test
+    void processDeleteGroupConfig_success_returnsOk() {
+        var wrapper = addWrapper();
+        var admin = wrapper.getAdmin();
+        var result = mock(AlterConfigsResult.class);
+        when(result.all()).thenReturn(KafkaFuture.completedFuture(null));
+        when(admin.incrementalAlterConfigs(anyMap())).thenReturn(result);
+
+        var request = new AdminDeleteGroupConfigRequest();
+        request.setAdminId(wrapper.getId());
+        request.setToken(wrapper.getToken());
+        request.setGroupId("group-a");
+        request.setConfigName("session.timeout.ms");
 
         channel.writeInbound(bearer(request));
 

@@ -184,6 +184,7 @@ The API is documented as an OpenAPI 3.1 specification in [`docs/api/openapi.yaml
 | POST   | `/admin/describe-group-configs`  | Describe group configs  |
 | POST   | `/admin/alter-group-config`      | Alter group config      |
 | POST   | `/admin/alter-topic-config`      | Alter topic config      |
+| POST   | `/admin/delete-group-config`     | Delete group config     |
 | POST   | `/admin/delete-topic-config`     | Delete topic config     |
 
 **SCRAM**
