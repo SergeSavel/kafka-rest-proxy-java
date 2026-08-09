@@ -32,11 +32,11 @@ import pro.savel.kafka.admin.requests.acls.AdminDeleteAclsRequest;
 import pro.savel.kafka.admin.requests.acls.AdminDescribeAclsRequest;
 import pro.savel.kafka.admin.requests.cluster.AdminDescribeClusterRequest;
 import pro.savel.kafka.admin.requests.cluster.AdminDescribeLogDirsRequest;
+import pro.savel.kafka.admin.requests.config.AdminAlterTopicConfigRequest;
 import pro.savel.kafka.admin.requests.config.AdminDeleteTopicConfigRequest;
 import pro.savel.kafka.admin.requests.config.AdminDescribeBrokerConfigsRequest;
 import pro.savel.kafka.admin.requests.config.AdminDescribeGroupConfigsRequest;
 import pro.savel.kafka.admin.requests.config.AdminDescribeTopicConfigsRequest;
-import pro.savel.kafka.admin.requests.config.AdminSetTopicConfigRequest;
 import pro.savel.kafka.admin.requests.group.*;
 import pro.savel.kafka.admin.requests.management.AdminCreateRequest;
 import pro.savel.kafka.admin.requests.management.AdminListRequest;
@@ -114,7 +114,8 @@ public class AdminRequestDecoder extends ChannelInboundHandlerAdapter {
             case "/touch" -> decodeTouch(ctx, httpRequest);
             case "/create" -> decodeCreate(ctx, httpRequest);
             case "/release" -> decodeRemove(ctx, httpRequest);
-            case "/set-topic-config" -> decodeSetTopicConfig(ctx, httpRequest);
+            case "/set-topic-config" -> decodeAlterTopicConfig(ctx, httpRequest); // deprecated
+            case "/alter-topic-config" -> decodeAlterTopicConfig(ctx, httpRequest);
             case "/delete-topic-config" -> decodeDeleteTopicConfig(ctx, httpRequest);
             case "/describe-user-scram-credentials" -> decodeDescribeUserScramCredentials(ctx, httpRequest);
             case "/upsert-user-scram-credentials" -> decodeUpsertUserScramCredentials(ctx, httpRequest);
@@ -271,9 +272,9 @@ public class AdminRequestDecoder extends ChannelInboundHandlerAdapter {
         }
     }
 
-    private void decodeSetTopicConfig(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
+    private void decodeAlterTopicConfig(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
         if (httpRequest.method() == HttpMethod.POST) {
-            decodeRequest(ctx, httpRequest, AdminSetTopicConfigRequest.class);
+            decodeRequest(ctx, httpRequest, AdminAlterTopicConfigRequest.class);
         } else {
             throw new MethodNotAllowedException("Unsupported HTTP method.");
         }

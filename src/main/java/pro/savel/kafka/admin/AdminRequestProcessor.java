@@ -25,11 +25,11 @@ import pro.savel.kafka.admin.requests.acls.AdminDeleteAclsRequest;
 import pro.savel.kafka.admin.requests.acls.AdminDescribeAclsRequest;
 import pro.savel.kafka.admin.requests.cluster.AdminDescribeClusterRequest;
 import pro.savel.kafka.admin.requests.cluster.AdminDescribeLogDirsRequest;
+import pro.savel.kafka.admin.requests.config.AdminAlterTopicConfigRequest;
 import pro.savel.kafka.admin.requests.config.AdminDeleteTopicConfigRequest;
 import pro.savel.kafka.admin.requests.config.AdminDescribeBrokerConfigsRequest;
 import pro.savel.kafka.admin.requests.config.AdminDescribeGroupConfigsRequest;
 import pro.savel.kafka.admin.requests.config.AdminDescribeTopicConfigsRequest;
-import pro.savel.kafka.admin.requests.config.AdminSetTopicConfigRequest;
 import pro.savel.kafka.admin.requests.group.*;
 import pro.savel.kafka.admin.requests.management.AdminCreateRequest;
 import pro.savel.kafka.admin.requests.management.AdminListRequest;
@@ -93,8 +93,8 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
             processTouch(ctx, requestBearer);
         else if (requestClass == AdminListRequest.class)
             processList(ctx, requestBearer);
-        else if (requestClass == AdminSetTopicConfigRequest.class)
-            processSetTopicConfig(ctx, requestBearer);
+        else if (requestClass == AdminAlterTopicConfigRequest.class)
+            processAlterTopicConfig(ctx, requestBearer);
         else if (requestClass == AdminDeleteTopicConfigRequest.class)
             processDeleteTopicConfig(ctx, requestBearer);
         else if (requestClass == AdminDescribeUserScramCredentialsRequest.class)
@@ -484,8 +484,8 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         });
     }
 
-    private void processSetTopicConfig(ChannelHandlerContext ctx, RequestBearer requestBearer) {
-        var request = (AdminSetTopicConfigRequest) requestBearer.request();
+    private void processAlterTopicConfig(ChannelHandlerContext ctx, RequestBearer requestBearer) {
+        var request = (AdminAlterTopicConfigRequest) requestBearer.request();
         var admin = getAdmin(request.getAdminId(), request.getToken());
         var configResource = new ConfigResource(ConfigResource.Type.TOPIC, request.getTopicName());
         var configEntry = new ConfigEntry(request.getConfigName(), request.getNewValue());

@@ -452,16 +452,34 @@ paths:
         '404': {$ref: '#/components/responses/NotFound'}
         '500': {$ref: '#/components/responses/InternalServerError'}
 
-  /admin/set-topic-config:
+  /admin/alter-topic-config:
     post:
       tags: [configs]
       summary: Set (incrementally alter) a single topic config entry
+      operationId: adminAlterTopicConfig
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/AdminAlterTopicConfigRequest'}
+      responses:
+        '200': {description: "Config entry set, empty body"}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+
+  /admin/set-topic-config:
+    post:
+      deprecated: true
+      tags: [configs]
+      summary: Deprecated alias of /admin/alter-topic-config
       operationId: adminSetTopicConfig
       requestBody:
         required: true
         content:
           application/json:
-            schema: {$ref: '#/components/schemas/AdminSetTopicConfigRequest'}
+            schema: {$ref: '#/components/schemas/AdminAlterTopicConfigRequest'}
       responses:
         '200': {description: "Config entry set, empty body"}
         '400': {$ref: '#/components/responses/BadRequest'}
@@ -2223,7 +2241,7 @@ components:
               type: string
               minLength: 1
 
-    AdminSetTopicConfigRequest:
+    AdminAlterTopicConfigRequest:
       allOf:
         - $ref: '#/components/schemas/AdminInstanceRef'
         - type: object

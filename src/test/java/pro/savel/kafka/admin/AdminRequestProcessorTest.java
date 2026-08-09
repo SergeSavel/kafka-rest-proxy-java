@@ -36,10 +36,10 @@ import pro.savel.kafka.admin.requests.acls.AdminDeleteAclsRequest;
 import pro.savel.kafka.admin.requests.acls.AdminDescribeAclsRequest;
 import pro.savel.kafka.admin.requests.cluster.AdminDescribeClusterRequest;
 import pro.savel.kafka.admin.requests.cluster.AdminDescribeLogDirsRequest;
+import pro.savel.kafka.admin.requests.config.AdminAlterTopicConfigRequest;
 import pro.savel.kafka.admin.requests.config.AdminDeleteTopicConfigRequest;
 import pro.savel.kafka.admin.requests.config.AdminDescribeGroupConfigsRequest;
 import pro.savel.kafka.admin.requests.config.AdminDescribeTopicConfigsRequest;
-import pro.savel.kafka.admin.requests.config.AdminSetTopicConfigRequest;
 import pro.savel.kafka.admin.requests.group.*;
 import pro.savel.kafka.admin.requests.management.AdminCreateRequest;
 import pro.savel.kafka.admin.requests.management.AdminListRequest;
@@ -560,14 +560,14 @@ class AdminRequestProcessorTest {
     }
 
     @Test
-    void processSetTopicConfig_success_returnsOk() {
+    void processAlterTopicConfig_success_returnsOk() {
         var wrapper = addWrapper();
         var admin = wrapper.getAdmin();
         var result = mock(AlterConfigsResult.class);
         when(result.all()).thenReturn(KafkaFuture.completedFuture(null));
         when(admin.incrementalAlterConfigs(anyMap())).thenReturn(result);
 
-        var request = new AdminSetTopicConfigRequest();
+        var request = new AdminAlterTopicConfigRequest();
         request.setAdminId(wrapper.getId());
         request.setToken(wrapper.getToken());
         request.setTopicName("topic-a");

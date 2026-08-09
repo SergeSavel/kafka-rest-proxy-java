@@ -19,7 +19,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 @Data
-public class AdminSetTopicConfigRequest implements AdminConfigRequest {
+public class AdminAlterTopicConfigRequest implements AdminConfigRequest {
     @NotEmpty
     private String adminId;
     @NotEmpty
