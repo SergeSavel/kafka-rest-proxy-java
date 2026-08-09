@@ -136,7 +136,6 @@ The API is documented as an OpenAPI 3.1 specification in [`docs/api/openapi.yaml
 | POST   | `/consumer/unsubscribe`           | Unsubscribe from all topics |
 | POST   | `/consumer/get-subscription`      | Get current subscription    |
 | POST   | `/consumer/get-partitions`        | Get partitions for a topic  |
-| POST   | ~~`/consumer/list-partitions`~~   | ~~List partitions~~ *(deprecated)* |
 | POST   | `/consumer/list-topics`           | List topics                 |
 | POST   | `/consumer/get-group-metadata`    | Get group metadata          |
 | POST   | `/consumer/get-committed`         | Get committed offsets       |
@@ -184,7 +183,6 @@ The API is documented as an OpenAPI 3.1 specification in [`docs/api/openapi.yaml
 | POST   | `/admin/describe-broker-configs` | Describe broker configs |
 | POST   | `/admin/describe-group-configs`  | Describe group configs  |
 | POST   | `/admin/alter-topic-config`      | Alter topic config      |
-| POST   | `/admin/set-topic-config`        | Set topic config        |
 | POST   | `/admin/delete-topic-config`     | Delete topic config     |
 
 **SCRAM**
