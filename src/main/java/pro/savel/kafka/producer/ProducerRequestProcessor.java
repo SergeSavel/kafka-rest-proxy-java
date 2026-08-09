@@ -14,17 +14,12 @@
 
 package pro.savel.kafka.producer;
 
-import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.util.ReferenceCountUtil;
 import org.apache.kafka.clients.producer.Callback;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import pro.savel.kafka.common.*;
 import pro.savel.kafka.producer.requests.*;
 import pro.savel.kafka.producer.responses.ProducerCreateResponse;
@@ -32,46 +27,17 @@ import pro.savel.kafka.producer.responses.ProducerListResponse;
 import pro.savel.kafka.producer.responses.ProducerPartitionsResponse;
 import pro.savel.kafka.producer.responses.ProducerSendResponse;
 
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
-import java.util.function.Consumer;
-
-@ChannelHandler.Sharable
-public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter {
-
-    private static final Logger logger = LoggerFactory.getLogger(ProducerRequestProcessor.class);
+public class ProducerRequestProcessor extends AbstractRequestProcessor {
 
     private final ProducerProvider provider;
-    private final BlockingTaskExecutor blockingTaskExecutor;
 
     public ProducerRequestProcessor(BlockingTaskExecutor blockingTaskExecutor, ProducerProvider provider) {
-        this.blockingTaskExecutor = blockingTaskExecutor;
+        super("producer", ProducerRequest.class, blockingTaskExecutor);
         this.provider = provider;
     }
 
-//region Overrides
-
     @Override
-    public void channelRead(ChannelHandlerContext ctx, Object msg) {
-        if (msg instanceof RequestBearer bearer && bearer.request() instanceof ProducerRequest) {
-            try {
-                processRequest(ctx, bearer);
-            } catch (Exception e) {
-                if (!handleError(ctx, e)) {
-                    logger.error("An unexpected error occurred while processing producer request.", e);
-                    HttpUtils.writeInternalServerErrorAndClose(ctx, Utils.combineErrorMessage(e));
-                }
-            } finally {
-                ReferenceCountUtil.release(msg);
-            }
-        } else {
-            ctx.fireChannelRead(msg);
-        }
-    }
-
-//endregion
-
-    public void processRequest(ChannelHandlerContext ctx, RequestBearer requestBearer) {
+    protected void processRequest(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var requestClass = requestBearer.request().getClass();
         if (requestClass == ProducerSendRequest.class)
             processSend(ctx, requestBearer);
@@ -198,31 +164,5 @@ public class ProducerRequestProcessor extends ChannelInboundHandlerAdapter {
         var wrapper = provider.getProducer(id, token);
         wrapper.touch();
         return wrapper.getProducer();
-    }
-
-    private <T> void execute(
-            ChannelHandlerContext ctx,
-            Callable<T> operation,
-            Consumer<T> completion) {
-        blockingTaskExecutor.execute(ctx, operation, (result, error) -> {
-            if (error == null) {
-                completion.accept(result);
-            } else if (!handleError(ctx, error)) {
-                logger.error("An unexpected error occurred while processing producer request.", error);
-                HttpUtils.writeInternalServerErrorAndClose(ctx, Utils.combineErrorMessage(error));
-            }
-        });
-    }
-
-    private static boolean handleError(ChannelHandlerContext ctx, Throwable error) {
-        var handled = true;
-        if ((error instanceof java.util.concurrent.CompletionException || error instanceof ExecutionException)
-                && error.getCause() != null)
-            handled = handleError(ctx, error.getCause());
-        else if (error instanceof org.apache.kafka.common.errors.TimeoutException && error.getCause() != null)
-            handled = handleError(ctx, error.getCause());
-        else if (!CommonErrors.handle(ctx, error))
-            handled = false;
-        return handled;
     }
 }

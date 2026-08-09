@@ -14,64 +14,42 @@
 
 package pro.savel.kafka.consumer;
 
-import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.util.ReferenceCountUtil;
 import org.apache.kafka.clients.consumer.InvalidOffsetException;
 import org.apache.kafka.clients.consumer.SubscriptionPattern;
 import org.apache.kafka.common.TopicPartition;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import pro.savel.kafka.common.*;
 import pro.savel.kafka.consumer.requests.*;
 import pro.savel.kafka.consumer.responses.*;
 
 import java.time.Duration;
 import java.util.Map;
-import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 import java.util.stream.Collectors;
 
-@ChannelHandler.Sharable
-public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter {
-
-    private static final Logger logger = LoggerFactory.getLogger(ConsumerRequestProcessor.class);
+public class ConsumerRequestProcessor extends AbstractRequestProcessor {
 
     private final ConsumerProvider provider;
-    private final BlockingTaskExecutor blockingTaskExecutor;
 
     public ConsumerRequestProcessor(BlockingTaskExecutor blockingTaskExecutor, ConsumerProvider provider) {
-        this.blockingTaskExecutor = blockingTaskExecutor;
+        super("consumer", ConsumerRequest.class, blockingTaskExecutor);
         this.provider = provider;
     }
 
-    // region Overrides
-
     @Override
-    public void channelRead(ChannelHandlerContext ctx, Object msg) {
-        if (msg instanceof RequestBearer bearer && bearer.request() instanceof ConsumerRequest) {
-            try {
-                processRequest(ctx, bearer);
-            } catch (Exception e) {
-                if (!handleError(ctx, e)) {
-                    logger.error("An unexpected error occurred while processing consumer request.", e);
-                    HttpUtils.writeInternalServerErrorAndClose(ctx, Utils.combineErrorMessage(e));
-                }
-            } finally {
-                ReferenceCountUtil.release(msg);
-            }
-        } else {
-            ctx.fireChannelRead(msg);
+    protected boolean handleSpecificError(ChannelHandlerContext ctx, Throwable error) {
+        if (error instanceof InvalidOffsetException e) {
+            HttpUtils.writeConflictAndClose(ctx, Utils.combineErrorMessage(e));
+            return true;
         }
+        return false;
     }
 
-    // endregion
-
     @SuppressWarnings("deprecation")
-    private void processRequest(ChannelHandlerContext ctx, RequestBearer requestBearer) {
+    @Override
+    protected void processRequest(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var requestClass = requestBearer.request().getClass();
         if (requestClass == ConsumerPollRequest.class)
             processPoll(ctx, requestBearer);
@@ -138,7 +116,7 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter {
                     request.getExpirationTimeout(), owner);
             var response = ConsumerCreateResponse.of(wrapper);
             return new ConsumerResponseBearer(requestBearer, HttpResponseStatus.CREATED, response);
-        });
+        }, ctx::writeAndFlush);
     }
 
     private void processRemove(ChannelHandlerContext ctx, RequestBearer requestBearer) {
@@ -146,7 +124,7 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter {
         execute(ctx, () -> {
             provider.removeConsumer(request.getConsumerId(), request.getToken());
             return new ConsumerResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null);
-        });
+        }, ctx::writeAndFlush);
     }
 
     private void processTouch(ChannelHandlerContext ctx, RequestBearer requestBearer) {
@@ -168,7 +146,7 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter {
             var records = consumer.poll(Duration.ofMillis(request.getTimeout()));
             var response = ConsumerPollResponse.of(records);
             return new ConsumerResponseBearer(requestBearer, HttpResponseStatus.OK, response);
-        });
+        }, ctx::writeAndFlush);
     }
 
     private void processCommit(ChannelHandlerContext ctx, RequestBearer requestBearer) {
@@ -177,7 +155,7 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter {
         execute(ctx, () -> {
             consumer.commitSync();
             return new ConsumerResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null);
-        });
+        }, ctx::writeAndFlush);
     }
 
     private void processAssign(ChannelHandlerContext ctx, RequestBearer requestBearer) {
@@ -187,7 +165,7 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter {
         execute(ctx, () -> {
             consumer.assign(assignment);
             return new ConsumerResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null);
-        });
+        }, ctx::writeAndFlush);
     }
 
     private void processGetAssignment(ChannelHandlerContext ctx, RequestBearer requestBearer) {
@@ -197,7 +175,7 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter {
             var assignment = consumer.assignment();
             var response = ConsumerAssignmentResponse.of(assignment);
             return new ConsumerResponseBearer(requestBearer, HttpResponseStatus.OK, response);
-        });
+        }, ctx::writeAndFlush);
     }
 
     private void processSeek(ChannelHandlerContext ctx, RequestBearer requestBearer) {
@@ -207,7 +185,7 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter {
         execute(ctx, () -> {
             consumer.seek(topicPartition, request.getOffset());
             return new ConsumerResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null);
-        });
+        }, ctx::writeAndFlush);
     }
 
     private void processSeekToBeginning(ChannelHandlerContext ctx, RequestBearer requestBearer) {
@@ -217,7 +195,7 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter {
         execute(ctx, () -> {
             consumer.seekToBeginning(partitions);
             return new ConsumerResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null);
-        });
+        }, ctx::writeAndFlush);
     }
 
     private void processSeekToEnd(ChannelHandlerContext ctx, RequestBearer requestBearer) {
@@ -227,7 +205,7 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter {
         execute(ctx, () -> {
             consumer.seekToEnd(partitions);
             return new ConsumerResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null);
-        });
+        }, ctx::writeAndFlush);
     }
 
     private void processSubscribe(ChannelHandlerContext ctx, RequestBearer requestBearer) {
@@ -241,7 +219,7 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter {
             else
                 throw new IllegalArgumentException("Topic list or pattern must be specified");
             return new ConsumerResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null);
-        });
+        }, ctx::writeAndFlush);
     }
 
     private void processUnsubscribe(ChannelHandlerContext ctx, RequestBearer requestBearer) {
@@ -250,7 +228,7 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter {
         execute(ctx, () -> {
             consumer.unsubscribe();
             return new ConsumerResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null);
-        });
+        }, ctx::writeAndFlush);
     }
 
     private void processGetSubscription(ChannelHandlerContext ctx, RequestBearer requestBearer) {
@@ -260,7 +238,7 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter {
             var subscription = consumer.subscription();
             var response = ConsumerSubscriptionResponse.of(subscription);
             return new ConsumerResponseBearer(requestBearer, HttpResponseStatus.OK, response);
-        });
+        }, ctx::writeAndFlush);
     }
 
     private void processGetPosition(ChannelHandlerContext ctx, RequestBearer requestBearer) {
@@ -271,7 +249,7 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter {
             var position = consumer.position(topicPartition);
             var response = ConsumerPositionResponse.of(position);
             return new ConsumerResponseBearer(requestBearer, HttpResponseStatus.OK, response);
-        });
+        }, ctx::writeAndFlush);
     }
 
     private void processGetPartitions(ChannelHandlerContext ctx, RequestBearer requestBearer) {
@@ -281,7 +259,7 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter {
             var partitions = consumer.partitionsFor(request.getTopic());
             var response = ConsumerPartitionsResponse.of(partitions);
             return new ConsumerResponseBearer(requestBearer, HttpResponseStatus.OK, response);
-        });
+        }, ctx::writeAndFlush);
     }
 
     @Deprecated
@@ -292,7 +270,7 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter {
             var partitions = consumer.partitionsFor(request.getTopic());
             var response = ConsumerResponseMapper.mapPartitionsResponse(partitions);
             return new ConsumerResponseBearer(requestBearer, HttpResponseStatus.OK, response);
-        });
+        }, ctx::writeAndFlush);
     }
 
     private void processGetGroupMetadata(ChannelHandlerContext ctx, RequestBearer requestBearer) {
@@ -311,7 +289,7 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter {
             var committed = consumer.committed(partitions);
             var response = ConsumerCommittedResponse.of(committed);
             return new ConsumerResponseBearer(requestBearer, HttpResponseStatus.OK, response);
-        });
+        }, ctx::writeAndFlush);
     }
 
     private void processGetBeginningOffsets(ChannelHandlerContext ctx, RequestBearer requestBearer) {
@@ -322,7 +300,7 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter {
             var offsets = consumer.beginningOffsets(partitions);
             var response = ConsumerOffsetsResponse.of(offsets);
             return new ConsumerResponseBearer(requestBearer, HttpResponseStatus.OK, response);
-        });
+        }, ctx::writeAndFlush);
     }
 
     private void processGetEndOffsets(ChannelHandlerContext ctx, RequestBearer requestBearer) {
@@ -333,7 +311,7 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter {
             var offsets = consumer.endOffsets(partitions);
             var response = ConsumerOffsetsResponse.of(offsets);
             return new ConsumerResponseBearer(requestBearer, HttpResponseStatus.OK, response);
-        });
+        }, ctx::writeAndFlush);
     }
 
     private void processListTopics(ChannelHandlerContext ctx, RequestBearer requestBearer) {
@@ -355,7 +333,7 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter {
             }
             var response = ConsumerTopicsResponse.of(topics);
             return new ConsumerResponseBearer(requestBearer, HttpResponseStatus.OK, response);
-        });
+        }, ctx::writeAndFlush);
     }
 
     // endregion
@@ -364,29 +342,5 @@ public class ConsumerRequestProcessor extends ChannelInboundHandlerAdapter {
         var wrapper = provider.getConsumer(id, token);
         wrapper.touch();
         return wrapper.getConsumer();
-    }
-
-    private void execute(ChannelHandlerContext ctx, Supplier<ConsumerResponseBearer> operation) {
-        blockingTaskExecutor.execute(ctx, operation::get, (response, error) -> {
-            if (error == null) {
-                ctx.writeAndFlush(response);
-            } else if (!handleError(ctx, error)) {
-                logger.error("An unexpected error occurred while processing consumer request.", error);
-                HttpUtils.writeInternalServerErrorAndClose(ctx, Utils.combineErrorMessage(error));
-            }
-        });
-    }
-
-    private static boolean handleError(ChannelHandlerContext ctx, Throwable error) {
-        var handled = true;
-        if (error instanceof java.util.concurrent.CompletionException && error.getCause() != null)
-            handled = handleError(ctx, error.getCause());
-        else if (error instanceof org.apache.kafka.common.errors.TimeoutException && error.getCause() != null)
-            handled = handleError(ctx, error.getCause());
-        else if (error instanceof InvalidOffsetException e)
-            HttpUtils.writeConflictAndClose(ctx, Utils.combineErrorMessage(e));
-        else if (!CommonErrors.handle(ctx, error))
-            handled = false;
-        return handled;
     }
 }

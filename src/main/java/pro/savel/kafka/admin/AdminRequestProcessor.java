@@ -14,16 +14,11 @@
 
 package pro.savel.kafka.admin;
 
-import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.util.ReferenceCountUtil;
 import org.apache.kafka.clients.admin.*;
 import org.apache.kafka.common.*;
 import org.apache.kafka.common.config.ConfigResource;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import pro.savel.kafka.admin.requests.AdminRequest;
 import pro.savel.kafka.admin.requests.acls.AdminCreateAclsRequest;
 import pro.savel.kafka.admin.requests.acls.AdminDeleteAclsRequest;
@@ -50,49 +45,22 @@ import pro.savel.kafka.admin.responses.*;
 import pro.savel.kafka.common.*;
 
 import java.util.*;
-import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Consumer;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 import java.util.stream.Collectors;
 
-@ChannelHandler.Sharable
-public class AdminRequestProcessor extends ChannelInboundHandlerAdapter {
-
-    private static final Logger logger = LoggerFactory.getLogger(AdminRequestProcessor.class);
+public class AdminRequestProcessor extends AbstractRequestProcessor {
 
     private final AdminProvider provider;
-    private final BlockingTaskExecutor blockingTaskExecutor;
 
     public AdminRequestProcessor(BlockingTaskExecutor blockingTaskExecutor, AdminProvider provider) {
-        this.blockingTaskExecutor = blockingTaskExecutor;
+        super("admin", AdminRequest.class, blockingTaskExecutor);
         this.provider = provider;
     }
 
-    // region Overrides
-
     @Override
-    public void channelRead(ChannelHandlerContext ctx, Object msg) {
-        if (msg instanceof RequestBearer bearer && bearer.request() instanceof AdminRequest) {
-            try {
-                processRequest(ctx, bearer);
-            } catch (Exception e) {
-                if (!handleError(ctx, e)) {
-                    logger.error("An unexpected error occurred while processing admin request.", e);
-                    HttpUtils.writeInternalServerErrorAndClose(ctx, Utils.combineErrorMessage(e));
-                }
-            } finally {
-                ReferenceCountUtil.release(msg);
-            }
-        } else {
-            ctx.fireChannelRead(msg);
-        }
-    }
-
-    // endregion
-
-    public void processRequest(ChannelHandlerContext ctx, RequestBearer requestBearer) {
+    protected void processRequest(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var requestClass = requestBearer.request().getClass();
         if (requestClass == AdminDescribeTopicRequest.class)
             processDescribeTopic(ctx, requestBearer);
@@ -486,7 +454,7 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter {
         processDescribeConfigs(ctx, requestBearer, admin, resource);
     }
 
-    private static void processDescribeConfigs(ChannelHandlerContext ctx, RequestBearer requestBearer, Admin admin,
+    private void processDescribeConfigs(ChannelHandlerContext ctx, RequestBearer requestBearer, Admin admin,
                                                ConfigResource resource) {
         var describeResult = admin.describeConfigs(Collections.singleton(resource));
         describeResult.all().whenComplete((configs, error) -> {
@@ -528,7 +496,7 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter {
         processIncrementalAlterConfigs(ctx, requestBearer, admin, configs);
     }
 
-    private static void processIncrementalAlterConfigs(ChannelHandlerContext ctx, RequestBearer requestBearer,
+    private void processIncrementalAlterConfigs(ChannelHandlerContext ctx, RequestBearer requestBearer,
                                                        Admin admin, Map<ConfigResource, Collection<AlterConfigOp>> configs) {
         var alterConfigsResult = admin.incrementalAlterConfigs(configs);
         alterConfigsResult.all().whenComplete((ignore, error) -> {
@@ -579,7 +547,7 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter {
         processAlterUserScramCredentials(ctx, requestBearer, admin, alteration);
     }
 
-    private static void processAlterUserScramCredentials(ChannelHandlerContext ctx, RequestBearer requestBearer,
+    private void processAlterUserScramCredentials(ChannelHandlerContext ctx, RequestBearer requestBearer,
                                                          Admin admin, UserScramCredentialAlteration alteration) {
         var alterationResult = admin.alterUserScramCredentials(Collections.singletonList(alteration));
         alterationResult.all().whenComplete((ignore, error) -> {
@@ -1074,27 +1042,5 @@ public class AdminRequestProcessor extends ChannelInboundHandlerAdapter {
         var wrapper = provider.getAdmin(id, token);
         wrapper.touch();
         return wrapper.getAdmin();
-    }
-
-    private <T> void execute(ChannelHandlerContext ctx, Callable<T> operation, Consumer<T> completion) {
-        blockingTaskExecutor.execute(ctx, operation, (result, error) -> {
-            if (error == null) {
-                completion.accept(result);
-            } else if (!handleError(ctx, error)) {
-                logger.error("An unexpected error occurred while processing admin request.", error);
-                HttpUtils.writeInternalServerErrorAndClose(ctx, Utils.combineErrorMessage(error));
-            }
-        });
-    }
-
-    private static boolean handleError(ChannelHandlerContext ctx, Throwable error) {
-        var handled = true;
-        if (error instanceof java.util.concurrent.CompletionException && error.getCause() != null)
-            handled = handleError(ctx, error.getCause());
-        else if (error instanceof org.apache.kafka.common.errors.TimeoutException && error.getCause() != null)
-            handled = handleError(ctx, error.getCause());
-        else if (!CommonErrors.handle(ctx, error))
-            handled = false;
-        return handled;
     }
 }
