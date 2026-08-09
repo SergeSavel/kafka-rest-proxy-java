@@ -496,9 +496,7 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         var configResource = new ConfigResource(ConfigResource.Type.TOPIC, request.getTopicName());
         var configEntry = new ConfigEntry(request.getConfigName(), request.getNewValue());
         var alterConfigOp = new AlterConfigOp(configEntry, AlterConfigOp.OpType.SET);
-        Collection<AlterConfigOp> alterConfigOps = Collections.singleton(alterConfigOp);
-        var configs = Collections.singletonMap(configResource, alterConfigOps);
-        processIncrementalAlterConfigs(ctx, requestBearer, admin, configs);
+        processIncrementalAlterConfig(ctx, requestBearer, admin, configResource, alterConfigOp);
     }
 
     private void processAlterGroupConfig(ChannelHandlerContext ctx, RequestBearer requestBearer) {
@@ -507,9 +505,7 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         var configResource = new ConfigResource(ConfigResource.Type.GROUP, request.getGroupId());
         var configEntry = new ConfigEntry(request.getConfigName(), request.getNewValue());
         var alterConfigOp = new AlterConfigOp(configEntry, AlterConfigOp.OpType.SET);
-        Collection<AlterConfigOp> alterConfigOps = Collections.singleton(alterConfigOp);
-        var configs = Collections.singletonMap(configResource, alterConfigOps);
-        processIncrementalAlterConfigs(ctx, requestBearer, admin, configs);
+        processIncrementalAlterConfig(ctx, requestBearer, admin, configResource, alterConfigOp);
     }
 
     private void processDeleteTopicConfig(ChannelHandlerContext ctx, RequestBearer requestBearer) {
