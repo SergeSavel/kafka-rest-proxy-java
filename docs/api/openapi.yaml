@@ -28,7 +28,7 @@ info:
 
     ## JSON conventions
     - Unknown properties in request bodies are rejected (`400`).
-    - Missing primitive fields (`int`, `long`, `boolean`, `short`) are rejected (`400`).
+    - Explicit `null` for primitive fields (`int`, `long`, `boolean`, `short`) is rejected (`400`).
     - Boolean getters named `isX` are serialized as `x` (e.g. `isInternal` → `internal`).
     - Kafka topic UUIDs are represented as base64url strings.
   license:
