@@ -15,6 +15,7 @@
 package pro.savel.kafka.admin.requests.topic;
 
 import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.Positive;
 import lombok.Data;
 
 @Data
@@ -25,4 +26,6 @@ public class AdminDeleteTopicRequest implements AdminTopicRequest {
     private String token;
     private String topicId;
     private String topicName;
+    @Positive
+    private Integer timeoutMs;
 }

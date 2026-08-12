@@ -15,6 +15,7 @@
 package pro.savel.kafka.admin.requests.group;
 
 import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.Positive;
 import lombok.Data;
 
 import java.util.Collection;
@@ -29,4 +30,6 @@ public class AdminRemoveMembersFromConsumerGroupRequest implements AdminGroupReq
     private String groupId;
     private Collection<String> members;
     private String reason;
+    @Positive
+    private Integer timeoutMs;
 }

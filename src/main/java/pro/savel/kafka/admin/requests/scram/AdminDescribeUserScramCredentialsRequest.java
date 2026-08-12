@@ -15,6 +15,7 @@
 package pro.savel.kafka.admin.requests.scram;
 
 import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.Positive;
 import lombok.Data;
 
 import java.util.List;
@@ -26,4 +27,6 @@ public class AdminDescribeUserScramCredentialsRequest implements AdminScramReque
     @NotEmpty
     private String token;
     private List<String> users;
+    @Positive
+    private Integer timeoutMs;
 }

@@ -17,6 +17,7 @@ package pro.savel.kafka.admin.requests.offset;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import lombok.Data;
 import pro.savel.kafka.common.contract.TopicPartition;
 
@@ -31,4 +32,6 @@ public abstract class AdminListOffsetsRequest implements AdminOffsetRequest {
     @NotEmpty
     private Collection<@NotNull @Valid TopicPartition> partitions;
     private String isolationLevel;
+    @Positive
+    private Integer timeoutMs;
 }

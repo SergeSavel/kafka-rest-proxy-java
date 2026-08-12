@@ -28,4 +28,6 @@ public class AdminCreatePartitionsRequest implements AdminTopicRequest {
     private String topicName;
     @Positive
     private int increaseTo;
+    @Positive
+    private Integer timeoutMs;
 }

@@ -15,6 +15,7 @@
 package pro.savel.kafka.admin.requests.cluster;
 
 import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.Positive;
 import lombok.Data;
 
 @Data
@@ -23,4 +24,6 @@ public class AdminDescribeClusterRequest implements AdminClusterRequest {
     private String adminId;
     @NotEmpty
     private String token;
+    @Positive
+    private Integer timeoutMs;
 }

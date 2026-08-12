@@ -33,6 +33,8 @@ public class AdminCreateTopicsRequest implements AdminTopicRequest {
     private Collection<@NotNull @Valid TopicSpec> topics;
     private Boolean validateOnly;
     private Boolean retryOnQuotaViolation;
+    @Positive
+    private Integer timeoutMs;
 
     @Data
     public static class TopicSpec {

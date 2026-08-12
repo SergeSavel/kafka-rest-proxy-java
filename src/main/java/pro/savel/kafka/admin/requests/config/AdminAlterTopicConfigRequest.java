@@ -16,6 +16,7 @@ package pro.savel.kafka.admin.requests.config;
 
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import lombok.Data;
 
 @Data
@@ -30,4 +31,6 @@ public class AdminAlterTopicConfigRequest implements AdminConfigRequest {
     private String configName;
     @NotNull
     private String newValue;
+    @Positive
+    private Integer timeoutMs;
 }

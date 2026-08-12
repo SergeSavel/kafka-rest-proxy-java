@@ -17,6 +17,7 @@ package pro.savel.kafka.admin.requests.cluster;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
+import jakarta.validation.constraints.Positive;
 import lombok.Getter;
 
 import java.util.Collection;
@@ -29,4 +30,6 @@ public class AdminDescribeLogDirsRequest implements AdminClusterRequest {
     private String token;
     @NotEmpty
     private Collection<@NotNull @PositiveOrZero Integer> brokerIds;
+    @Positive
+    private Integer timeoutMs;
 }

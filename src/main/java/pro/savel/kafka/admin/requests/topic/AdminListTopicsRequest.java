@@ -15,6 +15,7 @@
 package pro.savel.kafka.admin.requests.topic;
 
 import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.Positive;
 import lombok.Data;
 
 @Data
@@ -25,4 +26,6 @@ public class AdminListTopicsRequest implements AdminTopicRequest {
     private String token;
     private Boolean includeInternal;
     private String pattern;
+    @Positive
+    private Integer timeoutMs;
 }

@@ -16,6 +16,7 @@ package pro.savel.kafka.admin.requests.scram;
 
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import lombok.Data;
 
 @Data
@@ -31,4 +32,6 @@ public class AdminUpsertUserScramCredentialsRequest implements AdminScramRequest
     @NotNull
     private String password;
     private Integer iterations;
+    @Positive
+    private Integer timeoutMs;
 }

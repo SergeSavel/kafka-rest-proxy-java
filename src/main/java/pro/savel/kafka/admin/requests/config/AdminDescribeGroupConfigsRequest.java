@@ -15,6 +15,7 @@
 package pro.savel.kafka.admin.requests.config;
 
 import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.Positive;
 import lombok.Data;
 
 @Data
@@ -25,4 +26,6 @@ public class AdminDescribeGroupConfigsRequest implements AdminConfigRequest {
     private String token;
     @NotEmpty
     private String groupId;
+    @Positive
+    private Integer timeoutMs;
 }

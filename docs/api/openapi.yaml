@@ -564,7 +564,11 @@ paths:
       tags: [cluster]
       summary: Describe the cluster (id, controller, nodes)
       operationId: adminDescribeCluster
-      requestBody: {$ref: '#/components/requestBodies/AdminInstanceRef'}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/AdminDescribeClusterRequest'}
       responses:
         '200':
           description: Cluster description
@@ -581,7 +585,11 @@ paths:
       tags: [cluster]
       summary: Describe supported and finalized cluster features
       operationId: adminDescribeFeatures
-      requestBody: {$ref: '#/components/requestBodies/AdminInstanceRef'}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/AdminDescribeFeaturesRequest'}
       responses:
         '200':
           description: Feature metadata
@@ -1963,6 +1971,7 @@ components:
             includeAuthorizedOperations:
               type: boolean
               description: Include ACL operations authorized for the caller
+            timeoutMs: {type: integer, minimum: 1}
 
     AdminGroupIdsRequest:
       allOf:
@@ -1976,6 +1985,7 @@ components:
               items:
                 type: string
                 minLength: 1
+            timeoutMs: {type: integer, minimum: 1}
 
     TopicPartition:
       type: object
@@ -2093,6 +2103,7 @@ components:
             topicName:
               type: string
               minLength: 1
+            timeoutMs: {type: integer, minimum: 1}
 
     AdminListTopicsRequest:
       allOf:
@@ -2105,6 +2116,7 @@ components:
             pattern:
               type: string
               description: Regex to filter topic names
+            timeoutMs: {type: integer, minimum: 1}
 
     AdminListTopicsResponse:
       type: array
@@ -2127,6 +2139,7 @@ components:
               type: string
               description: Kafka topic UUID as a base64url string
             includeAuthorizedOperations: {type: boolean}
+            timeoutMs: {type: integer, minimum: 1}
       description: Exactly one of `topicName` and `topicId` must be provided.
 
     AdminDescribeTopicResponse:
@@ -2172,6 +2185,7 @@ components:
               description: |
                 Whether to retry the creation when a quota violation occurs.
                 Default: true.
+            timeoutMs: {type: integer, minimum: 1}
 
     AdminCreateTopicResponse:
       type: object
@@ -2219,6 +2233,7 @@ components:
               description: |
                 Whether to retry the creation when a quota violation occurs.
                 Default: true.
+            timeoutMs: {type: integer, minimum: 1}
 
     TopicCreationResult:
       allOf:
@@ -2248,6 +2263,7 @@ components:
             topicId:
               type: string
               description: Kafka topic UUID as a base64url string
+            timeoutMs: {type: integer, minimum: 1}
       description: |
         Specify `topicName` or `topicId`. When both are provided, `topicId` is used.
 
@@ -2270,6 +2286,7 @@ components:
               description: Kafka topic UUIDs as base64url strings
               items:
                 type: string
+            timeoutMs: {type: integer, minimum: 1}
       description: |
         Specify `topicNames` or `topicIds`. When both are provided, `topicIds` is used.
 
@@ -2336,6 +2353,7 @@ components:
               type: integer
               description: New total partition count (must be greater than the current count)
               exclusiveMinimum: 0
+            timeoutMs: {type: integer, minimum: 1}
 
     AdminDescribeBrokerConfigsRequest:
       allOf:
@@ -2346,6 +2364,7 @@ components:
             brokerId:
               type: integer
               minimum: 0
+            timeoutMs: {type: integer, minimum: 1}
 
     AdminDescribeGroupConfigsRequest:
       allOf:
@@ -2356,6 +2375,7 @@ components:
             groupId:
               type: string
               minLength: 1
+            timeoutMs: {type: integer, minimum: 1}
 
     AdminAlterGroupConfigRequest:
       allOf:
@@ -2372,6 +2392,7 @@ components:
             newValue:
               type: string
               description: May be an empty string
+            timeoutMs: {type: integer, minimum: 1}
 
     AdminAlterTopicConfigRequest:
       allOf:
@@ -2388,6 +2409,7 @@ components:
             newValue:
               type: string
               description: May be an empty string
+            timeoutMs: {type: integer, minimum: 1}
 
     AdminDeleteGroupConfigRequest:
       allOf:
@@ -2401,6 +2423,7 @@ components:
             configName:
               type: string
               minLength: 1
+            timeoutMs: {type: integer, minimum: 1}
 
     AdminDeleteTopicConfigRequest:
       allOf:
@@ -2414,6 +2437,7 @@ components:
             configName:
               type: string
               minLength: 1
+            timeoutMs: {type: integer, minimum: 1}
 
     AdminDescribeClusterResponse:
       type: object
@@ -2452,6 +2476,20 @@ components:
           format: int64
           nullable: true
 
+    AdminDescribeClusterRequest:
+      allOf:
+        - $ref: '#/components/schemas/AdminInstanceRef'
+        - type: object
+          properties:
+            timeoutMs: {type: integer, minimum: 1}
+
+    AdminDescribeFeaturesRequest:
+      allOf:
+        - $ref: '#/components/schemas/AdminInstanceRef'
+        - type: object
+          properties:
+            timeoutMs: {type: integer, minimum: 1}
+
     AdminUpdateFeatureRequest:
       allOf:
         - $ref: '#/components/schemas/AdminInstanceRef'
@@ -2471,6 +2509,7 @@ components:
               type: boolean
               default: false
               description: Validate the update without applying it
+            timeoutMs: {type: integer, minimum: 1}
 
     AdminDescribeLogDirsRequest:
       allOf:
@@ -2484,6 +2523,7 @@ components:
               items:
                 type: integer
                 minimum: 0
+            timeoutMs: {type: integer, minimum: 1}
 
     TopicPartitionReplicaInfo:
       type: object
@@ -2535,6 +2575,7 @@ components:
               items:
                 type: string
                 minLength: 1
+            timeoutMs: {type: integer, minimum: 1}
 
     ScramCredentialInfo:
       type: object
@@ -2572,6 +2613,7 @@ components:
             iterations:
               type: integer
               description: Omit to use the broker default
+            timeoutMs: {type: integer, minimum: 1}
 
     AdminDeleteUserScramCredentialsRequest:
       allOf:
@@ -2583,6 +2625,7 @@ components:
               type: string
               minLength: 1
             mechanism: {$ref: '#/components/schemas/ScramMechanism'}
+            timeoutMs: {type: integer, minimum: 1}
 
     ScramMechanism:
       type: string
@@ -2666,6 +2709,7 @@ components:
         - type: object
           properties:
             filter: {$ref: '#/components/schemas/AclBindingFilter'}
+            timeoutMs: {type: integer, minimum: 1}
 
     AdminDescribeAclsResponse:
       type: array
@@ -2681,6 +2725,7 @@ components:
               type: array
               minItems: 1
               items: {$ref: '#/components/schemas/AclBinding'}
+            timeoutMs: {type: integer, minimum: 1}
 
     AdminDeleteAclsRequest:
       allOf:
@@ -2692,6 +2737,7 @@ components:
               type: array
               minItems: 1
               items: {$ref: '#/components/schemas/AclBindingFilter'}
+            timeoutMs: {type: integer, minimum: 1}
 
     AdminDescribeProducersRequest:
       allOf:
@@ -2703,6 +2749,7 @@ components:
               type: array
               minItems: 1
               items: {$ref: '#/components/schemas/TopicPartition'}
+            timeoutMs: {type: integer, minimum: 1}
 
     ProducerState:
       type: object
@@ -2750,6 +2797,7 @@ components:
               type: integer
               description: Kafka `short` range (0..32767)
             coordinatorEpoch: {type: integer}
+            timeoutMs: {type: integer, minimum: 1}
 
     GroupListing:
       type: object
@@ -2784,6 +2832,7 @@ components:
               type: array
               description: Filter by group states
               items: {type: string}
+            timeoutMs: {type: integer, minimum: 1}
 
     AdminListGroupsResponse:
       type: array
@@ -2992,6 +3041,7 @@ components:
             requireStable:
               type: boolean
               description: When true, fails while a transaction is in progress
+            timeoutMs: {type: integer, minimum: 1}
 
     TopicPartitionOffsetMetadata:
       type: object
@@ -3033,6 +3083,7 @@ components:
                     format: int64
                     minimum: 0
                   metadata: {type: string}
+                  timeoutMs: {type: integer, minimum: 1}
 
     AdminDeleteConsumerGroupOffsetsRequest:
       allOf:
@@ -3047,6 +3098,7 @@ components:
               type: array
               minItems: 1
               items: {$ref: '#/components/schemas/TopicPartition'}
+            timeoutMs: {type: integer, minimum: 1}
 
     AdminRemoveMembersFromConsumerGroupRequest:
       allOf:
@@ -3064,6 +3116,7 @@ components:
             reason:
               type: string
               description: Reason recorded in the broker log
+            timeoutMs: {type: integer, minimum: 1}
 
     AdminListOffsetsRequest:
       allOf:
@@ -3076,6 +3129,7 @@ components:
               minItems: 1
               items: {$ref: '#/components/schemas/TopicPartition'}
             isolationLevel: {$ref: '#/components/schemas/IsolationLevel'}
+            timeoutMs: {type: integer, minimum: 1}
 
     AdminListTimestampOffsetsRequest:
       allOf:

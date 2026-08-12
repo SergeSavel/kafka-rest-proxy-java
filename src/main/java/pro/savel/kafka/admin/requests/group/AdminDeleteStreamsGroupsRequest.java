@@ -15,6 +15,7 @@
 package pro.savel.kafka.admin.requests.group;
 
 import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.Positive;
 import lombok.Data;
 
 import java.util.Collection;
@@ -27,4 +28,6 @@ public class AdminDeleteStreamsGroupsRequest implements AdminGroupRequest {
     private String token;
     @NotEmpty
     private Collection<String> groupIds;
+    @Positive
+    private Integer timeoutMs;
 }

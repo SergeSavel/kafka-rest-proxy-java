@@ -16,6 +16,7 @@ package pro.savel.kafka.admin.requests.cluster;
 
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.PositiveOrZero;
+import jakarta.validation.constraints.Positive;
 import lombok.Data;
 
 @Data
@@ -31,4 +32,6 @@ public class AdminUpdateFeatureRequest implements AdminClusterRequest {
     @NotEmpty
     private String upgradeType;
     private Boolean validateOnly;
+    @Positive
+    private Integer timeoutMs;
 }

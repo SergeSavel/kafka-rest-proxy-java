@@ -16,6 +16,7 @@ package pro.savel.kafka.admin.requests.acls;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.Positive;
 import lombok.Data;
 import pro.savel.kafka.admin.data.AdminAclBindingFilter;
 
@@ -27,4 +28,6 @@ public class AdminDescribeAclsRequest implements AdminAclsRequest {
     private String token;
     @Valid
     private AdminAclBindingFilter filter;
+    @Positive
+    private Integer timeoutMs;
 }

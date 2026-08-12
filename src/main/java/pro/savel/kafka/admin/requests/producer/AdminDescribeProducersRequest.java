@@ -17,6 +17,7 @@ package pro.savel.kafka.admin.requests.producer;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import lombok.Data;
 import pro.savel.kafka.common.contract.TopicPartition;
 
@@ -30,4 +31,6 @@ public class AdminDescribeProducersRequest implements AdminProducerRequest {
     private String token;
     @NotEmpty
     private Collection<@NotNull @Valid TopicPartition> partitions;
+    @Positive
+    private Integer timeoutMs;
 }

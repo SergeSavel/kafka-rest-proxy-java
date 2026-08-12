@@ -15,6 +15,7 @@
 package pro.savel.kafka.admin.requests.group;
 
 import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.Positive;
 import lombok.Data;
 
 @Data
@@ -26,4 +27,6 @@ public class AdminDescribeStreamsGroupRequest implements AdminGroupRequest {
     @NotEmpty
     private String groupId;
     private Boolean includeAuthorizedOperations;
+    @Positive
+    private Integer timeoutMs;
 }

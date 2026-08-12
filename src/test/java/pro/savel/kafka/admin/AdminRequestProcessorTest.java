@@ -22,6 +22,7 @@ import org.apache.kafka.clients.consumer.OffsetAndMetadata;
 import org.apache.kafka.common.*;
 import org.apache.kafka.common.acl.AccessControlEntry;
 import org.apache.kafka.common.acl.AclBinding;
+import org.apache.kafka.common.acl.AclBindingFilter;
 import org.apache.kafka.common.acl.AclOperation;
 import org.apache.kafka.common.acl.AclPermissionType;
 import org.apache.kafka.common.resource.PatternType;
@@ -219,7 +220,7 @@ class AdminRequestProcessorTest {
         when(result.clusterId()).thenReturn(KafkaFuture.completedFuture("cluster-1"));
         when(result.controller()).thenReturn(KafkaFuture.completedFuture(node));
         when(result.authorizedOperations()).thenReturn(KafkaFuture.completedFuture(Set.of()));
-        when(admin.describeCluster()).thenReturn(result);
+        when(admin.describeCluster(any(DescribeClusterOptions.class))).thenReturn(result);
 
         var request = new AdminDescribeClusterRequest();
         request.setAdminId(wrapper.getId());
@@ -243,7 +244,7 @@ class AdminRequestProcessorTest {
         when(metadata.finalizedFeatures()).thenReturn(Map.of("group.version", new FinalizedVersionRange((short) 1, (short) 1)));
         when(metadata.finalizedFeaturesEpoch()).thenReturn(Optional.of(42L));
         when(result.featureMetadata()).thenReturn(KafkaFuture.completedFuture(metadata));
-        when(admin.describeFeatures()).thenReturn(result);
+        when(admin.describeFeatures(any(DescribeFeaturesOptions.class))).thenReturn(result);
 
         var request = new AdminDescribeFeaturesRequest();
         request.setAdminId(wrapper.getId());
@@ -268,7 +269,7 @@ class AdminRequestProcessorTest {
         var admin = wrapper.getAdmin();
         var result = mock(DescribeLogDirsResult.class);
         when(result.allDescriptions()).thenReturn(KafkaFuture.completedFuture(Map.of()));
-        when(admin.describeLogDirs(anyCollection())).thenReturn(result);
+        when(admin.describeLogDirs(anyCollection(), any(DescribeLogDirsOptions.class))).thenReturn(result);
 
         var request = new AdminDescribeLogDirsRequest();
         setField(request, "adminId", wrapper.getId());
@@ -509,7 +510,7 @@ class AdminRequestProcessorTest {
         var admin = wrapper.getAdmin();
         var result = mock(DeleteTopicsResult.class);
         when(result.all()).thenReturn(KafkaFuture.completedFuture(null));
-        when(admin.deleteTopics(any(TopicCollection.class))).thenReturn(result);
+        when(admin.deleteTopics(any(TopicCollection.class), any(DeleteTopicsOptions.class))).thenReturn(result);
 
         var request = new AdminDeleteTopicRequest();
         request.setAdminId(wrapper.getId());
@@ -529,7 +530,7 @@ class AdminRequestProcessorTest {
         var result = mock(DeleteTopicsResult.class);
         when(result.all()).thenReturn(KafkaFuture.completedFuture(null));
         when(result.topicNameValues()).thenReturn(Map.of("topic-a", KafkaFuture.completedFuture(null)));
-        when(admin.deleteTopics(any(TopicCollection.class))).thenReturn(result);
+        when(admin.deleteTopics(any(TopicCollection.class), any(DeleteTopicsOptions.class))).thenReturn(result);
 
         var request = new AdminDeleteTopicsRequest();
         request.setAdminId(wrapper.getId());
@@ -578,7 +579,7 @@ class AdminRequestProcessorTest {
         var admin = wrapper.getAdmin();
         var result = mock(CreatePartitionsResult.class);
         when(result.all()).thenReturn(KafkaFuture.completedFuture(null));
-        when(admin.createPartitions(anyMap())).thenReturn(result);
+        when(admin.createPartitions(anyMap(), any(CreatePartitionsOptions.class))).thenReturn(result);
 
         var request = new AdminCreatePartitionsRequest();
         request.setAdminId(wrapper.getId());
@@ -605,7 +606,7 @@ class AdminRequestProcessorTest {
                 org.apache.kafka.common.config.ConfigResource.Type.TOPIC, "topic-a");
         var config = new Config(List.of(new ConfigEntry("retention.ms", "604800000")));
         when(result.all()).thenReturn(KafkaFuture.completedFuture(Map.of(resource, config)));
-        when(admin.describeConfigs(anyCollection())).thenReturn(result);
+        when(admin.describeConfigs(anyCollection(), any(DescribeConfigsOptions.class))).thenReturn(result);
 
         var request = new AdminDescribeTopicConfigsRequest();
         request.setAdminId(wrapper.getId());
@@ -630,7 +631,7 @@ class AdminRequestProcessorTest {
                 org.apache.kafka.common.config.ConfigResource.Type.GROUP, "group-a");
         var config = new Config(List.of(new ConfigEntry("session.timeout.ms", "30000")));
         when(result.all()).thenReturn(KafkaFuture.completedFuture(Map.of(resource, config)));
-        when(admin.describeConfigs(anyCollection())).thenReturn(result);
+        when(admin.describeConfigs(anyCollection(), any(DescribeConfigsOptions.class))).thenReturn(result);
 
         var request = new AdminDescribeGroupConfigsRequest();
         request.setAdminId(wrapper.getId());
@@ -652,7 +653,7 @@ class AdminRequestProcessorTest {
         var admin = wrapper.getAdmin();
         var result = mock(AlterConfigsResult.class);
         when(result.all()).thenReturn(KafkaFuture.completedFuture(null));
-        when(admin.incrementalAlterConfigs(anyMap())).thenReturn(result);
+        when(admin.incrementalAlterConfigs(anyMap(), any(AlterConfigsOptions.class))).thenReturn(result);
 
         var request = new AdminAlterTopicConfigRequest();
         request.setAdminId(wrapper.getId());
@@ -673,7 +674,7 @@ class AdminRequestProcessorTest {
         var admin = wrapper.getAdmin();
         var result = mock(AlterConfigsResult.class);
         when(result.all()).thenReturn(KafkaFuture.completedFuture(null));
-        when(admin.incrementalAlterConfigs(anyMap())).thenReturn(result);
+        when(admin.incrementalAlterConfigs(anyMap(), any(AlterConfigsOptions.class))).thenReturn(result);
 
         var request = new AdminAlterGroupConfigRequest();
         request.setAdminId(wrapper.getId());
@@ -694,7 +695,7 @@ class AdminRequestProcessorTest {
         var admin = wrapper.getAdmin();
         var result = mock(AlterConfigsResult.class);
         when(result.all()).thenReturn(KafkaFuture.completedFuture(null));
-        when(admin.incrementalAlterConfigs(anyMap())).thenReturn(result);
+        when(admin.incrementalAlterConfigs(anyMap(), any(AlterConfigsOptions.class))).thenReturn(result);
 
         var request = new AdminDeleteTopicConfigRequest();
         request.setAdminId(wrapper.getId());
@@ -714,7 +715,7 @@ class AdminRequestProcessorTest {
         var admin = wrapper.getAdmin();
         var result = mock(AlterConfigsResult.class);
         when(result.all()).thenReturn(KafkaFuture.completedFuture(null));
-        when(admin.incrementalAlterConfigs(anyMap())).thenReturn(result);
+        when(admin.incrementalAlterConfigs(anyMap(), any(AlterConfigsOptions.class))).thenReturn(result);
 
         var request = new AdminDeleteGroupConfigRequest();
         request.setAdminId(wrapper.getId());
@@ -740,7 +741,7 @@ class AdminRequestProcessorTest {
         var description = new UserScramCredentialsDescription("user-1",
                 List.of(new ScramCredentialInfo(ScramMechanism.SCRAM_SHA_256, 4096)));
         when(result.all()).thenReturn(KafkaFuture.completedFuture(Map.of("user-1", description)));
-        when(admin.describeUserScramCredentials(any())).thenReturn(result);
+        when(admin.describeUserScramCredentials(any(), any(DescribeUserScramCredentialsOptions.class))).thenReturn(result);
 
         var request = new pro.savel.kafka.admin.requests.scram.AdminDescribeUserScramCredentialsRequest();
         request.setAdminId(wrapper.getId());
@@ -760,7 +761,7 @@ class AdminRequestProcessorTest {
         var admin = wrapper.getAdmin();
         var result = mock(AlterUserScramCredentialsResult.class);
         when(result.all()).thenReturn(KafkaFuture.completedFuture(null));
-        when(admin.alterUserScramCredentials(anyList())).thenReturn(result);
+        when(admin.alterUserScramCredentials(anyList(), any(AlterUserScramCredentialsOptions.class))).thenReturn(result);
 
         var request = new pro.savel.kafka.admin.requests.scram.AdminUpsertUserScramCredentialsRequest();
         request.setAdminId(wrapper.getId());
@@ -781,7 +782,7 @@ class AdminRequestProcessorTest {
         var admin = wrapper.getAdmin();
         var result = mock(AlterUserScramCredentialsResult.class);
         when(result.all()).thenReturn(KafkaFuture.completedFuture(null));
-        when(admin.alterUserScramCredentials(anyList())).thenReturn(result);
+        when(admin.alterUserScramCredentials(anyList(), any(AlterUserScramCredentialsOptions.class))).thenReturn(result);
 
         var request = new pro.savel.kafka.admin.requests.scram.AdminDeleteUserScramCredentialsRequest();
         request.setAdminId(wrapper.getId());
@@ -808,7 +809,7 @@ class AdminRequestProcessorTest {
                 new ResourcePattern(ResourceType.TOPIC, "topic-a", PatternType.LITERAL),
                 new AccessControlEntry("User:alice", "*", AclOperation.READ, AclPermissionType.ALLOW));
         when(result.values()).thenReturn(KafkaFuture.completedFuture(List.of(binding)));
-        when(admin.describeAcls(any())).thenReturn(result);
+        when(admin.describeAcls(any(AclBindingFilter.class), any(DescribeAclsOptions.class))).thenReturn(result);
 
         var request = new AdminDescribeAclsRequest();
         request.setAdminId(wrapper.getId());
@@ -828,7 +829,7 @@ class AdminRequestProcessorTest {
         var admin = wrapper.getAdmin();
         var result = mock(CreateAclsResult.class);
         when(result.all()).thenReturn(KafkaFuture.completedFuture(null));
-        when(admin.createAcls(anyCollection())).thenReturn(result);
+        when(admin.createAcls(anyCollection(), any(CreateAclsOptions.class))).thenReturn(result);
 
         var request = new AdminCreateAclsRequest();
         request.setAdminId(wrapper.getId());
@@ -859,7 +860,7 @@ class AdminRequestProcessorTest {
         var admin = wrapper.getAdmin();
         var result = mock(DeleteAclsResult.class);
         when(result.all()).thenReturn(KafkaFuture.completedFuture(List.of()));
-        when(admin.deleteAcls(anyCollection())).thenReturn(result);
+        when(admin.deleteAcls(anyCollection(), any(DeleteAclsOptions.class))).thenReturn(result);
 
         var request = new AdminDeleteAclsRequest();
         request.setAdminId(wrapper.getId());
@@ -887,7 +888,7 @@ class AdminRequestProcessorTest {
         var admin = wrapper.getAdmin();
         var result = mock(DescribeProducersResult.class);
         when(result.all()).thenReturn(KafkaFuture.completedFuture(Map.of()));
-        when(admin.describeProducers(anyCollection())).thenReturn(result);
+        when(admin.describeProducers(anyCollection(), any(DescribeProducersOptions.class))).thenReturn(result);
 
         var request = new AdminDescribeProducersRequest();
         request.setAdminId(wrapper.getId());
@@ -906,7 +907,7 @@ class AdminRequestProcessorTest {
         var admin = wrapper.getAdmin();
         var result = mock(AbortTransactionResult.class);
         when(result.all()).thenReturn(KafkaFuture.completedFuture(null));
-        when(admin.abortTransaction(any())).thenReturn(result);
+        when(admin.abortTransaction(any(AbortTransactionSpec.class), any(AbortTransactionOptions.class))).thenReturn(result);
 
         var request = new AdminAbortTransactionRequest();
         request.setAdminId(wrapper.getId());
@@ -1029,7 +1030,7 @@ class AdminRequestProcessorTest {
         var admin = wrapper.getAdmin();
         var result = mock(DeleteConsumerGroupsResult.class);
         when(result.all()).thenReturn(KafkaFuture.completedFuture(null));
-        when(admin.deleteConsumerGroups(anyCollection())).thenReturn(result);
+        when(admin.deleteConsumerGroups(anyCollection(), any(DeleteConsumerGroupsOptions.class))).thenReturn(result);
 
         var request = new AdminDeleteConsumerGroupRequest();
         request.setAdminId(wrapper.getId());
@@ -1071,7 +1072,7 @@ class AdminRequestProcessorTest {
         var admin = wrapper.getAdmin();
         var result = mock(AlterConsumerGroupOffsetsResult.class);
         when(result.all()).thenReturn(KafkaFuture.completedFuture(null));
-        when(admin.alterConsumerGroupOffsets(anyString(), anyMap())).thenReturn(result);
+        when(admin.alterConsumerGroupOffsets(anyString(), anyMap(), any(AlterConsumerGroupOffsetsOptions.class))).thenReturn(result);
 
         var request = new AdminAlterConsumerGroupOffsetsRequest();
         request.setAdminId(wrapper.getId());
@@ -1095,7 +1096,7 @@ class AdminRequestProcessorTest {
         var admin = wrapper.getAdmin();
         var result = mock(DeleteConsumerGroupOffsetsResult.class);
         when(result.all()).thenReturn(KafkaFuture.completedFuture(null));
-        when(admin.deleteConsumerGroupOffsets(anyString(), anySet())).thenReturn(result);
+        when(admin.deleteConsumerGroupOffsets(anyString(), anySet(), any(DeleteConsumerGroupOffsetsOptions.class))).thenReturn(result);
 
         var request = new AdminDeleteConsumerGroupOffsetsRequest();
         request.setAdminId(wrapper.getId());

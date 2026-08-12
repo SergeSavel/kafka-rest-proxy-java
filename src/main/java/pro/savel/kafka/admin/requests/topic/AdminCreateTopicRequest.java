@@ -32,4 +32,6 @@ public class AdminCreateTopicRequest implements AdminTopicRequest {
     private Short replicationFactor;
     private Boolean validateOnly;
     private Boolean retryOnQuotaViolation;
+    @Positive
+    private Integer timeoutMs;
 }

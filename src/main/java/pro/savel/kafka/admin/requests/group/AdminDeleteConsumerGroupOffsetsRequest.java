@@ -17,6 +17,7 @@ package pro.savel.kafka.admin.requests.group;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import lombok.Data;
 import pro.savel.kafka.common.contract.TopicPartition;
 
@@ -32,4 +33,6 @@ public class AdminDeleteConsumerGroupOffsetsRequest implements AdminGroupRequest
     private String groupId;
     @NotEmpty
     private Collection<@NotNull @Valid TopicPartition> partitions;
+    @Positive
+    private Integer timeoutMs;
 }

@@ -16,6 +16,7 @@ package pro.savel.kafka.admin.requests.config;
 
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.PositiveOrZero;
+import jakarta.validation.constraints.Positive;
 import lombok.Data;
 
 @Data
@@ -26,4 +27,6 @@ public class AdminDescribeBrokerConfigsRequest implements AdminConfigRequest {
     private String token;
     @PositiveOrZero
     private int brokerId;
+    @Positive
+    private Integer timeoutMs;
 }

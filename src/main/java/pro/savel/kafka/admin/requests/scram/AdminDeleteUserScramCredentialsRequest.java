@@ -15,6 +15,7 @@
 package pro.savel.kafka.admin.requests.scram;
 
 import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.Positive;
 import lombok.Data;
 
 @Data
@@ -27,4 +28,6 @@ public class AdminDeleteUserScramCredentialsRequest implements AdminScramRequest
     private String user;
     @NotEmpty
     private String mechanism;
+    @Positive
+    private Integer timeoutMs;
 }

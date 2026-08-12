@@ -223,7 +223,10 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
     private void processDescribeCluster(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (AdminDescribeClusterRequest) requestBearer.request();
         var admin = getAdmin(request.getAdminId(), request.getToken());
-        var describeResult = admin.describeCluster();
+        var options = new DescribeClusterOptions();
+        if (request.getTimeoutMs() != null)
+            options.timeoutMs(request.getTimeoutMs());
+        var describeResult = admin.describeCluster(options);
         var nodesFuture = describeResult.nodes().toCompletionStage().toCompletableFuture();
         var clusterIdFuture = describeResult.clusterId().toCompletionStage().toCompletableFuture();
         var controllerFuture = describeResult.controller().toCompletionStage().toCompletableFuture();
@@ -247,7 +250,10 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
     private void processDescribeFeatures(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (AdminDescribeFeaturesRequest) requestBearer.request();
         var admin = getAdmin(request.getAdminId(), request.getToken());
-        var describeResult = admin.describeFeatures();
+        var options = new DescribeFeaturesOptions();
+        if (request.getTimeoutMs() != null)
+            options.timeoutMs(request.getTimeoutMs());
+        var describeResult = admin.describeFeatures(options);
         describeResult.featureMetadata().whenComplete((metadata, error) -> {
             if (error == null) {
                 var response = AdminDescribeFeaturesResponse.of(metadata);
@@ -263,7 +269,10 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         var request = (AdminDescribeLogDirsRequest) requestBearer.request();
         var admin = getAdmin(request.getAdminId(), request.getToken());
         var brokers = request.getBrokerIds();
-        var describeResult = admin.describeLogDirs(brokers);
+        var options = new DescribeLogDirsOptions();
+        if (request.getTimeoutMs() != null)
+            options.timeoutMs(request.getTimeoutMs());
+        var describeResult = admin.describeLogDirs(brokers, options);
         describeResult.allDescriptions().whenComplete((descriptions, error) -> {
             if (error == null) {
                 var response = AdminDescribeLogDirsResponse.of(descriptions);
@@ -290,6 +299,8 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         var options = new UpdateFeaturesOptions();
         if (request.getValidateOnly() != null)
             options.validateOnly(request.getValidateOnly());
+        if (request.getTimeoutMs() != null)
+            options.timeoutMs(request.getTimeoutMs());
         var updateFeatures = Collections.singletonMap(request.getFeatureName(), featureUpdate);
         var updateResult = admin.updateFeatures(updateFeatures, options);
         updateResult.all().whenComplete((ignore, error) -> {
@@ -320,6 +331,8 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         var includeInternal = request.getIncludeInternal();
         if (includeInternal != null)
             options.listInternal(includeInternal);
+        if (request.getTimeoutMs() != null)
+            options.timeoutMs(request.getTimeoutMs());
         var topicsResult = admin.listTopics(options);
         topicsResult.listings().whenComplete((listings, error) -> {
             if (error == null) {
@@ -345,6 +358,8 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         var includeAuthorizedOperations = request.getIncludeAuthorizedOperations();
         if (includeAuthorizedOperations != null)
             options = options.includeAuthorizedOperations(includeAuthorizedOperations);
+        if (request.getTimeoutMs() != null)
+            options = options.timeoutMs(request.getTimeoutMs());
         org.apache.kafka.common.TopicCollection topicCollection;
         if (request.getTopicId() != null)
             topicCollection = org.apache.kafka.common.TopicCollection
@@ -385,6 +400,8 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
             options.validateOnly(request.getValidateOnly());
         if (request.getRetryOnQuotaViolation() != null)
             options.retryOnQuotaViolation(request.getRetryOnQuotaViolation());
+        if (request.getTimeoutMs() != null)
+            options.timeoutMs(request.getTimeoutMs());
         var createResult = admin.createTopics(Collections.singleton(newTopic), options);
         createResult.all().whenComplete((topics, error) -> {
             if (error == null) {
@@ -422,6 +439,8 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
             options.validateOnly(request.getValidateOnly());
         if (request.getRetryOnQuotaViolation() != null)
             options.retryOnQuotaViolation(request.getRetryOnQuotaViolation());
+        if (request.getTimeoutMs() != null)
+            options.timeoutMs(request.getTimeoutMs());
         var createResult = admin.createTopics(newTopics, options);
         createResult.all().whenComplete((ignore1, ignore2) -> {
             try {
@@ -446,7 +465,10 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
             topics = TopicCollection.ofTopicNames(topicNames);
         } else
             throw new IllegalArgumentException("Topic id or name must be specified");
-        var deleteResult = admin.deleteTopics(topics);
+        var options = new DeleteTopicsOptions();
+        if (request.getTimeoutMs() != null)
+            options.timeoutMs(request.getTimeoutMs());
+        var deleteResult = admin.deleteTopics(topics, options);
         deleteResult.all().whenComplete((ignore, error) -> {
             if (error == null)
                 ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null));
@@ -469,7 +491,10 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
             topics = TopicCollection.ofTopicNames(request.getTopicNames());
         } else
             throw new IllegalArgumentException("Topic ids or names must be specified");
-        var deleteResult = admin.deleteTopics(topics);
+        var options = new DeleteTopicsOptions();
+        if (request.getTimeoutMs() != null)
+            options.timeoutMs(request.getTimeoutMs());
+        var deleteResult = admin.deleteTopics(topics, options);
         deleteResult.all().whenComplete((ignore1, ignore2) -> {
             AdminDeleteTopicsResponse response;
             if (request.getTopicIds() != null)
@@ -504,7 +529,10 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         var request = (AdminCreatePartitionsRequest) requestBearer.request();
         var admin = getAdmin(request.getAdminId(), request.getToken());
         var newPartitions = NewPartitions.increaseTo(request.getIncreaseTo());
-        var createResult = admin.createPartitions(Collections.singletonMap(request.getTopicName(), newPartitions));
+        var options = new CreatePartitionsOptions();
+        if (request.getTimeoutMs() != null)
+            options.timeoutMs(request.getTimeoutMs());
+        var createResult = admin.createPartitions(Collections.singletonMap(request.getTopicName(), newPartitions), options);
         createResult.all().whenComplete((topics, error) -> {
             if (error == null)
                 ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null));
@@ -523,26 +551,29 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         var request = (AdminDescribeBrokerConfigsRequest) requestBearer.request();
         var admin = getAdmin(request.getAdminId(), request.getToken());
         var resource = new ConfigResource(ConfigResource.Type.BROKER, String.valueOf(request.getBrokerId()));
-        processDescribeConfigs(ctx, requestBearer, admin, resource, "Broker not found.");
+        processDescribeConfigs(ctx, requestBearer, admin, resource, "Broker not found.", request.getTimeoutMs());
     }
 
     private void processDescribeTopicConfigs(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (AdminDescribeTopicConfigsRequest) requestBearer.request();
         var admin = getAdmin(request.getAdminId(), request.getToken());
         var resource = new ConfigResource(ConfigResource.Type.TOPIC, request.getTopicName());
-        processDescribeConfigs(ctx, requestBearer, admin, resource, "Topic not found.");
+        processDescribeConfigs(ctx, requestBearer, admin, resource, "Topic not found.", request.getTimeoutMs());
     }
 
     private void processDescribeGroupConfigs(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (AdminDescribeGroupConfigsRequest) requestBearer.request();
         var admin = getAdmin(request.getAdminId(), request.getToken());
         var resource = new ConfigResource(ConfigResource.Type.GROUP, request.getGroupId());
-        processDescribeConfigs(ctx, requestBearer, admin, resource, "Group not found.");
+        processDescribeConfigs(ctx, requestBearer, admin, resource, "Group not found.", request.getTimeoutMs());
     }
 
     private void processDescribeConfigs(ChannelHandlerContext ctx, RequestBearer requestBearer, Admin admin,
-                                               ConfigResource resource, String notFoundMessage) {
-        var describeResult = admin.describeConfigs(Collections.singleton(resource));
+                                               ConfigResource resource, String notFoundMessage, Integer timeoutMs) {
+        var options = new DescribeConfigsOptions();
+        if (timeoutMs != null)
+            options.timeoutMs(timeoutMs);
+        var describeResult = admin.describeConfigs(Collections.singleton(resource), options);
         describeResult.all().whenComplete((configs, error) -> {
             if (error == null) {
                 if (configs.isEmpty()) {
@@ -566,7 +597,7 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         var configResource = new ConfigResource(ConfigResource.Type.TOPIC, request.getTopicName());
         var configEntry = new ConfigEntry(request.getConfigName(), request.getNewValue());
         var alterConfigOp = new AlterConfigOp(configEntry, AlterConfigOp.OpType.SET);
-        processIncrementalAlterConfig(ctx, requestBearer, admin, configResource, alterConfigOp);
+        processIncrementalAlterConfig(ctx, requestBearer, admin, configResource, alterConfigOp, request.getTimeoutMs());
     }
 
     private void processAlterGroupConfig(ChannelHandlerContext ctx, RequestBearer requestBearer) {
@@ -575,7 +606,7 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         var configResource = new ConfigResource(ConfigResource.Type.GROUP, request.getGroupId());
         var configEntry = new ConfigEntry(request.getConfigName(), request.getNewValue());
         var alterConfigOp = new AlterConfigOp(configEntry, AlterConfigOp.OpType.SET);
-        processIncrementalAlterConfig(ctx, requestBearer, admin, configResource, alterConfigOp);
+        processIncrementalAlterConfig(ctx, requestBearer, admin, configResource, alterConfigOp, request.getTimeoutMs());
     }
 
     private void processDeleteTopicConfig(ChannelHandlerContext ctx, RequestBearer requestBearer) {
@@ -584,7 +615,7 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         var configResource = new ConfigResource(ConfigResource.Type.TOPIC, request.getTopicName());
         var configEntry = new ConfigEntry(request.getConfigName(), null);
         var alterConfigOp = new AlterConfigOp(configEntry, AlterConfigOp.OpType.DELETE);
-        processIncrementalAlterConfig(ctx, requestBearer, admin, configResource, alterConfigOp);
+        processIncrementalAlterConfig(ctx, requestBearer, admin, configResource, alterConfigOp, request.getTimeoutMs());
     }
 
     private void processDeleteGroupConfig(ChannelHandlerContext ctx, RequestBearer requestBearer) {
@@ -593,19 +624,23 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         var configResource = new ConfigResource(ConfigResource.Type.GROUP, request.getGroupId());
         var configEntry = new ConfigEntry(request.getConfigName(), null);
         var alterConfigOp = new AlterConfigOp(configEntry, AlterConfigOp.OpType.DELETE);
-        processIncrementalAlterConfig(ctx, requestBearer, admin, configResource, alterConfigOp);
+        processIncrementalAlterConfig(ctx, requestBearer, admin, configResource, alterConfigOp, request.getTimeoutMs());
     }
 
     private void processIncrementalAlterConfig(ChannelHandlerContext ctx, RequestBearer requestBearer, Admin admin,
-                                               ConfigResource resource, AlterConfigOp op) {
+                                               ConfigResource resource, AlterConfigOp op, Integer timeoutMs) {
         Collection<AlterConfigOp> alterConfigOps = Collections.singleton(op);
         var configs = Collections.singletonMap(resource, alterConfigOps);
-        processIncrementalAlterConfigs(ctx, requestBearer, admin, configs);
+        processIncrementalAlterConfigs(ctx, requestBearer, admin, configs, timeoutMs);
     }
 
     private void processIncrementalAlterConfigs(ChannelHandlerContext ctx, RequestBearer requestBearer,
-                                                       Admin admin, Map<ConfigResource, Collection<AlterConfigOp>> configs) {
-        var alterConfigsResult = admin.incrementalAlterConfigs(configs);
+                                                       Admin admin, Map<ConfigResource, Collection<AlterConfigOp>> configs,
+                                                       Integer timeoutMs) {
+        var options = new AlterConfigsOptions();
+        if (timeoutMs != null)
+            options.timeoutMs(timeoutMs);
+        var alterConfigsResult = admin.incrementalAlterConfigs(configs, options);
         alterConfigsResult.all().whenComplete((ignore, error) -> {
             if (error == null) {
                 var responseBearer = new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, null);
@@ -624,7 +659,10 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
     private void processDescribeUserScramCredentials(ChannelHandlerContext ctx, RequestBearer requestBearer) {
         var request = (AdminDescribeUserScramCredentialsRequest) requestBearer.request();
         var admin = getAdmin(request.getAdminId(), request.getToken());
-        var describeResult = admin.describeUserScramCredentials(request.getUsers());
+        var options = new DescribeUserScramCredentialsOptions();
+        if (request.getTimeoutMs() != null)
+            options.timeoutMs(request.getTimeoutMs());
+        var describeResult = admin.describeUserScramCredentials(request.getUsers(), options);
         describeResult.all().whenComplete((descriptions, error) -> {
             if (error == null) {
                 var response = AdminDescribeUserScramCredentialsResponse.of(descriptions);
@@ -643,7 +681,7 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         var credentialInfo = new ScramCredentialInfo(ScramMechanism.fromMechanismName(request.getMechanism()),
                 iterations);
         var alteration = new UserScramCredentialUpsertion(request.getUser(), credentialInfo, request.getPassword());
-        processAlterUserScramCredentials(ctx, requestBearer, admin, alteration);
+        processAlterUserScramCredentials(ctx, requestBearer, admin, alteration, request.getTimeoutMs());
     }
 
     private void processDeleteUserScramCredentials(ChannelHandlerContext ctx, RequestBearer requestBearer) {
@@ -651,12 +689,16 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         var admin = getAdmin(request.getAdminId(), request.getToken());
         var alteration = new UserScramCredentialDeletion(request.getUser(),
                 ScramMechanism.fromMechanismName(request.getMechanism()));
-        processAlterUserScramCredentials(ctx, requestBearer, admin, alteration);
+        processAlterUserScramCredentials(ctx, requestBearer, admin, alteration, request.getTimeoutMs());
     }
 
     private void processAlterUserScramCredentials(ChannelHandlerContext ctx, RequestBearer requestBearer,
-                                                         Admin admin, UserScramCredentialAlteration alteration) {
-        var alterationResult = admin.alterUserScramCredentials(Collections.singletonList(alteration));
+                                                         Admin admin, UserScramCredentialAlteration alteration,
+                                                         Integer timeoutMs) {
+        var options = new AlterUserScramCredentialsOptions();
+        if (timeoutMs != null)
+            options.timeoutMs(timeoutMs);
+        var alterationResult = admin.alterUserScramCredentials(Collections.singletonList(alteration), options);
         alterationResult.all().whenComplete((ignore, error) -> {
             if (error == null) {
                 var responseBearer = new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, null);
@@ -676,7 +718,10 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         var request = (AdminDescribeAclsRequest) requestBearer.request();
         var admin = getAdmin(request.getAdminId(), request.getToken());
         var filter = AdminRequestMapper.mapAclBindingFilter(request.getFilter());
-        var describeResult = admin.describeAcls(filter);
+        var options = new DescribeAclsOptions();
+        if (request.getTimeoutMs() != null)
+            options.timeoutMs(request.getTimeoutMs());
+        var describeResult = admin.describeAcls(filter, options);
         describeResult.values().whenComplete((aclBindings, error) -> {
             if (error == null) {
                 var response = AdminDescribeAclsResponse.of(aclBindings);
@@ -692,7 +737,10 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         var request = (AdminCreateAclsRequest) requestBearer.request();
         var admin = getAdmin(request.getAdminId(), request.getToken());
         var acls = AdminRequestMapper.mapAclBindings(request.getAcls());
-        var createAclsResult = admin.createAcls(acls);
+        var options = new CreateAclsOptions();
+        if (request.getTimeoutMs() != null)
+            options.timeoutMs(request.getTimeoutMs());
+        var createAclsResult = admin.createAcls(acls, options);
         createAclsResult.all().whenComplete((ignore, error) -> {
             if (error == null)
                 ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null));
@@ -707,7 +755,10 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         var request = (AdminDeleteAclsRequest) requestBearer.request();
         var admin = getAdmin(request.getAdminId(), request.getToken());
         var filters = AdminRequestMapper.mapAclBindingFilters(request.getFilters());
-        var createAclsResult = admin.deleteAcls(filters);
+        var options = new DeleteAclsOptions();
+        if (request.getTimeoutMs() != null)
+            options.timeoutMs(request.getTimeoutMs());
+        var createAclsResult = admin.deleteAcls(filters, options);
         createAclsResult.all().whenComplete((ignore, error) -> {
             if (error == null)
                 ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null));
@@ -726,7 +777,10 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         var request = (AdminDescribeProducersRequest) requestBearer.request();
         var admin = getAdmin(request.getAdminId(), request.getToken());
         var partitions = CommonRequestMapper.mapPartitions(request.getPartitions());
-        var describeResult = admin.describeProducers(partitions);
+        var options = new DescribeProducersOptions();
+        if (request.getTimeoutMs() != null)
+            options.timeoutMs(request.getTimeoutMs());
+        var describeResult = admin.describeProducers(partitions, options);
         describeResult.all().whenComplete((producerStates, error) -> {
             if (error == null) {
                 var response = AdminDescribeProducersResponse.of(producerStates);
@@ -743,7 +797,10 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         var admin = getAdmin(request.getAdminId(), request.getToken());
         var partition = CommonRequestMapper.mapTopicPartition(request.getPartition());
         var spec = new AbortTransactionSpec(partition, request.getProducerId(), request.getProducerEpoch(), request.getCoordinatorEpoch());
-        admin.abortTransaction(spec).all().whenComplete((ignore, error) -> {
+        var options = new AbortTransactionOptions();
+        if (request.getTimeoutMs() != null)
+            options.timeoutMs(request.getTimeoutMs());
+        admin.abortTransaction(spec, options).all().whenComplete((ignore, error) -> {
             if (error == null)
                 ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null));
             else if (!handleError(ctx, error)) {
@@ -789,6 +846,8 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
             }
             options = options.inGroupStates(groupStates);
         }
+        if (request.getTimeoutMs() != null)
+            options = options.timeoutMs(request.getTimeoutMs());
         var listGroupsResult = admin.listGroups(options);
         listGroupsResult.all().whenComplete((groupListings, error) -> {
             if (error == null) {
@@ -807,6 +866,8 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         var options = new DescribeClassicGroupsOptions();
         if (request.getIncludeAuthorizedOperations() != null)
             options = options.includeAuthorizedOperations(request.getIncludeAuthorizedOperations());
+        if (request.getTimeoutMs() != null)
+            options = options.timeoutMs(request.getTimeoutMs());
         var groupIds = Collections.singleton(request.getGroupId());
         var describeResult = admin.describeClassicGroups(groupIds, options);
         describeResult.all().whenComplete((classicGroupDescriptions, error) -> {
@@ -833,6 +894,8 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         var options = new DescribeConsumerGroupsOptions();
         if (request.getIncludeAuthorizedOperations() != null)
             options = options.includeAuthorizedOperations(request.getIncludeAuthorizedOperations());
+        if (request.getTimeoutMs() != null)
+            options = options.timeoutMs(request.getTimeoutMs());
         var groupIds = Collections.singleton(request.getGroupId());
         var describeResult = admin.describeConsumerGroups(groupIds, options);
         describeResult.all().whenComplete((consumerGroupDescriptions, error) -> {
@@ -859,6 +922,8 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         var options = new DescribeShareGroupsOptions();
         if (request.getIncludeAuthorizedOperations() != null)
             options = options.includeAuthorizedOperations(request.getIncludeAuthorizedOperations());
+        if (request.getTimeoutMs() != null)
+            options = options.timeoutMs(request.getTimeoutMs());
         var groupIds = Collections.singleton(request.getGroupId());
         var describeResult = admin.describeShareGroups(groupIds, options);
         describeResult.all().whenComplete((shareGroupDescriptions, error) -> {
@@ -885,6 +950,8 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         var options = new DescribeStreamsGroupsOptions();
         if (request.getIncludeAuthorizedOperations() != null)
             options = options.includeAuthorizedOperations(request.getIncludeAuthorizedOperations());
+        if (request.getTimeoutMs() != null)
+            options = options.timeoutMs(request.getTimeoutMs());
         var groupIds = Collections.singleton(request.getGroupId());
         var describeResult = admin.describeStreamsGroups(groupIds, options);
         describeResult.all().whenComplete((streamsGroupDescriptions, error) -> {
@@ -912,6 +979,8 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         var options = new ListConsumerGroupOffsetsOptions();
         if (request.getRequireStable() != null)
             options = options.requireStable(request.getRequireStable());
+        if (request.getTimeoutMs() != null)
+            options = options.timeoutMs(request.getTimeoutMs());
         var listResult = admin.listConsumerGroupOffsets(groupId, options);
         listResult.all().whenComplete((offsets, error) -> {
             if (error == null) {
@@ -936,7 +1005,10 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         var admin = getAdmin(request.getAdminId(), request.getToken());
         var groupId = request.getGroupId();
         var offsets = AdminRequestMapper.mapTopicPartitionOffsetMetadata(request.getOffsets());
-        var alterResult = admin.alterConsumerGroupOffsets(groupId, offsets);
+        var options = new AlterConsumerGroupOffsetsOptions();
+        if (request.getTimeoutMs() != null)
+            options.timeoutMs(request.getTimeoutMs());
+        var alterResult = admin.alterConsumerGroupOffsets(groupId, offsets, options);
         alterResult.all().whenComplete((ignore, error) -> {
             if (error == null)
                 ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null));
@@ -952,7 +1024,10 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         var admin = getAdmin(request.getAdminId(), request.getToken());
         var groupId = request.getGroupId();
         var partitions = CommonRequestMapper.mapPartitions(request.getPartitions());
-        var deleteResult = admin.deleteConsumerGroupOffsets(groupId, partitions);
+        var options = new DeleteConsumerGroupOffsetsOptions();
+        if (request.getTimeoutMs() != null)
+            options.timeoutMs(request.getTimeoutMs());
+        var deleteResult = admin.deleteConsumerGroupOffsets(groupId, partitions, options);
         deleteResult.all().whenComplete((ignore, error) -> {
             if (error == null)
                 ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null));
@@ -979,6 +1054,8 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         }
         if (request.getReason() != null)
             options.reason(request.getReason());
+        if (request.getTimeoutMs() != null)
+            options.timeoutMs(request.getTimeoutMs());
         var removeResult = admin.removeMembersFromConsumerGroup(groupId, options);
         removeResult.all().whenComplete((ignore, error) -> {
             if (error == null)
@@ -994,7 +1071,10 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         var request = (AdminDeleteConsumerGroupRequest) requestBearer.request();
         var admin = getAdmin(request.getAdminId(), request.getToken());
         var groupIds = Collections.singleton(request.getGroupId());
-        var deleteResult = admin.deleteConsumerGroups(groupIds);
+        var options = new DeleteConsumerGroupsOptions();
+        if (request.getTimeoutMs() != null)
+            options.timeoutMs(request.getTimeoutMs());
+        var deleteResult = admin.deleteConsumerGroups(groupIds, options);
         deleteResult.all().whenComplete((ignore, error) -> {
             if (error == null)
                 ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null));
@@ -1009,7 +1089,10 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         var request = (AdminDeleteConsumerGroupsRequest) requestBearer.request();
         var admin = getAdmin(request.getAdminId(), request.getToken());
         var groupIds = request.getGroupIds();
-        var deleteResult = admin.deleteConsumerGroups(groupIds);
+        var options = new DeleteConsumerGroupsOptions();
+        if (request.getTimeoutMs() != null)
+            options.timeoutMs(request.getTimeoutMs());
+        var deleteResult = admin.deleteConsumerGroups(groupIds, options);
         deleteResult.all().whenComplete((ignore, error) -> {
             if (error == null)
                 ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null));
@@ -1024,7 +1107,10 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         var request = (AdminDeleteShareGroupRequest) requestBearer.request();
         var admin = getAdmin(request.getAdminId(), request.getToken());
         var groupIds = Collections.singleton(request.getGroupId());
-        var deleteResult = admin.deleteShareGroups(groupIds);
+        var options = new DeleteShareGroupsOptions();
+        if (request.getTimeoutMs() != null)
+            options.timeoutMs(request.getTimeoutMs());
+        var deleteResult = admin.deleteShareGroups(groupIds, options);
         deleteResult.all().whenComplete((ignore, error) -> {
             if (error == null)
                 ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null));
@@ -1039,7 +1125,10 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         var request = (AdminDeleteShareGroupsRequest) requestBearer.request();
         var admin = getAdmin(request.getAdminId(), request.getToken());
         var groupIds = request.getGroupIds();
-        var deleteResult = admin.deleteShareGroups(groupIds);
+        var options = new DeleteShareGroupsOptions();
+        if (request.getTimeoutMs() != null)
+            options.timeoutMs(request.getTimeoutMs());
+        var deleteResult = admin.deleteShareGroups(groupIds, options);
         deleteResult.all().whenComplete((ignore, error) -> {
             if (error == null)
                 ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null));
@@ -1054,7 +1143,10 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         var request = (AdminDeleteStreamsGroupRequest) requestBearer.request();
         var admin = getAdmin(request.getAdminId(), request.getToken());
         var groupIds = Collections.singleton(request.getGroupId());
-        var deleteResult = admin.deleteStreamsGroups(groupIds);
+        var options = new DeleteStreamsGroupsOptions();
+        if (request.getTimeoutMs() != null)
+            options.timeoutMs(request.getTimeoutMs());
+        var deleteResult = admin.deleteStreamsGroups(groupIds, options);
         deleteResult.all().whenComplete((ignore, error) -> {
             if (error == null)
                 ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null));
@@ -1069,7 +1161,10 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         var request = (AdminDeleteStreamsGroupsRequest) requestBearer.request();
         var admin = getAdmin(request.getAdminId(), request.getToken());
         var groupIds = request.getGroupIds();
-        var deleteResult = admin.deleteStreamsGroups(groupIds);
+        var options = new DeleteStreamsGroupsOptions();
+        if (request.getTimeoutMs() != null)
+            options.timeoutMs(request.getTimeoutMs());
+        var deleteResult = admin.deleteStreamsGroups(groupIds, options);
         deleteResult.all().whenComplete((ignore, error) -> {
             if (error == null)
                 ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null));
@@ -1131,6 +1226,8 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
                 HttpUtils.writeBadRequestAndClose(ctx, e.getMessage());
                 return;
             }
+        if (request.getTimeoutMs() != null)
+            options = options.timeoutMs(request.getTimeoutMs());
         var listOffsetsResult = admin.listOffsets(topicPartitionOffsets, options);
         listOffsetsResult.all().whenComplete((offsets, error) -> {
             if (error == null) {

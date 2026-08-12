@@ -15,6 +15,7 @@
 package pro.savel.kafka.admin.requests.group;
 
 import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.Positive;
 import lombok.Data;
 
 import java.util.Collection;
@@ -28,4 +29,6 @@ public class AdminListGroupsRequest implements AdminGroupRequest {
     private Collection<String> withTypes;
     private Collection<String> withProtocolTypes;
     private Collection<String> inStates;
+    @Positive
+    private Integer timeoutMs;
 }
