@@ -46,6 +46,7 @@ import static org.mockito.Mockito.*;
 
 class ConsumerRequestProcessorTest {
 
+    @SuppressWarnings("unchecked")
     private final ConsumerProvider provider = new ConsumerProvider(config -> mock(Consumer.class));
     private final ConsumerRequestProcessor processor =
             new ConsumerRequestProcessor(new SynchronousBlockingTaskExecutor(), provider);

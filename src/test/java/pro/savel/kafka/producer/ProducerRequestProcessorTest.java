@@ -42,6 +42,7 @@ import static org.mockito.Mockito.*;
 
 class ProducerRequestProcessorTest {
 
+    @SuppressWarnings("unchecked")
     private final ProducerProvider provider = new ProducerProvider(config -> mock(Producer.class));
     private final ProducerRequestProcessor processor =
             new ProducerRequestProcessor(new SynchronousBlockingTaskExecutor(), provider);
