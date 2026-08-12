@@ -72,6 +72,8 @@ public abstract class CommonErrors {
                     HttpUtils.writeConflictAndClose(ctx, Utils.combineErrorMessage(error));
             case FencedInstanceIdException ignored ->
                     HttpUtils.writeConflictAndClose(ctx, Utils.combineErrorMessage(error));
+            case FeatureUpdateFailedException ignored ->
+                    HttpUtils.writeInternalServerErrorAndClose(ctx, Utils.combineErrorMessage(error));
             case null, default -> handled = false;
         }
         return handled;

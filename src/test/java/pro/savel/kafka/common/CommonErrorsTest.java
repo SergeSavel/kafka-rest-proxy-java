@@ -112,6 +112,11 @@ class CommonErrorsTest {
         assertTrue(CommonErrors.handle(ctx, new TopicExistsException("te") {}));
     }
 
+    @Test
+    void handle_featureUpdateFailedException_returnsTrue() {
+        assertTrue(CommonErrors.handle(ctx, new FeatureUpdateFailedException("fu")));
+    }
+
 //endregion
 
 //region CompletionException / TimeoutException unwrapping
