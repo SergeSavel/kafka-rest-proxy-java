@@ -3,7 +3,7 @@ plugins {
     java
 }
 
-val nettyVersion = "4.2.16.Final"
+val nettyVersion = "4.2.17.Final"
 
 group = "pro.savel.kafka"
 version = "5.1.0"
@@ -45,7 +45,7 @@ dependencies {
     testCompileOnly("org.projectlombok:lombok:1.18.46")
     testAnnotationProcessor("org.projectlombok:lombok:1.18.46")
     implementation("com.fasterxml.jackson.core:jackson-databind:2.22.1")
-    testImplementation(platform("org.junit:junit-bom:6.1.2"))
+    testImplementation(platform("org.junit:junit-bom:6.1.3"))
     testImplementation("org.junit.jupiter:junit-jupiter")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     testImplementation("org.mockito:mockito-core:5.23.0")
