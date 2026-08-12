@@ -78,6 +78,47 @@ The service runs as user `kafka-gateway` from `/opt/kafka-gateway/` with:
 - `LimitNOFILE=65536`
 - `TimeoutStopSec=120` (greater than the default 60-second application shutdown deadline)
 
+### Windows Service (Apache Procrun)
+
+1. Install `prunsrv.exe` from the [Apache Commons Daemon binaries](https://downloads.apache.org/commons/daemon/binaries/windows/).
+2. Extract the distribution archive.
+3. Navigate to the distribution folder.
+
+Run the provided script from an elevated prompt:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\install-windows-service.ps1 -InstallDir C:\kafka-gateway
+```
+
+Parameters:
+
+| Parameter           | Default                        | Description                                                                                    |
+|---------------------|--------------------------------|------------------------------------------------------------------------------------------------|
+| `-InstallDir`       | (required)                     | The distribution directory containing `lib`                                                     |
+| `-WorkDir`          | `-InstallDir`                  | Service working directory                                                                       |
+| `-LogDir`           | `<WorkDir>\logs`               | Log directory                                                                                   |
+| `-ServiceName`      | `kafka-gateway`                | Windows service name                                                                            |
+| `-Prunsrv`          | `prunsrv.exe`                  | Procrun executable (`<InstallDir>`, then PATH)                                                  |
+| `-JvmOpts`          | `-Xms256M;-Xmx2G`              | JVM options (like `JAVA_OPTS` in the systemd unit)                                              |
+| `-KafkaGatewayOpts` | `-Dhost=127.0.0.1;-Dport=8086` | Gateway options (like `KAFKA_GATEWAY_OPTS` in the systemd unit)                                 |
+| `-StopTimeout`      | `120`                          | Seconds to wait for shutdown; must exceed the `-Dshutdown.timeoutSeconds` deadline (default 60) |
+
+Manage the service:
+
+```powershell
+prunsrv //ES//kafka-gateway   # start
+prunsrv //SS//kafka-gateway   # stop
+prunsrv //DS//kafka-gateway   # uninstall
+```
+
+Manual configuration (GUI): the Commons Daemon binaries also include `prunmgr.exe`:
+
+```powershell
+.\prunmgr.exe //ES//kafka-gateway
+```
+
+The dialog edits the service parameters (startup, JVM, paths, logging) and can start/stop the service. Other modes: `//MS//` (tray monitor), `//MR//` (monitor and start the service if it is not running), `//MQ//` (quit all monitors). Changes are stored in the registry under `HKLM\SOFTWARE\WOW6432Node\Apache Software Foundation\Procrun 2.0\kafka-gateway`.
+
 ### TLS
 
 TLS is **not** implemented in the application. Use an NGINX reverse proxy for TLS termination (LAN-only deployment).

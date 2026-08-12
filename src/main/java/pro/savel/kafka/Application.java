@@ -41,6 +41,8 @@ public class Application
 {
     private static final Logger logger = LoggerFactory.getLogger(Application.class);
 
+    private static volatile Channel serverChannel;
+
     public static void main(String[] args) throws InterruptedException
     {
         var config = ServerConfig.fromSystemProperties();
@@ -64,6 +66,8 @@ public class Application
                     .childHandler(initializer);
 
             var channel = bootstrap.bind(config.host(), config.port()).sync().channel();
+            serverChannel = channel;
+
             logger.info("Server started on {}:{} using {} transport and {} event loop threads.",
                     config.host(), config.port(), transport.name(), workerGroup.executorCount());
 
@@ -92,6 +96,17 @@ public class Application
                     // JVM shutdown is already in progress.
                 }
         }
+    }
+
+    /**
+     * Stops the running server. Called by Apache Procrun on service stop: closes the server channel and lets
+     * {@link #main(String[])} complete the graceful shutdown.
+     */
+    public static void stop(String[] args)
+    {
+        var channel = serverChannel;
+        if (channel != null)
+            channel.close();
     }
 
     private static void awaitShutdown(FutureTask<Void> shutdownTask) {

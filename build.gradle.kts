@@ -59,6 +59,7 @@ distributions {
             from("NOTICE")
             from("README.md")
             from("kafka-gateway.service")
+            from("install-windows-service.ps1")
             from("docs") {
                 into("docs")
             }
