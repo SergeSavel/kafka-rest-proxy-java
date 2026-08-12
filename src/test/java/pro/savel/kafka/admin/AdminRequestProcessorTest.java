@@ -35,6 +35,7 @@ import pro.savel.kafka.admin.requests.acls.AdminCreateAclsRequest;
 import pro.savel.kafka.admin.requests.acls.AdminDeleteAclsRequest;
 import pro.savel.kafka.admin.requests.acls.AdminDescribeAclsRequest;
 import pro.savel.kafka.admin.requests.cluster.AdminDescribeClusterRequest;
+import pro.savel.kafka.admin.requests.cluster.AdminDescribeFeaturesRequest;
 import pro.savel.kafka.admin.requests.cluster.AdminDescribeLogDirsRequest;
 import pro.savel.kafka.admin.requests.config.AdminAlterGroupConfigRequest;
 import pro.savel.kafka.admin.requests.config.AdminAlterTopicConfigRequest;
@@ -60,6 +61,7 @@ import pro.savel.kafka.common.contract.TopicPartition;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
 
@@ -227,6 +229,35 @@ class AdminRequestProcessorTest {
         assertEquals(HttpResponseStatus.OK, response.getStatus());
         var body = (AdminDescribeClusterResponse) response.getResponse();
         assertEquals("cluster-1", body.getClusterId());
+    }
+
+    @Test
+    void processDescribeFeatures_success_returnsMetadata() {
+        var wrapper = addWrapper();
+        var admin = wrapper.getAdmin();
+        var result = mock(DescribeFeaturesResult.class);
+        var metadata = mock(FeatureMetadata.class);
+        when(metadata.supportedFeatures()).thenReturn(Map.of("group.version", new SupportedVersionRange((short) 0, (short) 1)));
+        when(metadata.finalizedFeatures()).thenReturn(Map.of("group.version", new FinalizedVersionRange((short) 1, (short) 1)));
+        when(metadata.finalizedFeaturesEpoch()).thenReturn(Optional.of(42L));
+        when(result.featureMetadata()).thenReturn(KafkaFuture.completedFuture(metadata));
+        when(admin.describeFeatures()).thenReturn(result);
+
+        var request = new AdminDescribeFeaturesRequest();
+        request.setAdminId(wrapper.getId());
+        request.setToken(wrapper.getToken());
+
+        channel.writeInbound(bearer(request));
+
+        AdminResponseBearer response = channel.readOutbound();
+        assertEquals(HttpResponseStatus.OK, response.getStatus());
+        var body = (AdminDescribeFeaturesResponse) response.getResponse();
+        assertEquals(42L, body.getFinalizedFeaturesEpoch());
+        assertEquals(1, body.getSupportedFeatures().size());
+        assertEquals("group.version", body.getSupportedFeatures().get(0).getName());
+        assertEquals(1, body.getSupportedFeatures().get(0).getMaxVersion());
+        assertEquals(1, body.getFinalizedFeatures().size());
+        assertEquals("group.version", body.getFinalizedFeatures().get(0).getName());
     }
 
     @Test

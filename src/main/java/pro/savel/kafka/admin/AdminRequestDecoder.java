@@ -31,6 +31,7 @@ import pro.savel.kafka.admin.requests.acls.AdminCreateAclsRequest;
 import pro.savel.kafka.admin.requests.acls.AdminDeleteAclsRequest;
 import pro.savel.kafka.admin.requests.acls.AdminDescribeAclsRequest;
 import pro.savel.kafka.admin.requests.cluster.AdminDescribeClusterRequest;
+import pro.savel.kafka.admin.requests.cluster.AdminDescribeFeaturesRequest;
 import pro.savel.kafka.admin.requests.cluster.AdminDescribeLogDirsRequest;
 import pro.savel.kafka.admin.requests.config.AdminAlterGroupConfigRequest;
 import pro.savel.kafka.admin.requests.config.AdminAlterTopicConfigRequest;
@@ -112,6 +113,7 @@ public class AdminRequestDecoder extends ChannelInboundHandlerAdapter {
             case "/describe-broker-configs" -> decodeDescribeBrokerConfigs(ctx, httpRequest);
             case "/describe-group-configs" -> decodeDescribeGroupConfigs(ctx, httpRequest);
             case "/describe-cluster" -> decodeDescribeCluster(ctx, httpRequest);
+            case "/describe-features" -> decodeDescribeFeatures(ctx, httpRequest);
             case "/describe-log-dirs" -> decodeDescribeLogDirs(ctx, httpRequest);
             case "/touch" -> decodeTouch(ctx, httpRequest);
             case "/create" -> decodeCreate(ctx, httpRequest);
@@ -191,6 +193,14 @@ public class AdminRequestDecoder extends ChannelInboundHandlerAdapter {
     private void decodeDescribeCluster(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
         if (httpRequest.method() == HttpMethod.POST) {
             decodeRequest(ctx, httpRequest, AdminDescribeClusterRequest.class);
+        } else {
+            throw new MethodNotAllowedException("Unsupported HTTP method.");
+        }
+    }
+
+    private void decodeDescribeFeatures(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
+        if (httpRequest.method() == HttpMethod.POST) {
+            decodeRequest(ctx, httpRequest, AdminDescribeFeaturesRequest.class);
         } else {
             throw new MethodNotAllowedException("Unsupported HTTP method.");
         }

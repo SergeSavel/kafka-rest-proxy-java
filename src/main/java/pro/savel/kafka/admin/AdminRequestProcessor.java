@@ -24,6 +24,7 @@ import pro.savel.kafka.admin.requests.acls.AdminCreateAclsRequest;
 import pro.savel.kafka.admin.requests.acls.AdminDeleteAclsRequest;
 import pro.savel.kafka.admin.requests.acls.AdminDescribeAclsRequest;
 import pro.savel.kafka.admin.requests.cluster.AdminDescribeClusterRequest;
+import pro.savel.kafka.admin.requests.cluster.AdminDescribeFeaturesRequest;
 import pro.savel.kafka.admin.requests.cluster.AdminDescribeLogDirsRequest;
 import pro.savel.kafka.admin.requests.config.AdminAlterGroupConfigRequest;
 import pro.savel.kafka.admin.requests.config.AdminAlterTopicConfigRequest;
@@ -85,6 +86,8 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
             processDescribeGroupConfigs(ctx, requestBearer);
         else if (requestClass == AdminDescribeClusterRequest.class)
             processDescribeCluster(ctx, requestBearer);
+        else if (requestClass == AdminDescribeFeaturesRequest.class)
+            processDescribeFeatures(ctx, requestBearer);
         else if (requestClass == AdminDescribeLogDirsRequest.class)
             processDescribeLogDirs(ctx, requestBearer);
         else if (requestClass == AdminCreateRequest.class)
@@ -234,6 +237,21 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
                         HttpUtils.writeInternalServerErrorAndClose(ctx, error.getMessage());
                     }
                 });
+    }
+
+    private void processDescribeFeatures(ChannelHandlerContext ctx, RequestBearer requestBearer) {
+        var request = (AdminDescribeFeaturesRequest) requestBearer.request();
+        var admin = getAdmin(request.getAdminId(), request.getToken());
+        var describeResult = admin.describeFeatures();
+        describeResult.featureMetadata().whenComplete((metadata, error) -> {
+            if (error == null) {
+                var response = AdminDescribeFeaturesResponse.of(metadata);
+                ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
+            } else if (!handleError(ctx, error)) {
+                logger.error("Unable to describe features.", error);
+                HttpUtils.writeInternalServerErrorAndClose(ctx, error.getMessage());
+            }
+        });
     }
 
     private void processDescribeLogDirs(ChannelHandlerContext ctx, RequestBearer requestBearer) {

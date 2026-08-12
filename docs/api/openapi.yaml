@@ -555,6 +555,23 @@ paths:
         '404': {$ref: '#/components/responses/NotFound'}
         '500': {$ref: '#/components/responses/InternalServerError'}
 
+  /admin/describe-features:
+    post:
+      tags: [cluster]
+      summary: Describe supported and finalized cluster features
+      operationId: adminDescribeFeatures
+      requestBody: {$ref: '#/components/requestBodies/AdminInstanceRef'}
+      responses:
+        '200':
+          description: Feature metadata
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AdminDescribeFeaturesResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+
   /admin/describe-log-dirs:
     post:
       tags: [cluster]
@@ -2345,6 +2362,30 @@ components:
           type: array
           nullable: true
           items: {$ref: '#/components/schemas/AclOperation'}
+
+    AdminDescribeFeaturesResponse:
+      type: object
+      properties:
+        supportedFeatures:
+          type: array
+          items:
+            type: object
+            properties:
+              name: {type: string}
+              minVersion: {type: integer}
+              maxVersion: {type: integer}
+        finalizedFeatures:
+          type: array
+          items:
+            type: object
+            properties:
+              name: {type: string}
+              minVersionLevel: {type: integer}
+              maxVersionLevel: {type: integer}
+        finalizedFeaturesEpoch:
+          type: integer
+          format: int64
+          nullable: true
 
     AdminDescribeLogDirsRequest:
       allOf:
