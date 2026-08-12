@@ -389,6 +389,27 @@ paths:
         '404': {$ref: '#/components/responses/NotFound'}
         '500': {$ref: '#/components/responses/InternalServerError'}
 
+  /admin/delete-records:
+    post:
+      tags: [topics]
+      summary: Delete records from a topic partition before the given offset
+      operationId: adminDeleteRecords
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/AdminDeleteRecordsRequest'}
+      responses:
+        '200':
+          description: New low watermark of the partition
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AdminDeleteRecordsResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+
   /admin/describe-topic-configs:
     post:
       tags: [configs]
@@ -2251,6 +2272,33 @@ components:
                 type: string
       description: |
         Specify `topicNames` or `topicIds`. When both are provided, `topicIds` is used.
+
+    AdminDeleteRecordsRequest:
+      allOf:
+        - $ref: '#/components/schemas/AdminInstanceRef'
+        - type: object
+          required: [topic, partition, beforeOffset]
+          properties:
+            topic:
+              type: string
+              minLength: 1
+            partition:
+              type: integer
+              minimum: 0
+            beforeOffset:
+              type: integer
+              format: int64
+              minimum: 0
+            timeoutMs:
+              type: integer
+              minimum: 1
+
+    AdminDeleteRecordsResponse:
+      type: object
+      properties:
+        lowWatermark:
+          type: integer
+          format: int64
 
     TopicDeletionResult:
       type: object

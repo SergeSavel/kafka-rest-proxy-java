@@ -175,6 +175,7 @@ The API is documented as an OpenAPI 3.1 specification in [`docs/api/openapi.yaml
 | POST   | `/admin/create-topics`     | Create multiple topics |
 | POST   | `/admin/delete-topic`      | Delete topic           |
 | POST   | `/admin/delete-topics`     | Delete multiple topics |
+| POST   | `/admin/delete-records`    | Delete records         |
 | POST   | `/admin/create-partitions` | Create partitions      |
 
 **Configs**

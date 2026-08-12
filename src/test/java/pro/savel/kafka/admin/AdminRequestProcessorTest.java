@@ -546,6 +546,33 @@ class AdminRequestProcessorTest {
     }
 
     @Test
+    void processDeleteRecords_success_returnsLowWatermark() {
+        var wrapper = addWrapper();
+        var admin = wrapper.getAdmin();
+        var result = mock(DeleteRecordsResult.class);
+        var topicPartition = new org.apache.kafka.common.TopicPartition("topic-a", 0);
+        var deleted = mock(DeletedRecords.class);
+        when(deleted.lowWatermark()).thenReturn(42L);
+        when(result.lowWatermarks()).thenReturn(Map.of(topicPartition, KafkaFuture.completedFuture(deleted)));
+        when(admin.deleteRecords(anyMap(), any(DeleteRecordsOptions.class))).thenReturn(result);
+
+        var request = new AdminDeleteRecordsRequest();
+        request.setAdminId(wrapper.getId());
+        request.setToken(wrapper.getToken());
+        request.setTopic("topic-a");
+        request.setPartition(0);
+        request.setBeforeOffset(100L);
+        request.setTimeoutMs(5000);
+
+        channel.writeInbound(bearer(request));
+
+        AdminResponseBearer response = channel.readOutbound();
+        assertEquals(HttpResponseStatus.OK, response.getStatus());
+        var body = (AdminDeleteRecordsResponse) response.getResponse();
+        assertEquals(42L, body.getLowWatermark());
+    }
+
+    @Test
     void processCreatePartitions_success_returnsNoContent() {
         var wrapper = addWrapper();
         var admin = wrapper.getAdmin();

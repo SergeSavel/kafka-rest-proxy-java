@@ -77,6 +77,8 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
             processDeleteTopic(ctx, requestBearer);
         else if (requestClass == AdminDeleteTopicsRequest.class)
             processDeleteTopics(ctx, requestBearer);
+        else if (requestClass == AdminDeleteRecordsRequest.class)
+            processDeleteRecords(ctx, requestBearer);
         else if (requestClass == AdminListTopicsRequest.class)
             processListTopics(ctx, requestBearer);
         else if (requestClass == AdminDescribeTopicConfigsRequest.class)
@@ -475,6 +477,26 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
             else
                 response = AdminDeleteTopicsResponse.ofNames(deleteResult.topicNameValues());
             ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
+        });
+    }
+
+    private void processDeleteRecords(ChannelHandlerContext ctx, RequestBearer requestBearer) {
+        var request = (AdminDeleteRecordsRequest) requestBearer.request();
+        var admin = getAdmin(request.getAdminId(), request.getToken());
+        var topicPartition = new TopicPartition(request.getTopic(), request.getPartition());
+        var options = new DeleteRecordsOptions();
+        if (request.getTimeoutMs() != null)
+            options.timeoutMs(request.getTimeoutMs());
+        var records = Collections.singletonMap(topicPartition, RecordsToDelete.beforeOffset(request.getBeforeOffset()));
+        var deleteResult = admin.deleteRecords(records, options);
+        deleteResult.lowWatermarks().get(topicPartition).whenComplete((deleted, error) -> {
+            if (error == null) {
+                var response = AdminDeleteRecordsResponse.of(deleted);
+                ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
+            } else if (!handleError(ctx, error)) {
+                logger.error("Unable to delete records.", error);
+                HttpUtils.writeInternalServerErrorAndClose(ctx, error.getMessage());
+            }
         });
     }
 
