@@ -29,6 +29,7 @@ import org.apache.kafka.common.resource.ResourcePattern;
 import org.apache.kafka.common.resource.ResourceType;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import pro.savel.kafka.admin.data.AdminAclBinding;
 import pro.savel.kafka.admin.requests.AdminRequest;
 import pro.savel.kafka.admin.requests.acls.AdminCreateAclsRequest;
@@ -37,6 +38,7 @@ import pro.savel.kafka.admin.requests.acls.AdminDescribeAclsRequest;
 import pro.savel.kafka.admin.requests.cluster.AdminDescribeClusterRequest;
 import pro.savel.kafka.admin.requests.cluster.AdminDescribeFeaturesRequest;
 import pro.savel.kafka.admin.requests.cluster.AdminDescribeLogDirsRequest;
+import pro.savel.kafka.admin.requests.cluster.AdminUpdateFeatureRequest;
 import pro.savel.kafka.admin.requests.config.AdminAlterGroupConfigRequest;
 import pro.savel.kafka.admin.requests.config.AdminAlterTopicConfigRequest;
 import pro.savel.kafka.admin.requests.config.AdminDeleteGroupConfigRequest;
@@ -278,6 +280,31 @@ class AdminRequestProcessorTest {
         AdminResponseBearer response = channel.readOutbound();
         assertEquals(HttpResponseStatus.OK, response.getStatus());
         assertTrue(((AdminDescribeLogDirsResponse) response.getResponse()).isEmpty());
+    }
+
+    @Test
+    void processUpdateFeature_success_returnsOk() {
+        var wrapper = addWrapper();
+        var admin = wrapper.getAdmin();
+        var result = mock(UpdateFeaturesResult.class);
+        when(result.all()).thenReturn(KafkaFuture.completedFuture(null));
+        when(admin.updateFeatures(anyMap(), any(UpdateFeaturesOptions.class))).thenReturn(result);
+
+        var request = new AdminUpdateFeatureRequest();
+        request.setAdminId(wrapper.getId());
+        request.setToken(wrapper.getToken());
+        request.setFeatureName("group.version");
+        request.setVersionLevel((short) 1);
+        request.setUpgradeType("UPGRADE");
+        request.setValidateOnly(true);
+
+        channel.writeInbound(bearer(request));
+
+        AdminResponseBearer response = channel.readOutbound();
+        assertEquals(HttpResponseStatus.OK, response.getStatus());
+        var optionsCaptor = ArgumentCaptor.forClass(UpdateFeaturesOptions.class);
+        verify(admin).updateFeatures(anyMap(), optionsCaptor.capture());
+        assertTrue(optionsCaptor.getValue().validateOnly());
     }
 
     //endregion

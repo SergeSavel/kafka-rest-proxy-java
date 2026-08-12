@@ -26,6 +26,7 @@ import pro.savel.kafka.admin.requests.acls.AdminDescribeAclsRequest;
 import pro.savel.kafka.admin.requests.cluster.AdminDescribeClusterRequest;
 import pro.savel.kafka.admin.requests.cluster.AdminDescribeFeaturesRequest;
 import pro.savel.kafka.admin.requests.cluster.AdminDescribeLogDirsRequest;
+import pro.savel.kafka.admin.requests.cluster.AdminUpdateFeatureRequest;
 import pro.savel.kafka.admin.requests.config.AdminAlterGroupConfigRequest;
 import pro.savel.kafka.admin.requests.config.AdminAlterTopicConfigRequest;
 import pro.savel.kafka.admin.requests.config.AdminDeleteGroupConfigRequest;
@@ -90,6 +91,8 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
             processDescribeFeatures(ctx, requestBearer);
         else if (requestClass == AdminDescribeLogDirsRequest.class)
             processDescribeLogDirs(ctx, requestBearer);
+        else if (requestClass == AdminUpdateFeatureRequest.class)
+            processUpdateFeature(ctx, requestBearer);
         else if (requestClass == AdminCreateRequest.class)
             processCreate(ctx, requestBearer);
         else if (requestClass == AdminRemoveRequest.class)
@@ -265,6 +268,33 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
                 ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
             } else if (!handleError(ctx, error)) {
                 logger.error("Unable to get log dir descriptions.", error);
+                HttpUtils.writeInternalServerErrorAndClose(ctx, error.getMessage());
+            }
+        });
+    }
+
+    private void processUpdateFeature(ChannelHandlerContext ctx, RequestBearer requestBearer) {
+        var request = (AdminUpdateFeatureRequest) requestBearer.request();
+        var admin = getAdmin(request.getAdminId(), request.getToken());
+        FeatureUpdate.UpgradeType upgradeType;
+        try {
+            upgradeType = FeatureUpdate.UpgradeType.valueOf(request.getUpgradeType());
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Unsupported upgrade type: " + request.getUpgradeType());
+        }
+        if (upgradeType == FeatureUpdate.UpgradeType.UNKNOWN)
+            throw new IllegalArgumentException("Unsupported upgrade type: " + request.getUpgradeType());
+        var featureUpdate = new FeatureUpdate(request.getVersionLevel(), upgradeType);
+        var options = new UpdateFeaturesOptions();
+        if (request.getValidateOnly() != null)
+            options.validateOnly(request.getValidateOnly());
+        var updateFeatures = Collections.singletonMap(request.getFeatureName(), featureUpdate);
+        var updateResult = admin.updateFeatures(updateFeatures, options);
+        updateResult.all().whenComplete((ignore, error) -> {
+            if (error == null) {
+                ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, null));
+            } else if (!handleError(ctx, error)) {
+                logger.error("Unable to update feature.", error);
                 HttpUtils.writeInternalServerErrorAndClose(ctx, error.getMessage());
             }
         });

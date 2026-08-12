@@ -593,6 +593,23 @@ paths:
         '404': {$ref: '#/components/responses/NotFound'}
         '500': {$ref: '#/components/responses/InternalServerError'}
 
+  /admin/update-feature:
+    post:
+      tags: [cluster]
+      summary: Update the finalized version level of a single cluster feature
+      operationId: adminUpdateFeature
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/AdminUpdateFeatureRequest'}
+      responses:
+        '200': {description: "Feature updated, empty body"}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+
   /admin/describe-user-scram-credentials:
     post:
       tags: [scram]
@@ -2386,6 +2403,26 @@ components:
           type: integer
           format: int64
           nullable: true
+
+    AdminUpdateFeatureRequest:
+      allOf:
+        - $ref: '#/components/schemas/AdminInstanceRef'
+        - type: object
+          required: [featureName, versionLevel, upgradeType]
+          properties:
+            featureName:
+              type: string
+              minLength: 1
+            versionLevel:
+              type: integer
+              minimum: 0
+            upgradeType:
+              type: string
+              enum: [UPGRADE, SAFE_DOWNGRADE, UNSAFE_DOWNGRADE]
+            validateOnly:
+              type: boolean
+              default: false
+              description: Validate the update without applying it
 
     AdminDescribeLogDirsRequest:
       allOf:

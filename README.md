@@ -163,6 +163,7 @@ The API is documented as an OpenAPI 3.1 specification in [`docs/api/openapi.yaml
 | POST   | `/admin/describe-cluster`  | Describe cluster  |
 | POST   | `/admin/describe-features` | Describe features |
 | POST   | `/admin/describe-log-dirs` | Describe log dirs |
+| POST   | `/admin/update-feature`    | Update feature    |
 
 **Topics**
 
