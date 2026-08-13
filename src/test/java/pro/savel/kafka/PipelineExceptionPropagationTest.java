@@ -15,8 +15,6 @@
 package pro.savel.kafka;
 
 import io.netty.channel.embedded.EmbeddedChannel;
-import io.netty.handler.codec.http.FullHttpResponse;
-import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.timeout.ReadTimeoutException;
 import io.netty.handler.timeout.WriteTimeoutException;
 import org.junit.jupiter.api.Test;
@@ -24,11 +22,13 @@ import pro.savel.kafka.admin.AdminProvider;
 import pro.savel.kafka.admin.AdminRequestProcessor;
 import pro.savel.kafka.common.SynchronousBlockingTaskExecutor;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 /**
  * Guards against exceptionCaught being swallowed by a *RequestProcessor before it reaches
  * DefaultInboundHandler's ReadTimeoutException/WriteTimeoutException handling further down the pipeline.
+ * A swallowed exception would leave the channel open.
  */
 class PipelineExceptionPropagationTest {
 
@@ -44,9 +44,8 @@ class PipelineExceptionPropagationTest {
 
         channel.pipeline().fireExceptionCaught(ReadTimeoutException.INSTANCE);
 
-        FullHttpResponse response = channel.readOutbound();
-        assertEquals(HttpResponseStatus.REQUEST_TIMEOUT, response.status());
-        response.release();
+        assertFalse(channel.isOpen());
+        assertNull(channel.readOutbound());
         channel.finishAndReleaseAll();
     }
 
@@ -56,9 +55,8 @@ class PipelineExceptionPropagationTest {
 
         channel.pipeline().fireExceptionCaught(WriteTimeoutException.INSTANCE);
 
-        FullHttpResponse response = channel.readOutbound();
-        assertEquals(HttpResponseStatus.GATEWAY_TIMEOUT, response.status());
-        response.release();
+        assertFalse(channel.isOpen());
+        assertNull(channel.readOutbound());
         channel.finishAndReleaseAll();
     }
 }

@@ -17,11 +17,18 @@ package pro.savel.kafka;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.DefaultHttpContent;
+import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.LastHttpContent;
+import io.netty.handler.timeout.ReadTimeoutException;
+import io.netty.handler.timeout.WriteTimeoutException;
 import org.junit.jupiter.api.Test;
+
+import java.nio.charset.StandardCharsets;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class DefaultInboundHandlerTest {
@@ -52,6 +59,43 @@ class DefaultInboundHandlerTest {
 
         assertFalse(channel.writeInbound("unexpected"));
         assertFalse(channel.isOpen());
+        channel.finishAndReleaseAll();
+    }
+
+    @Test
+    void readTimeout_closesChannelWithoutWritingResponse() {
+        var channel = new EmbeddedChannel(new DefaultInboundHandler());
+
+        channel.pipeline().fireExceptionCaught(ReadTimeoutException.INSTANCE);
+
+        assertNull(channel.readOutbound());
+        assertFalse(channel.isOpen());
+        channel.finishAndReleaseAll();
+    }
+
+    @Test
+    void writeTimeout_closesChannelWithoutWritingResponse() {
+        var channel = new EmbeddedChannel(new DefaultInboundHandler());
+
+        channel.pipeline().fireExceptionCaught(WriteTimeoutException.INSTANCE);
+
+        assertNull(channel.readOutbound());
+        assertFalse(channel.isOpen());
+        channel.finishAndReleaseAll();
+    }
+
+    @Test
+    void timeoutDuringChunkedResponse_leavesAlreadyWrittenBytesIntact() {
+        var channel = new EmbeddedChannel(new DefaultInboundHandler());
+        var firstChunk = new DefaultHttpContent(Unpooled.wrappedBuffer("part".getBytes(StandardCharsets.UTF_8)));
+        channel.writeOutbound(firstChunk);
+
+        channel.pipeline().fireExceptionCaught(WriteTimeoutException.INSTANCE);
+
+        var written = channel.readOutbound();
+        assertInstanceOf(HttpContent.class, written);
+        ((HttpContent) written).release();
+        assertNull(channel.readOutbound());
         channel.finishAndReleaseAll();
     }
 }

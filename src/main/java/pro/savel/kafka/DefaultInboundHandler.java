@@ -18,13 +18,11 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.http.HttpContent;
-import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.timeout.ReadTimeoutException;
 import io.netty.handler.timeout.WriteTimeoutException;
 import io.netty.util.ReferenceCountUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import pro.savel.kafka.common.HttpUtils;
 
 @ChannelHandler.Sharable
 public class DefaultInboundHandler extends ChannelInboundHandlerAdapter {
@@ -49,13 +47,15 @@ public class DefaultInboundHandler extends ChannelInboundHandlerAdapter {
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-        if (cause instanceof ReadTimeoutException) {
-            HttpUtils.writeHttpResponseAndClose(ctx, HttpResponseStatus.REQUEST_TIMEOUT, null);
-        } else if (cause instanceof WriteTimeoutException) {
-            HttpUtils.writeHttpResponseAndClose(ctx, HttpResponseStatus.GATEWAY_TIMEOUT, null);
-        } else {
+        // A response for the current request may already be partially written (e.g. a chunked
+        // consumer/poll body). Writing a fresh 408/504 here would land after, or interleaved with,
+        // those bytes and corrupt the stream, which the client sees as a truncated response. Just
+        // close instead — the client loses the clean status code but not to a corrupted body.
+        if (cause instanceof ReadTimeoutException || cause instanceof WriteTimeoutException)
+            logger.warn("Closing connection to {} due to {}.", ctx.channel().remoteAddress(),
+                    cause.getClass().getSimpleName());
+        else
             logger.error("Unhandled pipeline exception.", cause);
-            ctx.close();
-        }
+        ctx.close();
     }
 }
