@@ -8,18 +8,28 @@
         <Console name="CONSOLE">
             <PatternLayout pattern="%d [%t] %p %c - %m%n"/>
         </Console>
-        <RollingFile name="FILE"
-                     fileName="${sys:log.dir:-logs}/kafka-gateway.log"
-                     filePattern="${sys:log.dir:-logs}/kafka-gateway-%d{yyyy-MM-dd}.log.gz">
-            <PatternLayout pattern="%d [%t] %p %c - %m%n"/>
-            <TimeBasedTriggeringPolicy modulate="true"/>
-            <DefaultRolloverStrategy>
-                <Delete basePath="${sys:log.dir:-logs}" maxDepth="1">
-                    <IfFileName glob="kafka-gateway-*.log.gz"/>
-                    <IfLastModified age="30d"/>
-                </Delete>
-            </DefaultRolloverStrategy>
-        </RollingFile>
+        <!-- File logging is only enabled when -Dlog.dir is set; otherwise events go to the Null appender. -->
+        <Routing name="FILE">
+            <Routes pattern="$${sys:log.dir:-CONSOLE_ONLY}">
+                <Route key="CONSOLE_ONLY">
+                    <Null name="NO_FILE"/>
+                </Route>
+                <Route>
+                    <RollingFile name="ROLLING_FILE"
+                                 fileName="${sys:log.dir}/kafka-gateway.log"
+                                 filePattern="${sys:log.dir}/kafka-gateway-%d{yyyy-MM-dd}.log.gz">
+                        <PatternLayout pattern="%d [%t] %p %c - %m%n"/>
+                        <TimeBasedTriggeringPolicy modulate="true"/>
+                        <DefaultRolloverStrategy>
+                            <Delete basePath="${sys:log.dir}" maxDepth="1">
+                                <IfFileName glob="kafka-gateway-*.log.gz"/>
+                                <IfLastModified age="30d"/>
+                            </Delete>
+                        </DefaultRolloverStrategy>
+                    </RollingFile>
+                </Route>
+            </Routes>
+        </Routing>
     </Appenders>
     <Loggers>
         <Root level="WARN">

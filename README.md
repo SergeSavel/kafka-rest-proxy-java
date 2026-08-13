@@ -57,7 +57,7 @@ KAFKA_GATEWAY_OPTS="-Dhost=127.0.0.1 -Dport=9090" ./build/install/kafka-gateway/
 | `-Dshutdown.timeoutSeconds`      | `60`       | Common deadline for graceful shutdown                                |
 | `-Dnetty.epoll`                  | `true`     | Use native epoll on Linux when available                             |
 | `-Dclient.close.parallelism`     | `32`       | Maximum concurrent close operations per client type                  |
-| `-Dlog.dir`                      | `logs`     | Log file directory; files roll daily and are deleted after 30 days   |
+| `-Dlog.dir`                      | `(none)`   | Log file directory (console-only when unset); files roll daily and are deleted after 30 days |
 
 ## Deployment
 
