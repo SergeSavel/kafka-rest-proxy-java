@@ -14,22 +14,31 @@
 
 package pro.savel.kafka;
 
-import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.ReferenceCountUtil;
 import pro.savel.kafka.common.HttpUtils;
 
-@ChannelHandler.Sharable
 public class HttpVersionHandler extends ChannelInboundHandlerAdapter {
+
+    private boolean discarding;
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) {
+        if (discarding) {
+            if (msg instanceof LastHttpContent)
+                discarding = false;
+            ReferenceCountUtil.release(msg);
+            return;
+        }
+
         if (msg instanceof HttpRequest httpRequest) {
             if (httpRequest.protocolVersion().majorVersion() != 1
                     || httpRequest.protocolVersion().minorVersion() != 1) {
+                discarding = true;
                 HttpUtils.writeHttpResponseAndClose(ctx,
                         HttpResponseStatus.HTTP_VERSION_NOT_SUPPORTED, null);
                 ReferenceCountUtil.release(msg);

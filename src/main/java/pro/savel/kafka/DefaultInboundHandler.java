@@ -17,6 +17,7 @@ package pro.savel.kafka;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.timeout.ReadTimeoutException;
 import io.netty.handler.timeout.WriteTimeoutException;
@@ -33,6 +34,12 @@ public class DefaultInboundHandler extends ChannelInboundHandlerAdapter {
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) {
         try {
+            if (msg instanceof HttpContent) {
+                // Leftover content of a request already handled or rejected upstream.
+                // Dropping it must not close the channel, otherwise an in-flight or subsequent
+                // response on the same connection gets truncated.
+                return;
+            }
             logger.error("Unexpected request type: {}", msg.getClass().getName());
             ctx.close();
         } finally {

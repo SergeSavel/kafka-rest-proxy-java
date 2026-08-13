@@ -66,7 +66,6 @@ class ServerInitializer extends ChannelInitializer<SocketChannel> {
 
     private final HealthRequestDecoder healthRequestDecoder = new HealthRequestDecoder();
     private final BasicAuthenticationHandler basicAuthenticationHandler = new BasicAuthenticationHandler(objectMapper);
-    private final HttpVersionHandler httpVersionHandler = new HttpVersionHandler();
 
     private final ProducerRequestDecoder producerRequestDecoder = new ProducerRequestDecoder(objectMapper, validatorFactory);
     private final ConsumerRequestDecoder consumerRequestDecoder = new ConsumerRequestDecoder(objectMapper, validatorFactory);
@@ -109,7 +108,7 @@ class ServerInitializer extends ChannelInitializer<SocketChannel> {
 
         ChannelPipeline pipeline = channel.pipeline();
         pipeline.addLast(new HttpServerCodec());
-        pipeline.addLast(httpVersionHandler);
+        pipeline.addLast(new HttpVersionHandler());
         pipeline.addLast(new ReadTimeoutHandler(config.readTimeoutSeconds(), TimeUnit.SECONDS));
         pipeline.addLast(new WriteTimeoutHandler(config.writeTimeoutSeconds(), TimeUnit.SECONDS));
         pipeline.addLast(new JsonRequestSizeLimitHandler(config.maxJsonRequestBytes()));
