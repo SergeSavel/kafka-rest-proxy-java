@@ -1,3 +1,5 @@
+import org.gradle.api.file.RelativePath
+
 plugins {
     id("application")
     java
@@ -60,9 +62,6 @@ distributions {
             from("README.md")
             from("kafka-gateway.service")
             from("install-windows-service.ps1")
-            from("docs") {
-                into("docs")
-            }
         }
     }
 }
@@ -70,6 +69,28 @@ distributions {
 tasks.jar {
     manifest {
         attributes(mapOf("Implementation-Version" to version))
+    }
+}
+
+// Put distribution files at the archive root instead of a kafka-gateway-<version>/ folder.
+// docs are added at the task level (outside the wrapped distribution spec) to avoid
+// stray directory entries of the wrapper folder in the archives.
+listOf(tasks.distZip, tasks.distTar).forEach { distTask ->
+    distTask.configure {
+        val distributionDir = "${project.name}-${project.version}"
+        from(fileTree("docs")) {
+            into("docs")
+        }
+        eachFile {
+            if (relativePath.segments.first() == distributionDir)
+                relativePath = RelativePath(true, *relativePath.segments.drop(1).toTypedArray())
+        }
+    }
+}
+
+tasks.installDist {
+    from(fileTree("docs")) {
+        into("docs")
     }
 }
 

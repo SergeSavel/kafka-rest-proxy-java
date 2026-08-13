@@ -84,8 +84,8 @@ The service runs as user `kafka-gateway` from `/opt/kafka-gateway/` with:
 ### Windows Service (Apache Procrun)
 
 1. Install `prunsrv.exe` from the [Apache Commons Daemon binaries](https://downloads.apache.org/commons/daemon/binaries/windows/).
-2. Extract the distribution archive.
-3. Navigate to the distribution folder (`C:\kafka-gateway` in the example below).
+2. Extract the distribution archive into the installation folder (`C:\kafka-gateway` in the example below).
+3. Navigate to the installation folder.
 
 Run the provided script from an elevated prompt:
 
