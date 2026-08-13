@@ -41,7 +41,7 @@ public class ConsumerProvider extends ClientProvider<ConsumerWrapper> {
     }
 
     public ConsumerWrapper createConsumer(String name, Properties config, int expirationTimeout, String owner) {
-        SaslConfigValidator.rejectEmptyScramPassword(config);
+        SaslConfigValidator.rejectEmptyScramCredentials(config);
         var consumer = clientFactory.apply(config);
         var wrapper = new ConsumerWrapper(name, config, consumer, expirationTimeout, owner);
         addItem(wrapper);

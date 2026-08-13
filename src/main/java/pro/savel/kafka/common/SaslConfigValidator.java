@@ -27,23 +27,28 @@ public abstract class SaslConfigValidator {
 
     private static final String SCRAM_SHA_256 = "SCRAM-SHA-256";
     private static final String SCRAM_SHA_512 = "SCRAM-SHA-512";
+    private static final String USERNAME_OPTION = "username";
     private static final String PASSWORD_OPTION = "password";
 
-    public static void rejectEmptyScramPassword(Properties config) {
+    public static void rejectEmptyScramCredentials(Properties config) {
         var mechanism = config.getProperty(SaslConfigs.SASL_MECHANISM);
         if (!SCRAM_SHA_256.equalsIgnoreCase(mechanism) && !SCRAM_SHA_512.equalsIgnoreCase(mechanism))
             return;
         var jaasConfig = config.getProperty(SaslConfigs.SASL_JAAS_CONFIG);
         if (jaasConfig == null)
             return;
+        String username;
         String password;
         try {
             var context = JaasContext.loadClientContext(Map.of(SaslConfigs.SASL_JAAS_CONFIG, new Password(jaasConfig)));
-            password = JaasContext.configEntryOption(context.configurationEntries(), PASSWORD_OPTION,
-                    ScramLoginModule.class.getName());
+            var entries = context.configurationEntries();
+            username = JaasContext.configEntryOption(entries, USERNAME_OPTION, ScramLoginModule.class.getName());
+            password = JaasContext.configEntryOption(entries, PASSWORD_OPTION, ScramLoginModule.class.getName());
         } catch (RuntimeException ignored) {
             return;
         }
+        if (username != null && username.isEmpty())
+            throw new BadRequestException("Empty SCRAM username in sasl.jaas.config.");
         if (password != null && password.isEmpty())
             throw new BadRequestException("Empty SCRAM password in sasl.jaas.config.");
     }

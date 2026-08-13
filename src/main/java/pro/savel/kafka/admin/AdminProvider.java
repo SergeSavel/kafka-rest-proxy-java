@@ -36,7 +36,7 @@ public class AdminProvider extends ClientProvider<AdminWrapper> {
     }
 
     public AdminWrapper createAdmin(String name, Properties config, int expirationTimeout, String owner) {
-        SaslConfigValidator.rejectEmptyScramPassword(config);
+        SaslConfigValidator.rejectEmptyScramCredentials(config);
         var admin = clientFactory.apply(config);
         var wrapper = new AdminWrapper(name, config, admin, expirationTimeout, owner);
         addItem(wrapper);
