@@ -159,6 +159,23 @@ class CommonErrorsTest {
         assertFalse(Thread.currentThread().isInterrupted(), "Calling thread must not be interrupted");
     }
 
+    @Test
+    void handle_kafkaInterruptException_returnsInternalServerErrorWithoutInterruptingCallingThread() {
+        // InterruptException interrupts the constructing thread, so clear the flag after building
+        // it: what this test is about is whether handle() sets the flag, not the constructor.
+        var error = new InterruptException("interrupted");
+        Thread.interrupted();
+        try {
+            assertTrue(CommonErrors.handle(ctx, error));
+
+            FullHttpResponse response = channel.readOutbound();
+            assertEquals(HttpResponseStatus.INTERNAL_SERVER_ERROR, response.status());
+            assertFalse(Thread.currentThread().isInterrupted(), "Calling thread must not be interrupted");
+        } finally {
+            Thread.interrupted(); // do not leak an interrupted state into the next test on failure
+        }
+    }
+
 //endregion
 
 //region Unhandled

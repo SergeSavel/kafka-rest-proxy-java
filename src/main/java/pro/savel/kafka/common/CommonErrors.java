@@ -29,6 +29,11 @@ public abstract class CommonErrors {
             // that was actually interrupted, so setting the flag would only corrupt that thread.
             case InterruptedException ignored ->
                     HttpUtils.writeInternalServerErrorAndClose(ctx, Utils.combineErrorMessage(error));
+            // Kafka's wrapper over InterruptedException, thrown out of the client APIs. Nothing to
+            // restore here either: its constructor already re-set the flag, and it did so on the
+            // thread that was really interrupted rather than on this one.
+            case InterruptException ignored ->
+                    HttpUtils.writeInternalServerErrorAndClose(ctx, Utils.combineErrorMessage(error));
             case IllegalArgumentException ignored ->
                     HttpUtils.writeBadRequestAndClose(ctx, Utils.combineErrorMessage(error));
             case IllegalStateException ignored ->
