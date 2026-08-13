@@ -1239,30 +1239,16 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
     }
 
     /**
-     * Registers the completion on the future with a guard: an exception thrown by the completion
-     * itself would otherwise be swallowed by the future, leaving the client without a response
-     * and the connection stuck with reading disabled.
+     * Registers the completion on the future under {@link #ensureResponse}: an exception thrown by
+     * the completion itself would otherwise be swallowed by the future, leaving the client without
+     * a response and the connection stuck with reading disabled.
      */
     private <T> void whenComplete(KafkaFuture<T> future, ChannelHandlerContext ctx, Completion<T> completion) {
-        future.whenComplete((result, error) -> {
-            try {
-                completion.complete(result, error);
-            } catch (Exception e) {
-                logger.error("An unexpected error occurred while processing admin request.", e);
-                HttpUtils.writeInternalServerErrorAndClose(ctx, Utils.combineErrorMessage(e));
-            }
-        });
+        future.whenComplete((result, error) -> ensureResponse(ctx, () -> completion.complete(result, error)));
     }
 
     private <T> void whenComplete(CompletableFuture<T> future, ChannelHandlerContext ctx, Completion<T> completion) {
-        future.whenComplete((result, error) -> {
-            try {
-                completion.complete(result, error);
-            } catch (Exception e) {
-                logger.error("An unexpected error occurred while processing admin request.", e);
-                HttpUtils.writeInternalServerErrorAndClose(ctx, Utils.combineErrorMessage(e));
-            }
-        });
+        future.whenComplete((result, error) -> ensureResponse(ctx, () -> completion.complete(result, error)));
     }
 
     @FunctionalInterface

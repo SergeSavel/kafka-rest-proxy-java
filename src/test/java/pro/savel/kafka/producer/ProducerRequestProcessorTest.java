@@ -14,9 +14,11 @@
 
 package pro.savel.kafka.producer;
 
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import org.apache.kafka.clients.producer.Callback;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.PartitionInfo;
@@ -25,6 +27,7 @@ import org.apache.kafka.common.config.SaslConfigs;
 import org.apache.kafka.common.errors.AuthorizationException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import pro.savel.kafka.common.BlockingTaskExecutor;
 import pro.savel.kafka.common.RequestBearer;
 import pro.savel.kafka.common.SynchronousBlockingTaskExecutor;
 import pro.savel.kafka.common.contract.Serde;
@@ -34,8 +37,13 @@ import pro.savel.kafka.producer.responses.ProducerListResponse;
 import pro.savel.kafka.producer.responses.ProducerPartitionsResponse;
 import pro.savel.kafka.producer.responses.ProducerSendResponse;
 
+import java.util.ArrayDeque;
 import java.util.List;
 import java.util.Properties;
+import java.util.Queue;
+import java.util.concurrent.Callable;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.BiConsumer;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -327,4 +335,93 @@ class ProducerRequestProcessorTest {
 
     private record UnknownProducerRequest() implements ProducerRequest {
     }
+
+    //region Response guarantee
+
+    @Test
+    void processSend_callbackThrows_returnsInternalServerErrorInsteadOfHanging() {
+        var wrapper = addWrapper();
+        var producer = wrapper.getProducer();
+        var callbackRef = new AtomicReference<Callback>();
+        doAnswer(invocation -> {
+            callbackRef.set(invocation.getArgument(1));
+            return null;
+        }).when(producer).send(any(), any());
+        var metadata = mock(RecordMetadata.class);
+        when(metadata.topic()).thenThrow(new RuntimeException("response construction failed"));
+
+        var request = new ProducerSendRequest();
+        request.setProducerId(wrapper.getId());
+        request.setToken(wrapper.getToken());
+        request.setTopic("topic");
+        request.setValue("payload".getBytes());
+
+        channel.writeInbound(bearer(request));
+        // Kafka completes the send on its own sender thread, long after channelRead returned, so a
+        // throw here has no pipeline exception handling to fall back on.
+        callbackRef.get().onCompletion(metadata, null);
+
+        FullHttpResponse response = channel.readOutbound();
+        assertNotNull(response, "a response must be written even when the callback throws");
+        assertEquals(HttpResponseStatus.INTERNAL_SERVER_ERROR, response.status());
+        response.release();
+    }
+
+    @Test
+    void execute_completionThrows_returnsInternalServerErrorInsteadOfHanging() {
+        var executor = new DeferredBlockingTaskExecutor();
+        var deferredChannel = new EmbeddedChannel(new ProducerRequestProcessor(executor, provider));
+        var wrapper = addWrapper();
+        var producer = wrapper.getProducer();
+        var partitionInfo = mock(PartitionInfo.class);
+        when(partitionInfo.partition()).thenThrow(new RuntimeException("response construction failed"));
+        when(producer.partitionsFor("topic")).thenReturn(List.of(partitionInfo));
+
+        var request = new ProducerGetPartitionsRequest();
+        request.setProducerId(wrapper.getId());
+        request.setToken(wrapper.getToken());
+        request.setTopic("topic");
+
+        deferredChannel.writeInbound(bearer(request));
+        executor.runCompletions();
+
+        FullHttpResponse response = deferredChannel.readOutbound();
+        assertNotNull(response, "a response must be written even when the completion throws");
+        assertEquals(HttpResponseStatus.INTERNAL_SERVER_ERROR, response.status());
+        response.release();
+        deferredChannel.finishAndReleaseAll();
+    }
+
+    /**
+     * Runs the operation inline but hands the completion back through a queue, the way the real
+     * executor hands it to the event loop. Unlike {@link SynchronousBlockingTaskExecutor} this keeps
+     * a throwing completion from unwinding back into channelRead, which is what makes the guard in
+     * {@code execute} observable at all.
+     */
+    private static class DeferredBlockingTaskExecutor extends BlockingTaskExecutor {
+
+        private final Queue<Runnable> completions = new ArrayDeque<>();
+
+        @Override
+        public <T> void execute(ChannelHandlerContext ctx, Callable<T> operation, BiConsumer<T, Throwable> completion) {
+            T result = null;
+            Throwable error = null;
+            try {
+                result = operation.call();
+            } catch (Throwable e) {
+                error = e;
+            }
+            var result_ = result;
+            var error_ = error;
+            completions.add(() -> completion.accept(result_, error_));
+        }
+
+        void runCompletions() {
+            Runnable next;
+            while ((next = completions.poll()) != null)
+                next.run();
+        }
+    }
+
+    //endregion
 }

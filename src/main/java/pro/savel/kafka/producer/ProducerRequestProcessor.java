@@ -108,7 +108,7 @@ public class ProducerRequestProcessor extends AbstractRequestProcessor {
         var headers = request.getHeaders();
         if (headers != null)
             headers.forEach((key, value) -> record.headers().add(key, value));
-        Callback callback = (RecordMetadata metadata, Exception exception) -> {
+        Callback callback = (RecordMetadata metadata, Exception exception) -> ensureResponse(ctx, () -> {
             if (exception != null) {
                 if (!handleError(ctx, exception)) {
                     logger.error("An unexpected error occurred while processing producer send.", exception);
@@ -118,7 +118,7 @@ public class ProducerRequestProcessor extends AbstractRequestProcessor {
                 var response = ProducerSendResponse.of(metadata);
                 ctx.writeAndFlush(new ProducerResponseBearer(requestBearer, HttpResponseStatus.CREATED, response));
             }
-        };
+        });
         producer.send(record, callback);
     }
 

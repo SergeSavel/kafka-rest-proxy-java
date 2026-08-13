@@ -78,14 +78,41 @@ public abstract class AbstractRequestProcessor extends ChannelInboundHandlerAdap
     protected abstract void processRequest(ChannelHandlerContext ctx, RequestBearer requestBearer);
 
     protected <T> void execute(ChannelHandlerContext ctx, Callable<T> operation, Consumer<T> completion) {
-        blockingTaskExecutor.execute(ctx, operation, (result, error) -> {
+        blockingTaskExecutor.execute(ctx, operation, (result, error) -> ensureResponse(ctx, () -> {
             if (error == null) {
                 completion.accept(result);
             } else if (!handleError(ctx, error)) {
                 logger.error("An unexpected error occurred while processing {} request.", kind, error);
                 HttpUtils.writeInternalServerErrorAndClose(ctx, Utils.combineErrorMessage(error));
             }
-        });
+        }));
+    }
+
+    /**
+     * Runs a body that owes the client a response, off the event loop and outside any pipeline
+     * exception handling: a Kafka callback, a KafkaFuture completion, a blocking-task completion.
+     * An exception escaping such a body has nowhere to go - the future discards it, Kafka or Netty
+     * merely logs it - and the request would then never be answered. That is not just a lost
+     * response: {@link pro.savel.kafka.HttpRequestFlowControlHandler} keeps auto-read off until the
+     * response completes, and the read timeout deliberately ignores connections whose reads the
+     * gateway itself suspended, so nothing would ever reap the connection.
+     */
+    protected void ensureResponse(ChannelHandlerContext ctx, ResponseTask task) {
+        try {
+            task.run();
+        } catch (Exception e) {
+            logger.error("An unexpected error occurred while completing {} request.", kind, e);
+            HttpUtils.writeInternalServerErrorAndClose(ctx, Utils.combineErrorMessage(e));
+        }
+    }
+
+    /**
+     * A response-producing body. Declares {@code throws Exception} because Kafka's result objects
+     * expose values through {@code KafkaFuture.get()}, which throws checked exceptions.
+     */
+    @FunctionalInterface
+    protected interface ResponseTask {
+        void run() throws Exception;
     }
 
     protected boolean handleError(ChannelHandlerContext ctx, Throwable error) {
