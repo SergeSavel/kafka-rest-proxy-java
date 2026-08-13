@@ -117,7 +117,7 @@ prunsrv //DS//kafka-gateway   # uninstall
 Manual configuration (GUI): the Commons Daemon binaries also include `prunmgr.exe`:
 
 ```powershell
-.\prunmgr.exe //ES//kafka-gateway
+prunmgr.exe //ES//kafka-gateway
 ```
 
 The dialog edits the service parameters (startup, JVM, paths, logging) and can start/stop the service. Other modes: `//MS//` (tray monitor), `//MR//` (monitor and start the service if it is not running), `//MQ//` (quit all monitors). Changes are stored in the registry under `HKLM\SOFTWARE\WOW6432Node\Apache Software Foundation\Procrun 2.0\kafka-gateway`.
