@@ -43,6 +43,9 @@ if (-not $classPath) {
     exit 1
 }
 
+# prunsrv grants the service user write access to --LogPath during install, so the directory must exist.
+New-Item -ItemType Directory -Force -Path $LogDir | Out-Null
+
 & $Prunsrv "//IS//$ServiceName" `
     --DisplayName="Kafka Gateway" `
     --Description="Kafka HTTP Gateway" `
