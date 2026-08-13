@@ -15,18 +15,18 @@
 package pro.savel.kafka.consumer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.embedded.EmbeddedChannel;
-import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpResponse;
-import io.netty.handler.codec.http.HttpVersion;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.stream.ChunkedWriteHandler;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.common.TopicPartition;
+import org.apache.kafka.common.header.internals.RecordHeaders;
 import org.apache.kafka.common.record.TimestampType;
 import org.junit.jupiter.api.Test;
 import pro.savel.kafka.HttpRequestFlowControlHandler;
@@ -36,7 +36,7 @@ import pro.savel.kafka.consumer.requests.ConsumerPollRequest;
 import pro.savel.kafka.consumer.responses.ConsumerPollResponse;
 
 import java.nio.charset.StandardCharsets;
-import java.util.List;
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.Optional;
 
@@ -58,13 +58,13 @@ class ConsumerPollPipelineIntegrationTest {
         var channel = new EmbeddedChannel(new HttpRequestFlowControlHandler(), new ChunkedWriteHandler(), encoder);
 
         var response = manyMessagesResponse(50);
-        var expected = ConsumerResponseSerializer.serializeBinary(io.netty.buffer.UnpooledByteBufAllocator.DEFAULT, response);
+        var expected = ConsumerResponseSerializer.serializeBinary(UnpooledByteBufAllocator.DEFAULT, response);
 
         var pollRequest = new ConsumerPollRequest();
         pollRequest.setConsumerId("c-1");
         pollRequest.setToken("t-1");
         var requestBearer = new RequestBearer(pollRequest, Serde.BINARY, true);
-        var responseBearer = new ConsumerResponseBearer(requestBearer, io.netty.handler.codec.http.HttpResponseStatus.OK, response);
+        var responseBearer = new ConsumerResponseBearer(requestBearer, HttpResponseStatus.OK, response);
 
         channel.writeOutbound(responseBearer);
 
@@ -96,13 +96,12 @@ class ConsumerPollPipelineIntegrationTest {
     }
 
     private static ConsumerPollResponse manyMessagesResponse(int count) {
-        var records = new java.util.ArrayList<ConsumerRecord<byte[], byte[]>>(count);
+        var records = new ArrayList<ConsumerRecord<byte[], byte[]>>(count);
         for (int i = 0; i < count; i++) {
             var key = ("key-" + i).getBytes(StandardCharsets.UTF_8);
             var value = ("value-" + i + "-" + "x".repeat(i % 7)).getBytes(StandardCharsets.UTF_8);
             records.add(new ConsumerRecord<>("topic", 0, i, 100L + i, TimestampType.CREATE_TIME,
-                    key.length, value.length, key, value, new org.apache.kafka.common.header.internals.RecordHeaders(),
-                    Optional.empty()));
+                    key.length, value.length, key, value, new RecordHeaders(), Optional.empty()));
         }
         var consumerRecords = new ConsumerRecords<byte[], byte[]>(
                 Map.of(new TopicPartition("topic", 0), records), Map.of());
