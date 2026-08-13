@@ -23,7 +23,6 @@ import io.netty.channel.group.DefaultChannelGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
-import io.netty.handler.timeout.ReadTimeoutHandler;
 import io.netty.handler.timeout.WriteTimeoutHandler;
 import io.netty.handler.stream.ChunkedWriteHandler;
 import io.netty.util.concurrent.GlobalEventExecutor;
@@ -109,7 +108,7 @@ class ServerInitializer extends ChannelInitializer<SocketChannel> {
         ChannelPipeline pipeline = channel.pipeline();
         pipeline.addLast(new HttpServerCodec());
         pipeline.addLast(new HttpVersionHandler());
-        pipeline.addLast(new ReadTimeoutHandler(config.readTimeoutSeconds(), TimeUnit.SECONDS));
+        pipeline.addLast(new ClientReadTimeoutHandler(config.readTimeoutSeconds(), TimeUnit.SECONDS));
         pipeline.addLast(new WriteTimeoutHandler(config.writeTimeoutSeconds(), TimeUnit.SECONDS));
         pipeline.addLast(new JsonRequestSizeLimitHandler(config.maxJsonRequestBytes()));
         pipeline.addLast(new HttpObjectAggregator(config.maxRequestBytes()));
