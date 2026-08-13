@@ -23,6 +23,7 @@ import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.PartitionInfo;
 import org.apache.kafka.common.TopicPartition;
+import org.apache.kafka.common.config.ConfigException;
 import org.apache.kafka.common.config.SaslConfigs;
 import org.apache.kafka.common.errors.AuthorizationException;
 import org.junit.jupiter.api.AfterEach;
@@ -108,6 +109,31 @@ class ProducerRequestProcessorTest {
         assertEquals(HttpResponseStatus.BAD_REQUEST, response.status());
         response.release();
         assertEquals(0, provider.getItems().size());
+    }
+
+    @Test
+    void processCreate_kafkaRejectsConfig_returnsBadRequest() {
+        // The real client constructor is what raises ConfigException on a malformed property, and
+        // the shared provider hands back a mock instead - so this test needs its own failing one.
+        var rejectingProvider = new ProducerProvider(config -> {
+            throw new ConfigException("bootstrap.servers", "not-a-broker");
+        });
+        var rejectingChannel = new EmbeddedChannel(
+                new ProducerRequestProcessor(new SynchronousBlockingTaskExecutor(), rejectingProvider));
+        var request = new ProducerCreateRequest();
+        request.setName("my-producer");
+        request.setConfig(new Properties());
+        request.setExpirationTimeout(60_000);
+
+        rejectingChannel.writeInbound(bearer(request));
+
+        FullHttpResponse response = rejectingChannel.readOutbound();
+        assertNotNull(response);
+        assertEquals(HttpResponseStatus.BAD_REQUEST, response.status());
+        response.release();
+        assertEquals(0, rejectingProvider.getItems().size());
+        rejectingChannel.finishAndReleaseAll();
+        rejectingProvider.close();
     }
 
     @Test

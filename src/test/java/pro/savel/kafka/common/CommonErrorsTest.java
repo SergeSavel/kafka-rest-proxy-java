@@ -19,6 +19,7 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import org.apache.kafka.common.config.ConfigException;
 import org.apache.kafka.common.errors.*;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -117,6 +118,13 @@ class CommonErrorsTest {
     @Test
     void handle_unknownTopicIdException_returnsBadRequest() {
         assertTrue(CommonErrors.handle(ctx, new UnknownTopicIdException("uti")));
+        FullHttpResponse response = channel.readOutbound();
+        assertEquals(HttpResponseStatus.BAD_REQUEST, response.status());
+    }
+
+    @Test
+    void handle_configException_returnsBadRequest() {
+        assertTrue(CommonErrors.handle(ctx, new ConfigException("port", "not-a-number")));
         FullHttpResponse response = channel.readOutbound();
         assertEquals(HttpResponseStatus.BAD_REQUEST, response.status());
     }

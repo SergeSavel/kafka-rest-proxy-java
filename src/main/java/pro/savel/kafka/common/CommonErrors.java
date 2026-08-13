@@ -15,6 +15,7 @@
 package pro.savel.kafka.common;
 
 import io.netty.channel.ChannelHandlerContext;
+import org.apache.kafka.common.config.ConfigException;
 import org.apache.kafka.common.errors.*;
 import pro.savel.kafka.common.exceptions.HttpStatusException;
 
@@ -34,6 +35,8 @@ public abstract class CommonErrors {
             // thread that was really interrupted rather than on this one.
             case InterruptException ignored ->
                     HttpUtils.writeInternalServerErrorAndClose(ctx, Utils.combineErrorMessage(error));
+            case ConfigException ignored ->
+                    HttpUtils.writeBadRequestAndClose(ctx, Utils.combineErrorMessage(error));
             case IllegalArgumentException ignored ->
                     HttpUtils.writeBadRequestAndClose(ctx, Utils.combineErrorMessage(error));
             case IllegalStateException ignored ->
