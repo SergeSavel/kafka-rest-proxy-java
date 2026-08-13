@@ -149,13 +149,14 @@ class CommonErrorsTest {
 //region InterruptedException
 
     @Test
-    void handle_interruptedException_restoresInterruptFlag() {
+    void handle_interruptedException_returnsInternalServerErrorWithoutInterruptingCallingThread() {
         Thread.interrupted(); // clear
 
-        CommonErrors.handle(ctx, new InterruptedException("interrupted"));
+        assertTrue(CommonErrors.handle(ctx, new InterruptedException("interrupted")));
 
-        assertTrue(Thread.currentThread().isInterrupted(), "Interrupt flag should be restored");
-        Thread.interrupted(); // clear for test framework
+        FullHttpResponse response = channel.readOutbound();
+        assertEquals(HttpResponseStatus.INTERNAL_SERVER_ERROR, response.status());
+        assertFalse(Thread.currentThread().isInterrupted(), "Calling thread must not be interrupted");
     }
 
 //endregion

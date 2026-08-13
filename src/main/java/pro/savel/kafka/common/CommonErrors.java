@@ -24,10 +24,11 @@ public abstract class CommonErrors {
         switch (error) {
             case HttpStatusException ge ->
                     HttpUtils.writeHttpResponseAndClose(ctx, ge.status(), Utils.combineErrorMessage(error));
-            case InterruptedException ignored -> {
-                    Thread.currentThread().interrupt();
+            // No Thread.currentThread().interrupt() here: handle() runs on whatever thread delivered
+            // the error (a Netty event loop, a Kafka producer/admin I/O thread), not on the thread
+            // that was actually interrupted, so setting the flag would only corrupt that thread.
+            case InterruptedException ignored ->
                     HttpUtils.writeInternalServerErrorAndClose(ctx, Utils.combineErrorMessage(error));
-            }
             case IllegalArgumentException ignored ->
                     HttpUtils.writeBadRequestAndClose(ctx, Utils.combineErrorMessage(error));
             case IllegalStateException ignored ->
