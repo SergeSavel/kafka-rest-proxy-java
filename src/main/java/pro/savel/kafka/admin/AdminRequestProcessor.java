@@ -231,8 +231,8 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         var clusterIdFuture = describeResult.clusterId().toCompletionStage().toCompletableFuture();
         var controllerFuture = describeResult.controller().toCompletionStage().toCompletableFuture();
         var aclFuture = describeResult.authorizedOperations().toCompletionStage().toCompletableFuture();
-        CompletableFuture.allOf(nodesFuture, clusterIdFuture, controllerFuture, aclFuture)
-                .whenComplete((ignored, error) -> {
+        whenComplete(CompletableFuture.allOf(nodesFuture, clusterIdFuture, controllerFuture, aclFuture), ctx,
+                (ignored, error) -> {
                     if (error == null) {
                         var response = AdminDescribeClusterResponse.of(
                                 clusterIdFuture.join(),
@@ -254,7 +254,7 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         if (request.getTimeoutMs() != null)
             options.timeoutMs(request.getTimeoutMs());
         var describeResult = admin.describeFeatures(options);
-        describeResult.featureMetadata().whenComplete((metadata, error) -> {
+        whenComplete(describeResult.featureMetadata(), ctx, (metadata, error) -> {
             if (error == null) {
                 var response = AdminDescribeFeaturesResponse.of(metadata);
                 ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
@@ -273,7 +273,7 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         if (request.getTimeoutMs() != null)
             options.timeoutMs(request.getTimeoutMs());
         var describeResult = admin.describeLogDirs(brokers, options);
-        describeResult.allDescriptions().whenComplete((descriptions, error) -> {
+        whenComplete(describeResult.allDescriptions(), ctx, (descriptions, error) -> {
             if (error == null) {
                 var response = AdminDescribeLogDirsResponse.of(descriptions);
                 ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
@@ -303,7 +303,7 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
             options.timeoutMs(request.getTimeoutMs());
         var updateFeatures = Collections.singletonMap(request.getFeatureName(), featureUpdate);
         var updateResult = admin.updateFeatures(updateFeatures, options);
-        updateResult.all().whenComplete((ignore, error) -> {
+        whenComplete(updateResult.all(), ctx, (ignore, error) -> {
             if (error == null) {
                 ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, null));
             } else if (!handleError(ctx, error)) {
@@ -334,7 +334,7 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         if (request.getTimeoutMs() != null)
             options.timeoutMs(request.getTimeoutMs());
         var topicsResult = admin.listTopics(options);
-        topicsResult.listings().whenComplete((listings, error) -> {
+        whenComplete(topicsResult.listings(), ctx, (listings, error) -> {
             if (error == null) {
                 var filtered = listings;
                 if (pattern != null) {
@@ -372,7 +372,7 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         var describeResult = admin.describeTopics(topicCollection, options);
         KafkaFuture<? extends Map<?, TopicDescription>> descriptions =
                 request.getTopicId() != null ? describeResult.allTopicIds() : describeResult.allTopicNames();
-        descriptions.whenComplete((topicDescriptions, error) -> {
+        whenComplete(descriptions, ctx, (topicDescriptions, error) -> {
             if (error == null) {
                 if (topicDescriptions.isEmpty()) {
                     HttpUtils.writeNotFoundAndClose(ctx, "Topic not found.");
@@ -403,21 +403,16 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         if (request.getTimeoutMs() != null)
             options.timeoutMs(request.getTimeoutMs());
         var createResult = admin.createTopics(Collections.singleton(newTopic), options);
-        createResult.all().whenComplete((topics, error) -> {
+        whenComplete(createResult.all(), ctx, (topics, error) -> {
             if (error == null) {
-                try {
-                    for (var topicName : createResult.values().keySet()) {
-                        var response = AdminCreateTopicResponse.of(
-                                createResult.topicId(topicName),
-                                createResult.numPartitions(topicName),
-                                createResult.replicationFactor(topicName)
-                        );
-                        ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
-                        return;
-                    }
-                } catch (Exception e) {
-                    logger.error("Unable to construct create topic response.", e);
-                    HttpUtils.writeInternalServerErrorAndClose(ctx, Utils.combineErrorMessage(e));
+                for (var topicName : createResult.values().keySet()) {
+                    var response = AdminCreateTopicResponse.of(
+                            createResult.topicId(topicName),
+                            createResult.numPartitions(topicName),
+                            createResult.replicationFactor(topicName)
+                    );
+                    ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
+                    return;
                 }
             } else if (!handleError(ctx, error)) {
                 logger.error("Unable to create topic.", error);
@@ -442,14 +437,9 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         if (request.getTimeoutMs() != null)
             options.timeoutMs(request.getTimeoutMs());
         var createResult = admin.createTopics(newTopics, options);
-        createResult.all().whenComplete((ignore1, ignore2) -> {
-            try {
-                var response = AdminCreateTopicsResponse.of(createResult);
-                ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
-            } catch (Exception e) {
-                logger.error("Unable to construct create topics response.", e);
-                HttpUtils.writeInternalServerErrorAndClose(ctx, Utils.combineErrorMessage(e));
-            }
+        whenComplete(createResult.all(), ctx, (ignore1, ignore2) -> {
+            var response = AdminCreateTopicsResponse.of(createResult);
+            ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
         });
     }
 
@@ -469,7 +459,7 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         if (request.getTimeoutMs() != null)
             options.timeoutMs(request.getTimeoutMs());
         var deleteResult = admin.deleteTopics(topics, options);
-        deleteResult.all().whenComplete((ignore, error) -> {
+        whenComplete(deleteResult.all(), ctx, (ignore, error) -> {
             if (error == null)
                 ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null));
             else if (!handleError(ctx, error)) {
@@ -495,7 +485,7 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         if (request.getTimeoutMs() != null)
             options.timeoutMs(request.getTimeoutMs());
         var deleteResult = admin.deleteTopics(topics, options);
-        deleteResult.all().whenComplete((ignore1, ignore2) -> {
+        whenComplete(deleteResult.all(), ctx, (ignore1, ignore2) -> {
             AdminDeleteTopicsResponse response;
             if (request.getTopicIds() != null)
                 response = AdminDeleteTopicsResponse.ofUuids(deleteResult.topicIdValues());
@@ -514,7 +504,7 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
             options.timeoutMs(request.getTimeoutMs());
         var records = Collections.singletonMap(topicPartition, RecordsToDelete.beforeOffset(request.getBeforeOffset()));
         var deleteResult = admin.deleteRecords(records, options);
-        deleteResult.lowWatermarks().get(topicPartition).whenComplete((deleted, error) -> {
+        whenComplete(deleteResult.lowWatermarks().get(topicPartition), ctx, (deleted, error) -> {
             if (error == null) {
                 var response = AdminDeleteRecordsResponse.of(deleted);
                 ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
@@ -533,7 +523,7 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         if (request.getTimeoutMs() != null)
             options.timeoutMs(request.getTimeoutMs());
         var createResult = admin.createPartitions(Collections.singletonMap(request.getTopicName(), newPartitions), options);
-        createResult.all().whenComplete((topics, error) -> {
+        whenComplete(createResult.all(), ctx, (topics, error) -> {
             if (error == null)
                 ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null));
             else if (!handleError(ctx, error)) {
@@ -574,7 +564,7 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         if (timeoutMs != null)
             options.timeoutMs(timeoutMs);
         var describeResult = admin.describeConfigs(Collections.singleton(resource), options);
-        describeResult.all().whenComplete((configs, error) -> {
+        whenComplete(describeResult.all(), ctx, (configs, error) -> {
             if (error == null) {
                 if (configs.isEmpty()) {
                     HttpUtils.writeNotFoundAndClose(ctx, notFoundMessage);
@@ -641,7 +631,7 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         if (timeoutMs != null)
             options.timeoutMs(timeoutMs);
         var alterConfigsResult = admin.incrementalAlterConfigs(configs, options);
-        alterConfigsResult.all().whenComplete((ignore, error) -> {
+        whenComplete(alterConfigsResult.all(), ctx, (ignore, error) -> {
             if (error == null) {
                 var responseBearer = new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, null);
                 ctx.writeAndFlush(responseBearer);
@@ -663,7 +653,7 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         if (request.getTimeoutMs() != null)
             options.timeoutMs(request.getTimeoutMs());
         var describeResult = admin.describeUserScramCredentials(request.getUsers(), options);
-        describeResult.all().whenComplete((descriptions, error) -> {
+        whenComplete(describeResult.all(), ctx, (descriptions, error) -> {
             if (error == null) {
                 var response = AdminDescribeUserScramCredentialsResponse.of(descriptions);
                 ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
@@ -699,7 +689,7 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         if (timeoutMs != null)
             options.timeoutMs(timeoutMs);
         var alterationResult = admin.alterUserScramCredentials(Collections.singletonList(alteration), options);
-        alterationResult.all().whenComplete((ignore, error) -> {
+        whenComplete(alterationResult.all(), ctx, (ignore, error) -> {
             if (error == null) {
                 var responseBearer = new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, null);
                 ctx.writeAndFlush(responseBearer);
@@ -722,7 +712,7 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         if (request.getTimeoutMs() != null)
             options.timeoutMs(request.getTimeoutMs());
         var describeResult = admin.describeAcls(filter, options);
-        describeResult.values().whenComplete((aclBindings, error) -> {
+        whenComplete(describeResult.values(), ctx, (aclBindings, error) -> {
             if (error == null) {
                 var response = AdminDescribeAclsResponse.of(aclBindings);
                 ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
@@ -741,7 +731,7 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         if (request.getTimeoutMs() != null)
             options.timeoutMs(request.getTimeoutMs());
         var createAclsResult = admin.createAcls(acls, options);
-        createAclsResult.all().whenComplete((ignore, error) -> {
+        whenComplete(createAclsResult.all(), ctx, (ignore, error) -> {
             if (error == null)
                 ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null));
             else if (!handleError(ctx, error)) {
@@ -759,7 +749,7 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         if (request.getTimeoutMs() != null)
             options.timeoutMs(request.getTimeoutMs());
         var createAclsResult = admin.deleteAcls(filters, options);
-        createAclsResult.all().whenComplete((ignore, error) -> {
+        whenComplete(createAclsResult.all(), ctx, (ignore, error) -> {
             if (error == null)
                 ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null));
             else if (!handleError(ctx, error)) {
@@ -781,7 +771,7 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         if (request.getTimeoutMs() != null)
             options.timeoutMs(request.getTimeoutMs());
         var describeResult = admin.describeProducers(partitions, options);
-        describeResult.all().whenComplete((producerStates, error) -> {
+        whenComplete(describeResult.all(), ctx, (producerStates, error) -> {
             if (error == null) {
                 var response = AdminDescribeProducersResponse.of(producerStates);
                 ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
@@ -800,7 +790,7 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         var options = new AbortTransactionOptions();
         if (request.getTimeoutMs() != null)
             options.timeoutMs(request.getTimeoutMs());
-        admin.abortTransaction(spec, options).all().whenComplete((ignore, error) -> {
+        whenComplete(admin.abortTransaction(spec, options).all(), ctx, (ignore, error) -> {
             if (error == null)
                 ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null));
             else if (!handleError(ctx, error)) {
@@ -849,7 +839,7 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         if (request.getTimeoutMs() != null)
             options = options.timeoutMs(request.getTimeoutMs());
         var listGroupsResult = admin.listGroups(options);
-        listGroupsResult.all().whenComplete((groupListings, error) -> {
+        whenComplete(listGroupsResult.all(), ctx, (groupListings, error) -> {
             if (error == null) {
                 var response = AdminListGroupsResponse.of(groupListings);
                 ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
@@ -870,7 +860,7 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
             options = options.timeoutMs(request.getTimeoutMs());
         var groupIds = Collections.singleton(request.getGroupId());
         var describeResult = admin.describeClassicGroups(groupIds, options);
-        describeResult.all().whenComplete((classicGroupDescriptions, error) -> {
+        whenComplete(describeResult.all(), ctx, (classicGroupDescriptions, error) -> {
             if (error == null) {
                 if (classicGroupDescriptions.isEmpty()) {
                     HttpUtils.writeNotFoundAndClose(ctx, "Classic group not found.");
@@ -898,7 +888,7 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
             options = options.timeoutMs(request.getTimeoutMs());
         var groupIds = Collections.singleton(request.getGroupId());
         var describeResult = admin.describeConsumerGroups(groupIds, options);
-        describeResult.all().whenComplete((consumerGroupDescriptions, error) -> {
+        whenComplete(describeResult.all(), ctx, (consumerGroupDescriptions, error) -> {
             if (error == null) {
                 if (consumerGroupDescriptions.isEmpty()) {
                     HttpUtils.writeNotFoundAndClose(ctx, "Consumer group not found.");
@@ -926,7 +916,7 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
             options = options.timeoutMs(request.getTimeoutMs());
         var groupIds = Collections.singleton(request.getGroupId());
         var describeResult = admin.describeShareGroups(groupIds, options);
-        describeResult.all().whenComplete((shareGroupDescriptions, error) -> {
+        whenComplete(describeResult.all(), ctx, (shareGroupDescriptions, error) -> {
             if (error == null) {
                 if (shareGroupDescriptions.isEmpty()) {
                     HttpUtils.writeNotFoundAndClose(ctx, "Share group not found.");
@@ -954,7 +944,7 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
             options = options.timeoutMs(request.getTimeoutMs());
         var groupIds = Collections.singleton(request.getGroupId());
         var describeResult = admin.describeStreamsGroups(groupIds, options);
-        describeResult.all().whenComplete((streamsGroupDescriptions, error) -> {
+        whenComplete(describeResult.all(), ctx, (streamsGroupDescriptions, error) -> {
             if (error == null) {
                 if (streamsGroupDescriptions.isEmpty()) {
                     HttpUtils.writeNotFoundAndClose(ctx, "Streams group not found.");
@@ -982,7 +972,7 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         if (request.getTimeoutMs() != null)
             options = options.timeoutMs(request.getTimeoutMs());
         var listResult = admin.listConsumerGroupOffsets(groupId, options);
-        listResult.all().whenComplete((offsets, error) -> {
+        whenComplete(listResult.all(), ctx, (offsets, error) -> {
             if (error == null) {
                 if (offsets.isEmpty()) {
                     HttpUtils.writeNotFoundAndClose(ctx, "Consumer group not found.");
@@ -1009,7 +999,7 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         if (request.getTimeoutMs() != null)
             options.timeoutMs(request.getTimeoutMs());
         var alterResult = admin.alterConsumerGroupOffsets(groupId, offsets, options);
-        alterResult.all().whenComplete((ignore, error) -> {
+        whenComplete(alterResult.all(), ctx, (ignore, error) -> {
             if (error == null)
                 ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null));
             else if (!handleError(ctx, error)) {
@@ -1028,7 +1018,7 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         if (request.getTimeoutMs() != null)
             options.timeoutMs(request.getTimeoutMs());
         var deleteResult = admin.deleteConsumerGroupOffsets(groupId, partitions, options);
-        deleteResult.all().whenComplete((ignore, error) -> {
+        whenComplete(deleteResult.all(), ctx, (ignore, error) -> {
             if (error == null)
                 ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null));
             else if (!handleError(ctx, error)) {
@@ -1057,7 +1047,7 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         if (request.getTimeoutMs() != null)
             options.timeoutMs(request.getTimeoutMs());
         var removeResult = admin.removeMembersFromConsumerGroup(groupId, options);
-        removeResult.all().whenComplete((ignore, error) -> {
+        whenComplete(removeResult.all(), ctx, (ignore, error) -> {
             if (error == null)
                 ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null));
             else if (!handleError(ctx, error)) {
@@ -1075,7 +1065,7 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         if (request.getTimeoutMs() != null)
             options.timeoutMs(request.getTimeoutMs());
         var deleteResult = admin.deleteConsumerGroups(groupIds, options);
-        deleteResult.all().whenComplete((ignore, error) -> {
+        whenComplete(deleteResult.all(), ctx, (ignore, error) -> {
             if (error == null)
                 ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null));
             else if (!handleError(ctx, error)) {
@@ -1093,7 +1083,7 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         if (request.getTimeoutMs() != null)
             options.timeoutMs(request.getTimeoutMs());
         var deleteResult = admin.deleteConsumerGroups(groupIds, options);
-        deleteResult.all().whenComplete((ignore, error) -> {
+        whenComplete(deleteResult.all(), ctx, (ignore, error) -> {
             if (error == null)
                 ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null));
             else if (!handleError(ctx, error)) {
@@ -1111,7 +1101,7 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         if (request.getTimeoutMs() != null)
             options.timeoutMs(request.getTimeoutMs());
         var deleteResult = admin.deleteShareGroups(groupIds, options);
-        deleteResult.all().whenComplete((ignore, error) -> {
+        whenComplete(deleteResult.all(), ctx, (ignore, error) -> {
             if (error == null)
                 ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null));
             else if (!handleError(ctx, error)) {
@@ -1129,7 +1119,7 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         if (request.getTimeoutMs() != null)
             options.timeoutMs(request.getTimeoutMs());
         var deleteResult = admin.deleteShareGroups(groupIds, options);
-        deleteResult.all().whenComplete((ignore, error) -> {
+        whenComplete(deleteResult.all(), ctx, (ignore, error) -> {
             if (error == null)
                 ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null));
             else if (!handleError(ctx, error)) {
@@ -1147,7 +1137,7 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         if (request.getTimeoutMs() != null)
             options.timeoutMs(request.getTimeoutMs());
         var deleteResult = admin.deleteStreamsGroups(groupIds, options);
-        deleteResult.all().whenComplete((ignore, error) -> {
+        whenComplete(deleteResult.all(), ctx, (ignore, error) -> {
             if (error == null)
                 ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null));
             else if (!handleError(ctx, error)) {
@@ -1165,7 +1155,7 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         if (request.getTimeoutMs() != null)
             options.timeoutMs(request.getTimeoutMs());
         var deleteResult = admin.deleteStreamsGroups(groupIds, options);
-        deleteResult.all().whenComplete((ignore, error) -> {
+        whenComplete(deleteResult.all(), ctx, (ignore, error) -> {
             if (error == null)
                 ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null));
             else if (!handleError(ctx, error)) {
@@ -1229,7 +1219,7 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         if (request.getTimeoutMs() != null)
             options = options.timeoutMs(request.getTimeoutMs());
         var listOffsetsResult = admin.listOffsets(topicPartitionOffsets, options);
-        listOffsetsResult.all().whenComplete((offsets, error) -> {
+        whenComplete(listOffsetsResult.all(), ctx, (offsets, error) -> {
             if (error == null) {
                 var response = AdminListOffsetsResponse.of(offsets);
                 ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
@@ -1246,5 +1236,37 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         var wrapper = provider.getAdmin(id, token);
         wrapper.touch();
         return wrapper.getAdmin();
+    }
+
+    /**
+     * Registers the completion on the future with a guard: an exception thrown by the completion
+     * itself would otherwise be swallowed by the future, leaving the client without a response
+     * and the connection stuck with reading disabled.
+     */
+    private <T> void whenComplete(KafkaFuture<T> future, ChannelHandlerContext ctx, Completion<T> completion) {
+        future.whenComplete((result, error) -> {
+            try {
+                completion.complete(result, error);
+            } catch (Exception e) {
+                logger.error("An unexpected error occurred while processing admin request.", e);
+                HttpUtils.writeInternalServerErrorAndClose(ctx, Utils.combineErrorMessage(e));
+            }
+        });
+    }
+
+    private <T> void whenComplete(CompletableFuture<T> future, ChannelHandlerContext ctx, Completion<T> completion) {
+        future.whenComplete((result, error) -> {
+            try {
+                completion.complete(result, error);
+            } catch (Exception e) {
+                logger.error("An unexpected error occurred while processing admin request.", e);
+                HttpUtils.writeInternalServerErrorAndClose(ctx, Utils.combineErrorMessage(e));
+            }
+        });
+    }
+
+    @FunctionalInterface
+    private interface Completion<T> {
+        void complete(T result, Throwable error) throws Exception;
     }
 }

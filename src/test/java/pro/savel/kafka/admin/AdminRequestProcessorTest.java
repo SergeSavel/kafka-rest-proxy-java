@@ -567,6 +567,28 @@ class AdminRequestProcessorTest {
     }
 
     @Test
+    void processDeleteTopics_callbackThrows_returnsInternalServerErrorInsteadOfHanging() {
+        var wrapper = addWrapper();
+        var admin = wrapper.getAdmin();
+        var result = mock(DeleteTopicsResult.class);
+        when(result.all()).thenReturn(KafkaFuture.completedFuture(null));
+        when(result.topicNameValues()).thenThrow(new RuntimeException("response construction failed"));
+        when(admin.deleteTopics(any(TopicCollection.class), any(DeleteTopicsOptions.class))).thenReturn(result);
+
+        var request = new AdminDeleteTopicsRequest();
+        request.setAdminId(wrapper.getId());
+        request.setToken(wrapper.getToken());
+        request.setTopicNames(List.of("topic-a"));
+
+        channel.writeInbound(bearer(request));
+
+        FullHttpResponse response = channel.readOutbound();
+        assertNotNull(response, "a response must be written even when the callback throws");
+        assertEquals(HttpResponseStatus.INTERNAL_SERVER_ERROR, response.status());
+        response.release();
+    }
+
+    @Test
     void processDeleteRecords_success_returnsLowWatermark() {
         var wrapper = addWrapper();
         var admin = wrapper.getAdmin();
