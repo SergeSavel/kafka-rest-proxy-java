@@ -40,4 +40,5 @@ bin/
 
 ### Project specific ###
 users.json
+logs/
 .qwen/

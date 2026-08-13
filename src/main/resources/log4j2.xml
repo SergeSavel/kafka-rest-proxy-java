@@ -8,10 +8,23 @@
         <Console name="CONSOLE">
             <PatternLayout pattern="%d [%t] %p %c - %m%n"/>
         </Console>
+        <RollingFile name="FILE"
+                     fileName="${sys:log.dir:-logs}/kafka-gateway.log"
+                     filePattern="${sys:log.dir:-logs}/kafka-gateway-%d{yyyy-MM-dd}.log.gz">
+            <PatternLayout pattern="%d [%t] %p %c - %m%n"/>
+            <TimeBasedTriggeringPolicy modulate="true"/>
+            <DefaultRolloverStrategy>
+                <Delete basePath="${sys:log.dir:-logs}" maxDepth="1">
+                    <IfFileName glob="kafka-gateway-*.log.gz"/>
+                    <IfLastModified age="30d"/>
+                </Delete>
+            </DefaultRolloverStrategy>
+        </RollingFile>
     </Appenders>
     <Loggers>
         <Root level="WARN">
             <AppenderRef ref="CONSOLE"/>
+            <AppenderRef ref="FILE"/>
         </Root>
         <Logger name="pro.savel" level="INFO"/>
     </Loggers>

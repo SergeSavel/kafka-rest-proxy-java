@@ -29,6 +29,9 @@ if (-not (Get-Command $Prunsrv -ErrorAction SilentlyContinue)) {
     exit 1
 }
 
+# Application log files go to the same directory as the Procrun service logs;
+# an explicit -Dlog.dir in $KafkaGatewayOpts overrides this.
+$JvmOpts = "$JvmOpts;-Dlog.dir=$LogDir"
 if ($KafkaGatewayOpts) {
     # Procrun separates options with ';' or '#'.
     $JvmOpts = "$JvmOpts;$KafkaGatewayOpts"

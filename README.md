@@ -57,6 +57,7 @@ KAFKA_GATEWAY_OPTS="-Dhost=127.0.0.1 -Dport=9090" ./build/install/kafka-gateway/
 | `-Dshutdown.timeoutSeconds`      | `60`       | Common deadline for graceful shutdown                                |
 | `-Dnetty.epoll`                  | `true`     | Use native epoll on Linux when available                             |
 | `-Dclient.close.parallelism`     | `32`       | Maximum concurrent close operations per client type                  |
+| `-Dlog.dir`                      | `logs`     | Log file directory; files roll daily and are deleted after 30 days   |
 
 ## Deployment
 
@@ -74,7 +75,9 @@ sudo systemctl enable --now kafka-gateway
 
 The service runs as user `kafka-gateway` from `/opt/kafka-gateway/` with:
 
-- Default bind address and port configured via `KAFKA_GATEWAY_OPTS` (`-Dhost=127.0.0.1 -Dport=8086`)
+- Default bind address, port, and log directory configured via `KAFKA_GATEWAY_OPTS`
+  (`-Dhost=127.0.0.1 -Dport=8086 -Dlog.dir=/var/log/kafka-gateway`)
+- Application log files roll daily in `/var/log/kafka-gateway`; console output goes to journald
 - `LimitNOFILE=65536`
 - `TimeoutStopSec=120` (greater than the default 60-second application shutdown deadline)
 
@@ -96,7 +99,7 @@ Parameters:
 |---------------------|--------------------------------|------------------------------------------------------------------------------------------------|
 | `-InstallDir`       | (required)                     | The distribution directory containing `lib`                                                     |
 | `-WorkDir`          | `-InstallDir`                  | Service working directory                                                                       |
-| `-LogDir`           | `<WorkDir>\logs`               | Log directory                                                                                   |
+| `-LogDir`           | `<WorkDir>\logs`               | Log directory (Procrun service and application log files)                                       |
 | `-ServiceName`      | `kafka-gateway`                | Windows service name                                                                            |
 | `-Prunsrv`          | `prunsrv.exe`                  | Procrun executable (`<InstallDir>`, then PATH)                                                  |
 | `-JvmOpts`          | `-Xms256M;-Xmx2G`              | JVM options (like `JAVA_OPTS` in the systemd unit)                                              |
