@@ -35,8 +35,8 @@ import java.util.function.Consumer;
  * <p>
  * Deliberately doesn't override {@code exceptionCaught}: the inherited default
  * ({@code ChannelHandlerAdapter}) already just calls {@code ctx.fireExceptionCaught(cause)}, which is
- * what lets {@code DefaultInboundHandler} further down the pipeline turn read/write timeouts into
- * proper 408/504 responses. An override here would intercept and stop that propagation.
+ * what lets {@code DefaultInboundHandler} further down the pipeline close the connection on
+ * read/write timeouts. An override here would intercept and stop that propagation.
  * <p>
  * Lifecycle is out of scope here too: {@code ServerInitializer} owns and closes each {@code *Provider}
  * directly, so processors don't implement {@code AutoCloseable}.
