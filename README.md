@@ -85,7 +85,7 @@ The service runs as user `kafka-gateway` from `/opt/kafka-gateway/` with:
 
 1. Install `prunsrv.exe` from the [Apache Commons Daemon binaries](https://downloads.apache.org/commons/daemon/binaries/windows/).
 2. Extract the distribution archive.
-3. Navigate to the distribution folder.
+3. Navigate to the distribution folder (`C:\kafka-gateway` in the example below).
 
 Run the provided script from an elevated prompt:
 
@@ -140,6 +140,27 @@ Optional HTTP Basic Authentication via `users.json` in the working directory:
 ```
 
 If `users.json` is missing, authentication is disabled and a warning is logged at startup.
+
+### Uninstall
+
+**systemd**
+
+```bash
+sudo systemctl disable --now kafka-gateway
+sudo userdel kafka-gateway
+sudo rm -rf /opt/kafka-gateway /var/log/kafka-gateway
+```
+
+`systemctl disable` also removes the unit symlink created by `systemctl link`.
+
+**Windows service**
+
+```powershell
+prunsrv //SS//kafka-gateway   # stop if running
+prunsrv //DS//kafka-gateway
+```
+
+Then delete the distribution folder (including `logs`).
 
 ## API Overview
 
