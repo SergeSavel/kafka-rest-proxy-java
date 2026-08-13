@@ -18,6 +18,7 @@ import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.common.serialization.ByteArraySerializer;
 import pro.savel.kafka.common.ClientProvider;
+import pro.savel.kafka.common.SaslConfigValidator;
 import pro.savel.kafka.common.exceptions.BadRequestException;
 import pro.savel.kafka.common.exceptions.NotFoundException;
 
@@ -40,6 +41,7 @@ public class ProducerProvider extends ClientProvider<ProducerWrapper> {
     }
 
     public ProducerWrapper createProducer(String name, Properties config, int expirationTimeout, String owner) {
+        SaslConfigValidator.rejectEmptyScramPassword(config);
         var producer = clientFactory.apply(config);
         var wrapper = new ProducerWrapper(name, config, producer, expirationTimeout, owner);
         addItem(wrapper);

@@ -16,6 +16,7 @@ package pro.savel.kafka.admin;
 
 import org.apache.kafka.clients.admin.Admin;
 import pro.savel.kafka.common.ClientProvider;
+import pro.savel.kafka.common.SaslConfigValidator;
 import pro.savel.kafka.common.exceptions.BadRequestException;
 import pro.savel.kafka.common.exceptions.NotFoundException;
 
@@ -35,6 +36,7 @@ public class AdminProvider extends ClientProvider<AdminWrapper> {
     }
 
     public AdminWrapper createAdmin(String name, Properties config, int expirationTimeout, String owner) {
+        SaslConfigValidator.rejectEmptyScramPassword(config);
         var admin = clientFactory.apply(config);
         var wrapper = new AdminWrapper(name, config, admin, expirationTimeout, owner);
         addItem(wrapper);

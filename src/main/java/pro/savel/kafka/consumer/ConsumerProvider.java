@@ -18,6 +18,7 @@ import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 import pro.savel.kafka.common.ClientProvider;
+import pro.savel.kafka.common.SaslConfigValidator;
 import pro.savel.kafka.common.exceptions.BadRequestException;
 import pro.savel.kafka.common.exceptions.NotFoundException;
 
@@ -40,6 +41,7 @@ public class ConsumerProvider extends ClientProvider<ConsumerWrapper> {
     }
 
     public ConsumerWrapper createConsumer(String name, Properties config, int expirationTimeout, String owner) {
+        SaslConfigValidator.rejectEmptyScramPassword(config);
         var consumer = clientFactory.apply(config);
         var wrapper = new ConsumerWrapper(name, config, consumer, expirationTimeout, owner);
         addItem(wrapper);

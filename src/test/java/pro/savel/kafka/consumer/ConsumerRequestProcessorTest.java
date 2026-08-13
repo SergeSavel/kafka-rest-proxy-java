@@ -27,6 +27,7 @@ import org.apache.kafka.clients.consumer.SubscriptionPattern;
 import org.apache.kafka.common.Node;
 import org.apache.kafka.common.PartitionInfo;
 import org.apache.kafka.common.TopicPartition;
+import org.apache.kafka.common.config.SaslConfigs;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import pro.savel.kafka.common.RequestBearer;
@@ -88,6 +89,25 @@ class ConsumerRequestProcessorTest {
         assertNotNull(body.getId());
         assertNotNull(body.getToken());
         assertEquals(1, provider.getItems().size());
+    }
+
+    @Test
+    void processCreate_emptyScramPassword_returnsBadRequest() {
+        var request = new ConsumerCreateRequest();
+        request.setName("my-consumer");
+        var config = new Properties();
+        config.setProperty(SaslConfigs.SASL_MECHANISM, "SCRAM-SHA-256");
+        config.setProperty(SaslConfigs.SASL_JAAS_CONFIG,
+                "org.apache.kafka.common.security.scram.ScramLoginModule required username=\"u\" password=\"\";");
+        request.setConfig(config);
+        request.setExpirationTimeout(60_000);
+
+        channel.writeInbound(bearer(request));
+
+        FullHttpResponse response = channel.readOutbound();
+        assertEquals(HttpResponseStatus.BAD_REQUEST, response.status());
+        response.release();
+        assertEquals(0, provider.getItems().size());
     }
 
     @Test

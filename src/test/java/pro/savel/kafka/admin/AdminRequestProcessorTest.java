@@ -25,6 +25,7 @@ import org.apache.kafka.common.acl.AclBinding;
 import org.apache.kafka.common.acl.AclBindingFilter;
 import org.apache.kafka.common.acl.AclOperation;
 import org.apache.kafka.common.acl.AclPermissionType;
+import org.apache.kafka.common.config.SaslConfigs;
 import org.apache.kafka.common.resource.PatternType;
 import org.apache.kafka.common.resource.ResourcePattern;
 import org.apache.kafka.common.resource.ResourceType;
@@ -132,6 +133,25 @@ class AdminRequestProcessorTest {
         assertNotNull(body.getId());
         assertNotNull(body.getToken());
         assertEquals(1, provider.getItems().size());
+    }
+
+    @Test
+    void processCreate_emptyScramPassword_returnsBadRequest() {
+        var request = new AdminCreateRequest();
+        request.setName("my-admin");
+        var config = new Properties();
+        config.setProperty(SaslConfigs.SASL_MECHANISM, "SCRAM-SHA-256");
+        config.setProperty(SaslConfigs.SASL_JAAS_CONFIG,
+                "org.apache.kafka.common.security.scram.ScramLoginModule required username=\"u\" password=\"\";");
+        request.setConfig(config);
+        request.setExpirationTimeout(60_000);
+
+        channel.writeInbound(bearer(request));
+
+        FullHttpResponse response = channel.readOutbound();
+        assertEquals(HttpResponseStatus.BAD_REQUEST, response.status());
+        response.release();
+        assertEquals(0, provider.getItems().size());
     }
 
     @Test

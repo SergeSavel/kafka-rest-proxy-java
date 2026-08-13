@@ -21,6 +21,7 @@ import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.PartitionInfo;
 import org.apache.kafka.common.TopicPartition;
+import org.apache.kafka.common.config.SaslConfigs;
 import org.apache.kafka.common.errors.AuthorizationException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -80,6 +81,25 @@ class ProducerRequestProcessorTest {
         assertNotNull(body.getId());
         assertNotNull(body.getToken());
         assertEquals(1, provider.getItems().size());
+    }
+
+    @Test
+    void processCreate_emptyScramPassword_returnsBadRequest() {
+        var request = new ProducerCreateRequest();
+        request.setName("my-producer");
+        var config = new Properties();
+        config.setProperty(SaslConfigs.SASL_MECHANISM, "SCRAM-SHA-256");
+        config.setProperty(SaslConfigs.SASL_JAAS_CONFIG,
+                "org.apache.kafka.common.security.scram.ScramLoginModule required username=\"u\" password=\"\";");
+        request.setConfig(config);
+        request.setExpirationTimeout(60_000);
+
+        channel.writeInbound(bearer(request));
+
+        FullHttpResponse response = channel.readOutbound();
+        assertEquals(HttpResponseStatus.BAD_REQUEST, response.status());
+        response.release();
+        assertEquals(0, provider.getItems().size());
     }
 
     @Test
