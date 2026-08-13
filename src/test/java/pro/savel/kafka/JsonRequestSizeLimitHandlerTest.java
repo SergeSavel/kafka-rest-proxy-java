@@ -53,6 +53,16 @@ class JsonRequestSizeLimitHandlerTest {
     }
 
     @Test
+    void jsonContentTypeWithoutSpaceInParameter_isStillLimited() {
+        var channel = new EmbeddedChannel(new JsonRequestSizeLimitHandler(4));
+        var request = request("application/json;charset=utf-8", 5);
+
+        assertFalse(channel.writeInbound(request));
+        assertResponseStatus(channel, HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE);
+        channel.finishAndReleaseAll();
+    }
+
+    @Test
     void chunkedJsonAboveLimit_returns413() {
         var channel = new EmbeddedChannel(new JsonRequestSizeLimitHandler(4));
         var request = request(HttpUtils.APPLICATION_JSON, null);

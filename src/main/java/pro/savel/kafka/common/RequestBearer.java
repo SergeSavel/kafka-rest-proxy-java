@@ -27,22 +27,16 @@ public record RequestBearer(Request request, Serde serializeTo, boolean connecti
     }
 
     private static Serde getSerde(HttpRequest httpRequest) {
-        Serde serializeTo;
         var headers = httpRequest.headers();
-        var accept = headers.get(HttpHeaderNames.ACCEPT);
-        var contentType = headers.get(HttpHeaderNames.CONTENT_TYPE);
+        var accept = HttpUtils.mediaType(headers.get(HttpHeaderNames.ACCEPT));
         if (accept == null || "*/*".equals(accept)) {
-            accept = contentType;
+            accept = HttpUtils.mediaType(headers.get(HttpHeaderNames.CONTENT_TYPE));
         }
-        if ("application/json".equals(accept) || "application/json; charset=utf-8".equals(accept)) {
-            serializeTo = Serde.JSON;
-        } else if ("application/octet-stream".equals(accept)) {
-            serializeTo = Serde.BINARY;
-        } else {
-            // default
-            serializeTo = Serde.JSON;
+        if (HttpUtils.APPLICATION_OCTET_STREAM.equals(accept)) {
+            return Serde.BINARY;
         }
-        return serializeTo;
+        // default
+        return Serde.JSON;
     }
 
 }

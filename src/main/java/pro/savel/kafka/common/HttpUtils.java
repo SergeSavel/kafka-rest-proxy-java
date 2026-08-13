@@ -47,11 +47,23 @@ public abstract class HttpUtils {
     }
 
     public static boolean isJson(String contentType) {
-        return APPLICATION_JSON.equalsIgnoreCase(contentType) || APPLICATION_JSON_CHARSET_UTF8.equalsIgnoreCase(contentType);
+        return APPLICATION_JSON.equals(mediaType(contentType));
     }
 
     public static boolean isOctetStream(String contentType) {
-        return APPLICATION_OCTET_STREAM.equalsIgnoreCase(contentType);
+        return APPLICATION_OCTET_STREAM.equals(mediaType(contentType));
+    }
+
+    /**
+     * The media type of a Content-Type or Accept header value: the part before any parameters,
+     * lowercased and trimmed. Null when the value is null or carries no media type.
+     */
+    public static String mediaType(String headerValue) {
+        if (headerValue == null)
+            return null;
+        var separatorIndex = headerValue.indexOf(';');
+        var mediaType = (separatorIndex < 0 ? headerValue : headerValue.substring(0, separatorIndex)).trim().toLowerCase();
+        return mediaType.isEmpty() ? null : mediaType;
     }
 
     public static void writeOkAndClose(ChannelHandlerContext ctx, String message) {

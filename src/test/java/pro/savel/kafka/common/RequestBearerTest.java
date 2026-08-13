@@ -86,6 +86,23 @@ class RequestBearerTest {
     }
 
     @Test
+    void serde_acceptBinaryWithParameters_returnsBinary() {
+        var httpRequest = request();
+        httpRequest.headers().set(HttpHeaderNames.ACCEPT, "application/octet-stream; q=1");
+        var bearer = new RequestBearer(httpRequest, null);
+        assertEquals(Serde.BINARY, bearer.serializeTo());
+    }
+
+    @Test
+    void serde_acceptWildcardWithParameters_fallsBackToContentType() {
+        var httpRequest = request();
+        httpRequest.headers().set(HttpHeaderNames.ACCEPT, "*/*; q=0.8");
+        httpRequest.headers().set(HttpHeaderNames.CONTENT_TYPE, "application/octet-stream");
+        var bearer = new RequestBearer(httpRequest, null);
+        assertEquals(Serde.BINARY, bearer.serializeTo());
+    }
+
+    @Test
     void keepAlive_http11_defaultsToTrue() {
         var httpRequest = request();
         var bearer = new RequestBearer(httpRequest, null);
