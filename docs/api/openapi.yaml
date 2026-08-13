@@ -1290,7 +1290,7 @@ paths:
                 [int32 partition]       — present only when not null
                 int32  headersCount     — max 900
                 headersCount × {
-                  string headerKey
+                  string headerKey      — duplicate keys are preserved
                   int8   headerValueIsNull
                   [int32 headerValueLength + bytes]
                 }
@@ -3252,6 +3252,9 @@ components:
         headers:
           type: object
           additionalProperties: {type: string}
+          description: |
+            Kafka allows repeated header keys, but a JSON object cannot express them.
+            Use the binary send format when a key has to appear more than once.
         key:
           type: string
           nullable: true

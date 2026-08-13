@@ -20,6 +20,7 @@ import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.kafka.clients.producer.Callback;
 import org.apache.kafka.clients.producer.Producer;
+import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.PartitionInfo;
 import org.apache.kafka.common.TopicPartition;
@@ -38,7 +39,9 @@ import pro.savel.kafka.producer.responses.ProducerListResponse;
 import pro.savel.kafka.producer.responses.ProducerPartitionsResponse;
 import pro.savel.kafka.producer.responses.ProducerSendResponse;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 import java.util.Queue;
@@ -275,6 +278,35 @@ class ProducerRequestProcessorTest {
         FullHttpResponse response = channel.readOutbound();
         assertEquals(HttpResponseStatus.FORBIDDEN, response.status());
         response.release();
+    }
+
+    @Test
+    void processSend_duplicateHeaderKeys_bothReachTheRecord() {
+        var wrapper = addWrapper();
+        var producer = wrapper.getProducer();
+        var sentRecord = new AtomicReference<ProducerRecord<byte[], byte[]>>();
+        doAnswer(invocation -> {
+            sentRecord.set(invocation.getArgument(0));
+            Callback callback = invocation.getArgument(1);
+            callback.onCompletion(new RecordMetadata(new TopicPartition("topic", 0), 0, 0, 0L, 0, 0), null);
+            return null;
+        }).when(producer).send(any(), any());
+
+        var request = new ProducerSendRequest();
+        request.setProducerId(wrapper.getId());
+        request.setToken(wrapper.getToken());
+        request.setTopic("topic");
+        request.setHeaders(List.of(
+                new ProducerSendRequest.Header("dup", "v1".getBytes(StandardCharsets.UTF_8)),
+                new ProducerSendRequest.Header("dup", "v2".getBytes(StandardCharsets.UTF_8))));
+
+        channel.writeInbound(bearer(request));
+
+        var values = new ArrayList<byte[]>();
+        sentRecord.get().headers().headers("dup").forEach(header -> values.add(header.value()));
+        assertEquals(2, values.size(), "a repeated header key must not collapse on the way to Kafka");
+        assertArrayEquals("v1".getBytes(StandardCharsets.UTF_8), values.get(0));
+        assertArrayEquals("v2".getBytes(StandardCharsets.UTF_8), values.get(1));
     }
 
     @Test

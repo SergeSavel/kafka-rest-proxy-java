@@ -107,7 +107,7 @@ public class ProducerRequestProcessor extends AbstractRequestProcessor {
         var record = new ProducerRecord<>(request.getTopic(), request.getPartition(), request.getKey(), request.getValue());
         var headers = request.getHeaders();
         if (headers != null)
-            headers.forEach((key, value) -> record.headers().add(key, value));
+            headers.forEach(header -> record.headers().add(header.getKey(), header.getValue()));
         Callback callback = (RecordMetadata metadata, Exception exception) -> ensureResponse(ctx, () -> {
             if (exception != null) {
                 if (!handleError(ctx, exception)) {

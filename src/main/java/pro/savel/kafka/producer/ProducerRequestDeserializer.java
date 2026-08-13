@@ -19,8 +19,8 @@ import pro.savel.kafka.common.exceptions.BadRequestException;
 import pro.savel.kafka.producer.requests.ProducerSendRequest;
 
 import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 
 public class ProducerRequestDeserializer {
 
@@ -48,15 +48,15 @@ public class ProducerRequestDeserializer {
         return request;
     }
 
-    private static Map<String, byte[]> readHeaders(ByteBuf buf) throws BadRequestException {
+    private static List<ProducerSendRequest.Header> readHeaders(ByteBuf buf) throws BadRequestException {
         var headersCount = readPositiveInt(buf);
         if (headersCount > MAX_HEADERS_COUNT)
             throw new BadRequestException("Too many headers: " + headersCount);
-        var headers = new HashMap<String, byte[]>(headersCount);
+        var headers = new ArrayList<ProducerSendRequest.Header>(headersCount);
         for (int i = 1; i <= headersCount; i++) {
             var headerKey = readString(buf);
             var headerValue = readNullableBytes(buf);
-            headers.put(headerKey, headerValue);
+            headers.add(new ProducerSendRequest.Header(headerKey, headerValue));
         }
         return headers;
     }

@@ -18,7 +18,7 @@ import pro.savel.kafka.producer.requests.ProducerSendRequest;
 import pro.savel.kafka.producer.requests.ProducerSendStringRequest;
 
 import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
+import java.util.ArrayList;
 
 public class ProducerRequestMapper {
 
@@ -32,9 +32,9 @@ public class ProducerRequestMapper {
 
         var headersSource = stringRequest.getHeaders();
         if (headersSource != null) {
-            var headers = new HashMap<String, byte[]>(stringRequest.getHeaders().size());
+            var headers = new ArrayList<ProducerSendRequest.Header>(headersSource.size());
             headersSource.forEach((key, value) ->
-                    headers.put(key, value != null ? value.getBytes(StandardCharsets.UTF_8) : null));
+                    headers.add(new ProducerSendRequest.Header(key, value != null ? value.getBytes(StandardCharsets.UTF_8) : null)));
             request.setHeaders(headers);
         }
 

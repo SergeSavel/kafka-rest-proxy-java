@@ -17,8 +17,9 @@ package pro.savel.kafka.producer.requests;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.PositiveOrZero;
 import lombok.Data;
+import lombok.Getter;
 
-import java.util.Map;
+import java.util.List;
 
 @Data
 public class ProducerSendRequest implements ProducerRequest {
@@ -30,7 +31,20 @@ public class ProducerSendRequest implements ProducerRequest {
     private String topic;
     @PositiveOrZero
     private Integer partition;
-    private Map<String, byte[]> headers;
+    private List<Header> headers;
     private byte[] key;
     private byte[] value;
+
+    // A list, not a map: Kafka headers allow duplicate keys.
+    @Getter
+    public static class Header {
+
+        private final String key;
+        private final byte[] value;
+
+        public Header(String key, byte[] value) {
+            this.key = key;
+            this.value = value;
+        }
+    }
 }

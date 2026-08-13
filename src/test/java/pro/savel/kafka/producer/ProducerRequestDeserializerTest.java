@@ -36,9 +36,40 @@ class ProducerRequestDeserializerTest {
             assertEquals("token-1", request.getToken());
             assertEquals("topic-1", request.getTopic());
             assertEquals(3, request.getPartition());
-            assertArrayEquals("hv".getBytes(StandardCharsets.UTF_8), request.getHeaders().get("header-key"));
+            assertEquals(1, request.getHeaders().size());
+            assertEquals("header-key", request.getHeaders().get(0).getKey());
+            assertArrayEquals("hv".getBytes(StandardCharsets.UTF_8), request.getHeaders().get(0).getValue());
             assertArrayEquals("k".getBytes(StandardCharsets.UTF_8), request.getKey());
             assertArrayEquals("value".getBytes(StandardCharsets.UTF_8), request.getValue());
+        } finally {
+            buf.release();
+        }
+    }
+
+    @Test
+    void duplicateHeaderKeys_preservedInOrder() {
+        var buf = Unpooled.buffer();
+        buf.writeShort(1); // version
+        writeString(buf, "producer-1");
+        writeString(buf, "token-1");
+        writeString(buf, "topic-1");
+        buf.writeByte(1); // partition is null
+        buf.writeInt(2); // headers count
+        writeString(buf, "dup");
+        buf.writeByte(0); // header value is not null
+        writeBytes(buf, "v1");
+        writeString(buf, "dup");
+        buf.writeByte(0); // header value is not null
+        writeBytes(buf, "v2");
+        buf.writeByte(1); // key is null
+        buf.writeByte(1); // value is null
+        try {
+            var request = ProducerRequestDeserializer.deserializeBinarySend(buf);
+            assertEquals(2, request.getHeaders().size());
+            assertEquals("dup", request.getHeaders().get(0).getKey());
+            assertArrayEquals("v1".getBytes(StandardCharsets.UTF_8), request.getHeaders().get(0).getValue());
+            assertEquals("dup", request.getHeaders().get(1).getKey());
+            assertArrayEquals("v2".getBytes(StandardCharsets.UTF_8), request.getHeaders().get(1).getValue());
         } finally {
             buf.release();
         }

@@ -18,6 +18,7 @@ import org.junit.jupiter.api.Test;
 import pro.savel.kafka.producer.requests.ProducerSendStringRequest;
 
 import java.nio.charset.StandardCharsets;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -69,19 +70,24 @@ class ProducerRequestMapperTest {
     }
 
     @Test
-    void mapProduceRequest_headers_convertedToBytes() {
+    void mapProduceRequest_headers_convertedToBytesPreservingOrder() {
         var source = new ProducerSendStringRequest();
         source.setProducerId("p");
         source.setToken("t");
         source.setTopic("topic");
-        source.setHeaders(Map.of("h1", "v1", "h2", "v2"));
+        var headers = new LinkedHashMap<String, String>();
+        headers.put("h1", "v1");
+        headers.put("h2", "v2");
+        source.setHeaders(headers);
 
         var result = ProducerRequestMapper.mapProduceRequest(source);
 
         assertNotNull(result.getHeaders());
         assertEquals(2, result.getHeaders().size());
-        assertArrayEquals("v1".getBytes(StandardCharsets.UTF_8), result.getHeaders().get("h1"));
-        assertArrayEquals("v2".getBytes(StandardCharsets.UTF_8), result.getHeaders().get("h2"));
+        assertEquals("h1", result.getHeaders().get(0).getKey());
+        assertArrayEquals("v1".getBytes(StandardCharsets.UTF_8), result.getHeaders().get(0).getValue());
+        assertEquals("h2", result.getHeaders().get(1).getKey());
+        assertArrayEquals("v2".getBytes(StandardCharsets.UTF_8), result.getHeaders().get(1).getValue());
     }
 
     @Test
@@ -107,7 +113,10 @@ class ProducerRequestMapperTest {
 
         var result = ProducerRequestMapper.mapProduceRequest(source);
 
-        assertArrayEquals("v1".getBytes(StandardCharsets.UTF_8), result.getHeaders().get("h1"));
-        assertNull(result.getHeaders().get("h2"));
+        assertEquals(2, result.getHeaders().size());
+        var h1 = result.getHeaders().stream().filter(header -> "h1".equals(header.getKey())).findFirst().orElseThrow();
+        assertArrayEquals("v1".getBytes(StandardCharsets.UTF_8), h1.getValue());
+        var h2 = result.getHeaders().stream().filter(header -> "h2".equals(header.getKey())).findFirst().orElseThrow();
+        assertNull(h2.getValue());
     }
 }
