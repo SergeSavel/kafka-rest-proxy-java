@@ -70,6 +70,10 @@ public abstract class HttpUtils {
         writeHttpResponseAndClose(ctx, HttpResponseStatus.OK, message);
     }
 
+    public static void writeOkAndClose(ChannelHandlerContext ctx, String message, AsciiString contentType) {
+        writeHttpResponseAndClose(ctx, HttpResponseStatus.OK, message, contentType);
+    }
+
     public static void writeBadRequestAndClose(ChannelHandlerContext ctx, String message) {
         writeHttpResponseAndClose(ctx, HttpResponseStatus.BAD_REQUEST, message);
     }
@@ -127,9 +131,14 @@ public abstract class HttpUtils {
     }
 
     public static void writeHttpResponseAndClose(ChannelHandlerContext ctx, HttpResponseStatus status, String message) {
+        writeHttpResponseAndClose(ctx, status, message, ASCII_TEXT_PLAIN_CHARSET_UTF8);
+    }
+
+    public static void writeHttpResponseAndClose(ChannelHandlerContext ctx, HttpResponseStatus status, String message,
+                                                 AsciiString contentType) {
         var httpResponse = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, status);
         if (message != null) {
-            httpResponse.headers().set(ASCII_CONTENT_TYPE, ASCII_TEXT_PLAIN_CHARSET_UTF8);
+            httpResponse.headers().set(ASCII_CONTENT_TYPE, contentType);
             httpResponse.content().writeCharSequence(message, StandardCharsets.UTF_8);
         }
         httpResponse.headers().setInt(ASCII_CONTENT_LENGTH, httpResponse.content().readableBytes());

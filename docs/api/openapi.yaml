@@ -78,11 +78,13 @@ paths:
         '200':
           description: Gateway is running
           content:
-            text/plain:
+            application/json:
               schema:
-                type: string
-                description: JSON-formatted status string
-                example: '{"status":"UP"}'
+                type: object
+                properties:
+                  status:
+                    type: string
+                example: {"status": "UP"}
         '405': {$ref: '#/components/responses/MethodNotAllowed'}
 
   /version:
