@@ -56,6 +56,8 @@ public abstract class CommonErrors {
                     HttpUtils.writeBadRequestAndClose(ctx, Utils.combineErrorMessage(error));
             case UnknownTopicOrPartitionException ignored ->
                     HttpUtils.writeBadRequestAndClose(ctx, Utils.combineErrorMessage(error));
+            case UnknownTopicIdException ignored ->
+                    HttpUtils.writeBadRequestAndClose(ctx, Utils.combineErrorMessage(error));
             case InvalidConfigurationException ignored ->
                     HttpUtils.writeBadRequestAndClose(ctx, Utils.combineErrorMessage(error));
             case GroupNotEmptyException ignored ->
