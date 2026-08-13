@@ -24,6 +24,7 @@ import io.netty.util.AsciiString;
 import pro.savel.kafka.common.exceptions.BadRequestException;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Locale;
 
 public abstract class HttpUtils {
 
@@ -57,12 +58,17 @@ public abstract class HttpUtils {
     /**
      * The media type of a Content-Type or Accept header value: the part before any parameters,
      * lowercased and trimmed. Null when the value is null or carries no media type.
+     * <p>
+     * Lowercasing is pinned to {@link Locale#ROOT} because the input is protocol data, not text in
+     * the server's locale: under a Turkish or Azeri default locale {@code "APPLICATION/JSON"} would
+     * otherwise fold to {@code "applıcatıon/json"} with dotless i and never match.
      */
     public static String mediaType(String headerValue) {
         if (headerValue == null)
             return null;
         var separatorIndex = headerValue.indexOf(';');
-        var mediaType = (separatorIndex < 0 ? headerValue : headerValue.substring(0, separatorIndex)).trim().toLowerCase();
+        var mediaType = (separatorIndex < 0 ? headerValue : headerValue.substring(0, separatorIndex))
+                .trim().toLowerCase(Locale.ROOT);
         return mediaType.isEmpty() ? null : mediaType;
     }
 

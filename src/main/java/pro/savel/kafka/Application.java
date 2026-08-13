@@ -33,6 +33,7 @@ import pro.savel.kafka.common.ShutdownDeadline;
 
 import java.time.Duration;
 import java.util.Arrays;
+import java.util.Locale;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
@@ -170,7 +171,9 @@ public class Application
     }
 
     private static boolean isLinux() {
-        return System.getProperty("os.name", "").toLowerCase().contains("linux");
+        // Locale.ROOT: os.name is a platform string, and a Turkish default locale would fold
+        // "Linux" to "lınux" with dotless i, silently costing the epoll transport.
+        return System.getProperty("os.name", "").toLowerCase(Locale.ROOT).contains("linux");
     }
 
     private record Transport(

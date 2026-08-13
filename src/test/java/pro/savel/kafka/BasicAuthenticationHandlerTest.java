@@ -26,6 +26,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Base64;
+import java.util.Locale;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -203,6 +204,31 @@ class BasicAuthenticationHandlerTest {
         request.headers().set(HttpHeaderNames.AUTHORIZATION, basicAuth("ADMIN", "secret"));
         assertTrue(channel.writeInbound(request));
         channel.close();
+    }
+
+    @Test
+    void authenticate_caseInsensitiveUsername_isLocaleIndependent(@TempDir Path tempDir) throws IOException {
+        // Turkish uppercases 'i' to dotted 'İ', so "Admin" and "ADMIN" would fold to different keys
+        // and a valid credential would be rejected on a host with that default locale.
+        var previousDefault = Locale.getDefault();
+        Locale.setDefault(Locale.forLanguageTag("tr-TR"));
+        try {
+            var usersFile = tempDir.resolve("users.json");
+            Files.writeString(usersFile, """
+                    [{"username":"Admin","password":"secret"}]
+                    """);
+
+            var handler = new BasicAuthenticationHandler(objectMapper);
+            handler.initialize(usersFile.toString());
+
+            var channel = new EmbeddedChannel(handler, new ChannelInboundHandlerAdapter());
+            var request = getRequest();
+            request.headers().set(HttpHeaderNames.AUTHORIZATION, basicAuth("ADMIN", "secret"));
+            assertTrue(channel.writeInbound(request));
+            channel.close();
+        } finally {
+            Locale.setDefault(previousDefault);
+        }
     }
 
     @Test

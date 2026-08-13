@@ -16,6 +16,8 @@ package pro.savel.kafka.common;
 
 import org.junit.jupiter.api.Test;
 
+import java.util.Locale;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 class HttpUtilsTest {
@@ -45,6 +47,21 @@ class HttpUtilsTest {
         assertTrue(HttpUtils.isJson("Application/JSON"));
         assertFalse(HttpUtils.isJson("text/plain"));
         assertFalse(HttpUtils.isJson(null));
+    }
+
+    @Test
+    void mediaType_isLocaleIndependent() {
+        // Turkish lowercases 'I' to dotless 'ı', which would break "application" for a default-locale
+        // toLowerCase(). Header values are protocol data, so they must fold the same everywhere.
+        var previousDefault = Locale.getDefault();
+        Locale.setDefault(Locale.forLanguageTag("tr-TR"));
+        try {
+            assertEquals("application/json", HttpUtils.mediaType("APPLICATION/JSON"));
+            assertTrue(HttpUtils.isJson("Application/JSON; charset=UTF-8"));
+            assertTrue(HttpUtils.isOctetStream("APPLICATION/OCTET-STREAM"));
+        } finally {
+            Locale.setDefault(previousDefault);
+        }
     }
 
     @Test

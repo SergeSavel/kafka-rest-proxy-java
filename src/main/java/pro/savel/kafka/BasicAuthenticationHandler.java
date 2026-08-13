@@ -37,6 +37,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 @ChannelHandler.Sharable
@@ -78,7 +79,7 @@ public class BasicAuthenticationHandler extends ChannelInboundHandlerAdapter {
 
         var users_ = new HashMap<String, UserWithHash>();
         userList.forEach(user -> {
-            var key = user.username().toUpperCase();
+            var key = caseInsensitiveKey(user.username());
             if (users_.containsKey(key))
                 logger.warn("Duplicate username '{}' (case-insensitive) in users.json — overwriting.", user.username());
             users_.put(key, new UserWithHash(user.username(), hash(user.password())));
@@ -134,7 +135,7 @@ public class BasicAuthenticationHandler extends ChannelInboundHandlerAdapter {
             if (credentialsArray.length != 2)
                 throw new UnauthenticatedException("Invalid Authorization header.");
 
-            var user = users_.get(credentialsArray[0].toUpperCase());
+            var user = users_.get(caseInsensitiveKey(credentialsArray[0]));
 
             if (user == null)
                 throw new UnauthenticatedException("Invalid username or password.");
@@ -146,6 +147,16 @@ public class BasicAuthenticationHandler extends ChannelInboundHandlerAdapter {
         }
 
         ctx.fireChannelRead(request.retain());
+    }
+
+    /**
+     * Folds a username to the key under which it is indexed and looked up. Pinned to
+     * {@link Locale#ROOT} so that a credential matches the same way on every host: under a Turkish
+     * or Azeri default locale {@code "Admin"} would fold to {@code "ADMİN"} while {@code "ADMIN"}
+     * stays {@code "ADMIN"}, and the two would stop matching.
+     */
+    private static String caseInsensitiveKey(String username) {
+        return username.toUpperCase(Locale.ROOT);
     }
 
     private static byte[] hash(String value) {
