@@ -9,8 +9,6 @@ Spring, no heavy frameworks.
 - **Consumer** — create, poll, commit, seek, seek-to-beginning, seek-to-end, subscribe, assign, position, offsets,
   partitions, topics, lifecycle
 - **Admin** — topics, configs, ACLs, consumer groups, offsets, SCRAM credentials, cluster info
-- **Health check** — `GET /health` for liveness probes (no auth required)
-- **Version** — `GET /version`
 - **Binary protocol** — high-performance binary format for producer send and consumer poll
 - **Optional Basic Auth** — HTTP Basic Authentication via `users.json`
 
