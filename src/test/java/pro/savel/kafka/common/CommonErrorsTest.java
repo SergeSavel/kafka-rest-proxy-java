@@ -106,8 +106,17 @@ class CommonErrorsTest {
     }
 
     @Test
-    void handle_timeoutException_returnsTrue() {
+    void handle_timeoutException_returnsGatewayTimeout() {
         assertTrue(CommonErrors.handle(ctx, new TimeoutException("to") {}));
+        FullHttpResponse response = channel.readOutbound();
+        assertEquals(HttpResponseStatus.GATEWAY_TIMEOUT, response.status());
+    }
+
+    @Test
+    void handle_wakeupException_returnsServiceUnavailable() {
+        assertTrue(CommonErrors.handle(ctx, new WakeupException()));
+        FullHttpResponse response = channel.readOutbound();
+        assertEquals(HttpResponseStatus.SERVICE_UNAVAILABLE, response.status());
     }
 
     @Test

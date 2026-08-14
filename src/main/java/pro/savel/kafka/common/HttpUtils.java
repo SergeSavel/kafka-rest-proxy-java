@@ -136,6 +136,14 @@ public abstract class HttpUtils {
         writeHttpResponseAndClose(ctx, HttpResponseStatus.INTERNAL_SERVER_ERROR, message);
     }
 
+    public static void writeServiceUnavailableAndClose(ChannelHandlerContext ctx, String message) {
+        writeHttpResponseAndClose(ctx, HttpResponseStatus.SERVICE_UNAVAILABLE, message);
+    }
+
+    public static void writeGatewayTimeoutAndClose(ChannelHandlerContext ctx, String message) {
+        writeHttpResponseAndClose(ctx, HttpResponseStatus.GATEWAY_TIMEOUT, message);
+    }
+
     public static void writeHttpResponseAndClose(ChannelHandlerContext ctx, HttpResponseStatus status, String message) {
         writeHttpResponseAndClose(ctx, status, message, ASCII_TEXT_PLAIN_CHARSET_UTF8);
     }

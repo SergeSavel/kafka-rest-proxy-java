@@ -1874,8 +1874,18 @@ components:
       content:
         text/plain:
           schema: {$ref: '#/components/schemas/ErrorMessage'}
+    ServiceUnavailable:
+      description: The Kafka client instance is unavailable (closed or expired while the request was in flight)
+      content:
+        text/plain:
+          schema: {$ref: '#/components/schemas/ErrorMessage'}
+    GatewayTimeout:
+      description: Kafka did not respond within the timeout
+      content:
+        text/plain:
+          schema: {$ref: '#/components/schemas/ErrorMessage'}
     InternalServerError:
-      description: Internal error (timeout, interrupted, unexpected)
+      description: Internal error (interrupted, unexpected)
       content:
         text/plain:
           schema: {$ref: '#/components/schemas/ErrorMessage'}

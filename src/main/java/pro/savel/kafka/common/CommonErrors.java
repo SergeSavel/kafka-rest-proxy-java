@@ -42,9 +42,9 @@ public abstract class CommonErrors {
             case IllegalStateException ignored ->
                     HttpUtils.writeConflictAndClose(ctx, Utils.combineErrorMessage(error));
             case WakeupException ignored ->
-                    HttpUtils.writeInternalServerErrorAndClose(ctx, Utils.combineErrorMessage(error));
+                    HttpUtils.writeServiceUnavailableAndClose(ctx, Utils.combineErrorMessage(error));
             case TimeoutException ignored ->
-                    HttpUtils.writeInternalServerErrorAndClose(ctx, Utils.combineErrorMessage(error));
+                    HttpUtils.writeGatewayTimeoutAndClose(ctx, Utils.combineErrorMessage(error));
             case AuthorizationException ignored ->
                     HttpUtils.writeForbiddenAndClose(ctx, Utils.combineErrorMessage(error));
             case AuthenticationException ignored ->
