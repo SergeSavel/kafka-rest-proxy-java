@@ -49,7 +49,7 @@ public class BasicAuthenticationHandler extends ChannelInboundHandlerAdapter {
 
     private final ObjectMapper objectMapper;
 
-    private Map<String, UserWithHash> users;
+    private volatile Map<String, UserWithHash> users;
 
     public BasicAuthenticationHandler(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
