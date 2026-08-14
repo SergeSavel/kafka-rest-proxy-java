@@ -141,27 +141,6 @@ Optional HTTP Basic Authentication via `users.json` in the working directory:
 
 If `users.json` is missing, authentication is disabled and a warning is logged at startup.
 
-### Uninstall
-
-**systemd**
-
-```bash
-sudo systemctl disable --now kafka-gateway
-sudo userdel kafka-gateway
-sudo rm -rf /opt/kafka-gateway /var/log/kafka-gateway
-```
-
-`systemctl disable` also removes the unit symlink created by `systemctl link`.
-
-**Windows service**
-
-```powershell
-prunsrv //SS//kafka-gateway   # stop if running
-prunsrv //DS//kafka-gateway
-```
-
-Then delete the distribution folder (including `logs`).
-
 ## API Overview
 
 All endpoints accept JSON by default. Producer send and consumer poll also support a binary protocol for high-throughput
