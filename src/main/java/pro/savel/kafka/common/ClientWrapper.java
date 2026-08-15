@@ -35,14 +35,10 @@ public abstract class ClientWrapper implements AutoCloseable {
     protected ClientWrapper(String id, String name, Properties config, int expirationTimeout, String owner) {
         this.id = id;
         this.name = name;
-        this.username = getUsernameFromConfig(config);
+        this.username = SaslConfigValidator.usernameFromJaasConfig(config);
         this.expirationTimeout = expirationTimeout;
         this.owner = owner;
         touch();
-    }
-
-    private static String getUsernameFromConfig(Properties config) {
-        return config.getProperty("sasl.username");
     }
 
     public void touch() {

@@ -21,6 +21,8 @@ import pro.savel.kafka.common.exceptions.BadRequestException;
 import java.util.Properties;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class SaslConfigValidatorTest {
@@ -104,6 +106,37 @@ class SaslConfigValidatorTest {
     void rejectEmptyScramCredentials_malformedJaasConfig_passes() {
         var config = config("SCRAM-SHA-256", "not a jaas config");
         assertDoesNotThrow(() -> SaslConfigValidator.rejectEmptyScramCredentials(config));
+    }
+
+    @Test
+    void usernameFromJaasConfig_scramModule_returnsUsername() {
+        var config = config("SCRAM-SHA-256", jaas("username=\"scram-user\"", "password=\"secret\""));
+        assertEquals("scram-user", SaslConfigValidator.usernameFromJaasConfig(config));
+    }
+
+    @Test
+    void usernameFromJaasConfig_plainModule_returnsUsername() {
+        var config = config("PLAIN",
+                "org.apache.kafka.common.security.plain.PlainLoginModule required username=\"plain-user\" password=\"secret\";");
+        assertEquals("plain-user", SaslConfigValidator.usernameFromJaasConfig(config));
+    }
+
+    @Test
+    void usernameFromJaasConfig_noUsernameOption_returnsNull() {
+        var config = config("SCRAM-SHA-256", jaas(null, "password=\"secret\""));
+        assertNull(SaslConfigValidator.usernameFromJaasConfig(config));
+    }
+
+    @Test
+    void usernameFromJaasConfig_noJaasConfig_returnsNull() {
+        var config = config("SCRAM-SHA-256", null);
+        assertNull(SaslConfigValidator.usernameFromJaasConfig(config));
+    }
+
+    @Test
+    void usernameFromJaasConfig_malformedJaasConfig_returnsNull() {
+        var config = config("SCRAM-SHA-256", "not a jaas config");
+        assertNull(SaslConfigValidator.usernameFromJaasConfig(config));
     }
 
     private static Properties config(String mechanism, String jaasConfig) {

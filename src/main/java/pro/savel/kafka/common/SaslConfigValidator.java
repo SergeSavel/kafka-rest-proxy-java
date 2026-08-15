@@ -52,4 +52,23 @@ public abstract class SaslConfigValidator {
         if (password != null && password.isEmpty())
             throw new BadRequestException("Empty SCRAM password in sasl.jaas.config.");
     }
+
+    /**
+     * The username configured in sasl.jaas.config, or null when absent or unparseable.
+     */
+    public static String usernameFromJaasConfig(Properties config) {
+        var jaasConfig = config.getProperty(SaslConfigs.SASL_JAAS_CONFIG);
+        if (jaasConfig == null)
+            return null;
+        try {
+            var context = JaasContext.loadClientContext(Map.of(SaslConfigs.SASL_JAAS_CONFIG, new Password(jaasConfig)));
+            for (var entry : context.configurationEntries()) {
+                if (entry.getOptions().get(USERNAME_OPTION) instanceof String username)
+                    return username;
+            }
+            return null;
+        } catch (RuntimeException ignored) {
+            return null;
+        }
+    }
 }
