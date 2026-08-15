@@ -51,8 +51,9 @@ public class DefaultInboundHandler extends ChannelInboundHandlerAdapter {
         // consumer/poll body). Writing a fresh 408/504 here would land after, or interleaved with,
         // those bytes and corrupt the stream, which the client sees as a truncated response. Just
         // close instead — the client loses the clean status code but not to a corrupted body.
+        // Timeouts closing a keep-alive connection are routine - clients reconnect transparently.
         if (cause instanceof ReadTimeoutException || cause instanceof WriteTimeoutException)
-            logger.warn("Closing connection to {} due to {}.", ctx.channel().remoteAddress(),
+            logger.info("Closing connection to {} due to {}.", ctx.channel().remoteAddress(),
                     cause.getClass().getSimpleName());
         else
             logger.error("Unhandled pipeline exception.", cause);
