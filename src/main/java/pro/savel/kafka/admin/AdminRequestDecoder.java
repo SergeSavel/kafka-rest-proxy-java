@@ -61,12 +61,69 @@ import pro.savel.kafka.common.exceptions.BadRequestException;
 import pro.savel.kafka.common.exceptions.MethodNotAllowedException;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
 
 @ChannelHandler.Sharable
 public class AdminRequestDecoder extends ChannelInboundHandlerAdapter {
 
     public static final String URI_PREFIX = "/admin";
     private static final Logger logger = LoggerFactory.getLogger(AdminRequestDecoder.class);
+
+    private static final Map<String, Class<? extends AdminRequest>> REQUEST_TYPES = Map.<String, Class<? extends AdminRequest>>ofEntries(
+            Map.entry("/create", AdminCreateRequest.class),
+            Map.entry("/release", AdminRemoveRequest.class),
+            Map.entry("/touch", AdminTouchRequest.class),
+            Map.entry("/describe-cluster", AdminDescribeClusterRequest.class),
+            Map.entry("/describe-features", AdminDescribeFeaturesRequest.class),
+            Map.entry("/describe-log-dirs", AdminDescribeLogDirsRequest.class),
+            Map.entry("/update-feature", AdminUpdateFeatureRequest.class),
+            Map.entry("/list-topics", AdminListTopicsRequest.class),
+            Map.entry("/describe-topic", AdminDescribeTopicRequest.class),
+            Map.entry("/create-topic", AdminCreateTopicRequest.class),
+            Map.entry("/create-topics", AdminCreateTopicsRequest.class),
+            Map.entry("/delete-topic", AdminDeleteTopicRequest.class),
+            Map.entry("/delete-topics", AdminDeleteTopicsRequest.class),
+            Map.entry("/delete-records", AdminDeleteRecordsRequest.class),
+            Map.entry("/create-partitions", AdminCreatePartitionsRequest.class),
+            Map.entry("/describe-topic-configs", AdminDescribeTopicConfigsRequest.class),
+            Map.entry("/describe-broker-configs", AdminDescribeBrokerConfigsRequest.class),
+            Map.entry("/describe-group-configs", AdminDescribeGroupConfigsRequest.class),
+            Map.entry("/set-topic-config", AdminAlterTopicConfigRequest.class), // deprecated alias
+            Map.entry("/alter-topic-config", AdminAlterTopicConfigRequest.class),
+            Map.entry("/alter-group-config", AdminAlterGroupConfigRequest.class),
+            Map.entry("/delete-topic-config", AdminDeleteTopicConfigRequest.class),
+            Map.entry("/delete-group-config", AdminDeleteGroupConfigRequest.class),
+            Map.entry("/describe-user-scram-credentials", AdminDescribeUserScramCredentialsRequest.class),
+            Map.entry("/upsert-user-scram-credentials", AdminUpsertUserScramCredentialsRequest.class),
+            Map.entry("/delete-user-scram-credentials", AdminDeleteUserScramCredentialsRequest.class),
+            Map.entry("/describe-acls", AdminDescribeAclsRequest.class),
+            Map.entry("/create-acls", AdminCreateAclsRequest.class),
+            Map.entry("/delete-acls", AdminDeleteAclsRequest.class),
+            Map.entry("/describe-producers", AdminDescribeProducersRequest.class),
+            Map.entry("/abort-transaction", AdminAbortTransactionRequest.class),
+            Map.entry("/list-groups", AdminListGroupsRequest.class),
+            Map.entry("/describe-classic-group", AdminDescribeClassicGroupRequest.class),
+            Map.entry("/describe-consumer-group", AdminDescribeConsumerGroupRequest.class),
+            Map.entry("/describe-share-group", AdminDescribeShareGroupRequest.class),
+            Map.entry("/describe-streams-group", AdminDescribeStreamsGroupRequest.class),
+            Map.entry("/list-consumer-group-offsets", AdminListConsumerGroupOffsetsRequest.class),
+            Map.entry("/alter-consumer-group-offsets", AdminAlterConsumerGroupOffsetsRequest.class),
+            Map.entry("/delete-consumer-group-offsets", AdminDeleteConsumerGroupOffsetsRequest.class),
+            Map.entry("/remove-members-from-consumer-group", AdminRemoveMembersFromConsumerGroupRequest.class),
+            Map.entry("/delete-consumer-group", AdminDeleteConsumerGroupRequest.class),
+            Map.entry("/delete-consumer-groups", AdminDeleteConsumerGroupsRequest.class),
+            Map.entry("/delete-share-group", AdminDeleteShareGroupRequest.class),
+            Map.entry("/delete-share-groups", AdminDeleteShareGroupsRequest.class),
+            Map.entry("/delete-streams-group", AdminDeleteStreamsGroupRequest.class),
+            Map.entry("/delete-streams-groups", AdminDeleteStreamsGroupsRequest.class),
+            Map.entry("/list-earliest-offsets", AdminListEarliestOffsetsRequest.class),
+            Map.entry("/list-earliest-local-offsets", AdminListEarliestLocalOffsetsRequest.class),
+            Map.entry("/list-latest-offsets", AdminListLatestOffsetsRequest.class),
+            Map.entry("/list-latest-tiered-offsets", AdminListLatestTieredOffsetsRequest.class),
+            Map.entry("/list-max-timestamp-offsets", AdminListMaxTimestampOffsetsRequest.class),
+            Map.entry("/list-timestamp-offsets", AdminListTimestampOffsetsRequest.class)
+    );
+
     private final ObjectMapper objectMapper;
     private final Validator validator;
 
@@ -103,478 +160,23 @@ public class AdminRequestDecoder extends ChannelInboundHandlerAdapter {
     private void decode(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
         var decoder = new QueryStringDecoder(httpRequest.uri(), StandardCharsets.UTF_8, true);
         var pathMethod = decoder.path().substring(URI_PREFIX.length());
-        switch (pathMethod) {
-            case "/describe-topic" -> decodeDescribeTopic(ctx, httpRequest);
-            case "/list-topics" -> decodeListTopics(ctx, httpRequest);
-            case "/create-topic" -> decodeCreateTopic(ctx, httpRequest);
-            case "/create-topics" -> decodeCreateTopics(ctx, httpRequest);
-            case "/delete-topic" -> decodeDeleteTopic(ctx, httpRequest);
-            case "/delete-topics" -> decodeDeleteTopics(ctx, httpRequest);
-            case "/delete-records" -> decodeDeleteRecords(ctx, httpRequest);
-            case "/describe-topic-configs" -> decodeDescribeTopicConfigs(ctx, httpRequest);
-            case "/describe-broker-configs" -> decodeDescribeBrokerConfigs(ctx, httpRequest);
-            case "/describe-group-configs" -> decodeDescribeGroupConfigs(ctx, httpRequest);
-            case "/describe-cluster" -> decodeDescribeCluster(ctx, httpRequest);
-            case "/describe-features" -> decodeDescribeFeatures(ctx, httpRequest);
-            case "/describe-log-dirs" -> decodeDescribeLogDirs(ctx, httpRequest);
-            case "/update-feature" -> decodeUpdateFeature(ctx, httpRequest);
-            case "/touch" -> decodeTouch(ctx, httpRequest);
-            case "/create" -> decodeCreate(ctx, httpRequest);
-            case "/release" -> decodeRemove(ctx, httpRequest);
-            case "/set-topic-config" -> decodeAlterTopicConfig(ctx, httpRequest); // deprecated
-            case "/alter-topic-config" -> decodeAlterTopicConfig(ctx, httpRequest);
-            case "/alter-group-config" -> decodeAlterGroupConfig(ctx, httpRequest);
-            case "/delete-topic-config" -> decodeDeleteTopicConfig(ctx, httpRequest);
-            case "/delete-group-config" -> decodeDeleteGroupConfig(ctx, httpRequest);
-            case "/describe-user-scram-credentials" -> decodeDescribeUserScramCredentials(ctx, httpRequest);
-            case "/upsert-user-scram-credentials" -> decodeUpsertUserScramCredentials(ctx, httpRequest);
-            case "/delete-user-scram-credentials" -> decodeDeleteUserScramCredentials(ctx, httpRequest);
-            case "/describe-acls" -> decodeDescribeAcls(ctx, httpRequest);
-            case "/create-acls" -> decodeCreateAcls(ctx, httpRequest);
-            case "/delete-acls" -> decodeDeleteAcls(ctx, httpRequest);
-            case "/create-partitions" -> decodeCreatePartitions(ctx, httpRequest);
-            case "/describe-producers" -> decodeDescribeProducers(ctx, httpRequest);
-            case "/abort-transaction" -> decodeAbortTransaction(ctx, httpRequest);
-            case "/list-groups" -> decodeListGroups(ctx, httpRequest);
-            case "/describe-classic-group" -> decodeDescribeClassicGroup(ctx, httpRequest);
-            case "/describe-consumer-group" -> decodeDescribeConsumerGroup(ctx, httpRequest);
-            case "/describe-share-group" -> decodeDescribeShareGroup(ctx, httpRequest);
-            case "/describe-streams-group" -> decodeDescribeStreamsGroup(ctx, httpRequest);
-            case "/list-consumer-group-offsets" -> decodeListConsumerGroupOffsets(ctx, httpRequest);
-            case "/alter-consumer-group-offsets" -> decodeAlterConsumerGroupOffsets(ctx, httpRequest);
-            case "/delete-consumer-group-offsets" -> decodeDeleteConsumerGroupOffsets(ctx, httpRequest);
-            case "/remove-members-from-consumer-group" -> decodeRemoveMembersFromConsumerGroup(ctx, httpRequest);
-            case "/delete-consumer-group" -> decodeDeleteConsumerGroup(ctx, httpRequest);
-            case "/delete-consumer-groups" -> decodeDeleteConsumerGroups(ctx, httpRequest);
-            case "/delete-share-group" -> decodeDeleteShareGroup(ctx, httpRequest);
-            case "/delete-share-groups" -> decodeDeleteShareGroups(ctx, httpRequest);
-            case "/delete-streams-group" -> decodeDeleteStreamsGroup(ctx, httpRequest);
-            case "/delete-streams-groups" -> decodeDeleteStreamsGroups(ctx, httpRequest);
-            case "/list-earliest-offsets" -> decodeListEarliestOffsets(ctx, httpRequest);
-            case "/list-earliest-local-offsets" -> decodeListEarliestLocalOffsets(ctx, httpRequest);
-            case "/list-latest-offsets" -> decodeListLatestOffsets(ctx, httpRequest);
-            case "/list-latest-tiered-offsets" -> decodeListLatestTieredOffsets(ctx, httpRequest);
-            case "/list-max-timestamp-offsets" -> decodeListMaxTimestampOffsets(ctx, httpRequest);
-            case "/list-timestamp-offsets" -> decodeListTimestampOffsets(ctx, httpRequest);
-            case "" -> decodeList(ctx, httpRequest);
-            default -> HttpUtils.writeNotFoundAndClose(ctx);
-        }
-    }
-
-    private void decodeList(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws MethodNotAllowedException {
-        if (httpRequest.method() == HttpMethod.GET) {
+        if (pathMethod.isEmpty()) {
+            requireMethod(httpRequest, HttpMethod.GET);
             decodeListRequest(ctx, httpRequest);
-        } else {
-            throw new MethodNotAllowedException("Unsupported HTTP method.");
+            return;
         }
+        var requestType = REQUEST_TYPES.get(pathMethod);
+        if (requestType == null) {
+            HttpUtils.writeNotFoundAndClose(ctx);
+            return;
+        }
+        requireMethod(httpRequest, HttpMethod.POST);
+        decodeRequest(ctx, httpRequest, requestType);
     }
 
-    private void decodeCreate(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
-        if (httpRequest.method() == HttpMethod.POST) {
-            decodeRequest(ctx, httpRequest, AdminCreateRequest.class);
-        } else {
+    private static void requireMethod(FullHttpRequest httpRequest, HttpMethod method) throws MethodNotAllowedException {
+        if (httpRequest.method() != method)
             throw new MethodNotAllowedException("Unsupported HTTP method.");
-        }
-    }
-
-    private void decodeRemove(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
-        if (httpRequest.method() == HttpMethod.POST) {
-            decodeRequest(ctx, httpRequest, AdminRemoveRequest.class);
-        } else {
-            throw new MethodNotAllowedException("Unsupported HTTP method.");
-        }
-    }
-
-    private void decodeTouch(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
-        if (httpRequest.method() == HttpMethod.POST) {
-            decodeRequest(ctx, httpRequest, AdminTouchRequest.class);
-        } else {
-            throw new MethodNotAllowedException("Unsupported HTTP method.");
-        }
-    }
-
-    private void decodeDescribeCluster(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
-        if (httpRequest.method() == HttpMethod.POST) {
-            decodeRequest(ctx, httpRequest, AdminDescribeClusterRequest.class);
-        } else {
-            throw new MethodNotAllowedException("Unsupported HTTP method.");
-        }
-    }
-
-    private void decodeDescribeFeatures(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
-        if (httpRequest.method() == HttpMethod.POST) {
-            decodeRequest(ctx, httpRequest, AdminDescribeFeaturesRequest.class);
-        } else {
-            throw new MethodNotAllowedException("Unsupported HTTP method.");
-        }
-    }
-
-    private void decodeUpdateFeature(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
-        if (httpRequest.method() == HttpMethod.POST) {
-            decodeRequest(ctx, httpRequest, AdminUpdateFeatureRequest.class);
-        } else {
-            throw new MethodNotAllowedException("Unsupported HTTP method.");
-        }
-    }
-
-    private void decodeDescribeLogDirs(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
-        if (httpRequest.method() == HttpMethod.POST) {
-            decodeRequest(ctx, httpRequest, AdminDescribeLogDirsRequest.class);
-        } else {
-            throw new MethodNotAllowedException("Unsupported HTTP method.");
-        }
-    }
-
-    private void decodeListTopics(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
-        if (httpRequest.method() == HttpMethod.POST) {
-            decodeRequest(ctx, httpRequest, AdminListTopicsRequest.class);
-        } else {
-            throw new MethodNotAllowedException("Unsupported HTTP method.");
-        }
-    }
-
-    private void decodeCreateTopic(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
-        if (httpRequest.method() == HttpMethod.POST) {
-            decodeRequest(ctx, httpRequest, AdminCreateTopicRequest.class);
-        } else {
-            throw new MethodNotAllowedException("Unsupported HTTP method.");
-        }
-    }
-
-    private void decodeCreateTopics(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
-        if (httpRequest.method() == HttpMethod.POST) {
-            decodeRequest(ctx, httpRequest, AdminCreateTopicsRequest.class);
-        } else {
-            throw new MethodNotAllowedException("Unsupported HTTP method.");
-        }
-    }
-
-    private void decodeDeleteTopic(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
-        if (httpRequest.method() == HttpMethod.POST) {
-            decodeRequest(ctx, httpRequest, AdminDeleteTopicRequest.class);
-        } else {
-            throw new MethodNotAllowedException("Unsupported HTTP method.");
-        }
-    }
-
-    private void decodeDeleteTopics(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
-        if (httpRequest.method() == HttpMethod.POST) {
-            decodeRequest(ctx, httpRequest, AdminDeleteTopicsRequest.class);
-        } else {
-            throw new MethodNotAllowedException("Unsupported HTTP method.");
-        }
-    }
-
-    private void decodeDeleteRecords(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
-        if (httpRequest.method() == HttpMethod.POST) {
-            decodeRequest(ctx, httpRequest, AdminDeleteRecordsRequest.class);
-        } else {
-            throw new MethodNotAllowedException("Unsupported HTTP method.");
-        }
-    }
-
-    private void decodeDescribeTopic(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
-        if (httpRequest.method() == HttpMethod.POST) {
-            decodeRequest(ctx, httpRequest, AdminDescribeTopicRequest.class);
-        } else {
-            throw new MethodNotAllowedException("Unsupported HTTP method.");
-        }
-    }
-
-    private void decodeDescribeBrokerConfigs(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
-        if (httpRequest.method() == HttpMethod.POST) {
-            decodeRequest(ctx, httpRequest, AdminDescribeBrokerConfigsRequest.class);
-        } else {
-            throw new MethodNotAllowedException("Unsupported HTTP method.");
-        }
-    }
-
-    private void decodeDescribeTopicConfigs(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
-        if (httpRequest.method() == HttpMethod.POST) {
-            decodeRequest(ctx, httpRequest, AdminDescribeTopicConfigsRequest.class);
-        } else {
-            throw new MethodNotAllowedException("Unsupported HTTP method.");
-        }
-    }
-
-    private void decodeDescribeGroupConfigs(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
-        if (httpRequest.method() == HttpMethod.POST) {
-            decodeRequest(ctx, httpRequest, AdminDescribeGroupConfigsRequest.class);
-        } else {
-            throw new MethodNotAllowedException("Unsupported HTTP method.");
-        }
-    }
-
-    private void decodeAlterTopicConfig(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
-        if (httpRequest.method() == HttpMethod.POST) {
-            decodeRequest(ctx, httpRequest, AdminAlterTopicConfigRequest.class);
-        } else {
-            throw new MethodNotAllowedException("Unsupported HTTP method.");
-        }
-    }
-
-    private void decodeAlterGroupConfig(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
-        if (httpRequest.method() == HttpMethod.POST) {
-            decodeRequest(ctx, httpRequest, AdminAlterGroupConfigRequest.class);
-        } else {
-            throw new MethodNotAllowedException("Unsupported HTTP method.");
-        }
-    }
-
-    private void decodeDeleteTopicConfig(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
-        if (httpRequest.method() == HttpMethod.POST) {
-            decodeRequest(ctx, httpRequest, AdminDeleteTopicConfigRequest.class);
-        } else {
-            throw new MethodNotAllowedException("Unsupported HTTP method.");
-        }
-    }
-
-    private void decodeDeleteGroupConfig(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
-        if (httpRequest.method() == HttpMethod.POST) {
-            decodeRequest(ctx, httpRequest, AdminDeleteGroupConfigRequest.class);
-        } else {
-            throw new MethodNotAllowedException("Unsupported HTTP method.");
-        }
-    }
-
-    private void decodeDescribeUserScramCredentials(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
-        if (httpRequest.method() == HttpMethod.POST) {
-            decodeRequest(ctx, httpRequest, AdminDescribeUserScramCredentialsRequest.class);
-        } else {
-            throw new MethodNotAllowedException("Unsupported HTTP method.");
-        }
-    }
-
-    private void decodeUpsertUserScramCredentials(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
-        if (httpRequest.method() == HttpMethod.POST) {
-            decodeRequest(ctx, httpRequest, AdminUpsertUserScramCredentialsRequest.class);
-        } else {
-            throw new MethodNotAllowedException("Unsupported HTTP method.");
-        }
-    }
-
-    private void decodeDeleteUserScramCredentials(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
-        if (httpRequest.method() == HttpMethod.POST) {
-            decodeRequest(ctx, httpRequest, AdminDeleteUserScramCredentialsRequest.class);
-        } else {
-            throw new MethodNotAllowedException("Unsupported HTTP method.");
-        }
-    }
-
-    private void decodeDescribeAcls(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
-        if (httpRequest.method() == HttpMethod.POST) {
-            decodeRequest(ctx, httpRequest, AdminDescribeAclsRequest.class);
-        } else {
-            throw new MethodNotAllowedException("Unsupported HTTP method.");
-        }
-    }
-
-    private void decodeCreateAcls(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
-        if (httpRequest.method() == HttpMethod.POST) {
-            decodeRequest(ctx, httpRequest, AdminCreateAclsRequest.class);
-        } else {
-            throw new MethodNotAllowedException("Unsupported HTTP method.");
-        }
-    }
-
-    private void decodeDeleteAcls(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
-        if (httpRequest.method() == HttpMethod.POST) {
-            decodeRequest(ctx, httpRequest, AdminDeleteAclsRequest.class);
-        } else {
-            throw new MethodNotAllowedException("Unsupported HTTP method.");
-        }
-    }
-
-    private void decodeCreatePartitions(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
-        if (httpRequest.method() == HttpMethod.POST) {
-            decodeRequest(ctx, httpRequest, AdminCreatePartitionsRequest.class);
-        } else {
-            throw new MethodNotAllowedException("Unsupported HTTP method.");
-        }
-    }
-
-    private void decodeDescribeProducers(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
-        if (httpRequest.method() == HttpMethod.POST) {
-            decodeRequest(ctx, httpRequest, AdminDescribeProducersRequest.class);
-        } else {
-            throw new MethodNotAllowedException("Unsupported HTTP method.");
-        }
-    }
-
-    private void decodeAbortTransaction(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
-        if (httpRequest.method() == HttpMethod.POST) {
-            decodeRequest(ctx, httpRequest, AdminAbortTransactionRequest.class);
-        } else {
-            throw new MethodNotAllowedException("Unsupported HTTP method.");
-        }
-    }
-
-    private void decodeListGroups(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
-        if (httpRequest.method() == HttpMethod.POST) {
-            decodeRequest(ctx, httpRequest, AdminListGroupsRequest.class);
-        } else {
-            throw new MethodNotAllowedException("Unsupported HTTP method.");
-        }
-    }
-
-    private void decodeDescribeClassicGroup(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
-        if (httpRequest.method() == HttpMethod.POST) {
-            decodeRequest(ctx, httpRequest, AdminDescribeClassicGroupRequest.class);
-        } else {
-            throw new MethodNotAllowedException("Unsupported HTTP method.");
-        }
-    }
-
-    private void decodeDescribeConsumerGroup(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
-        if (httpRequest.method() == HttpMethod.POST) {
-            decodeRequest(ctx, httpRequest, AdminDescribeConsumerGroupRequest.class);
-        } else {
-            throw new MethodNotAllowedException("Unsupported HTTP method.");
-        }
-    }
-
-    private void decodeDescribeShareGroup(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
-        if (httpRequest.method() == HttpMethod.POST) {
-            decodeRequest(ctx, httpRequest, AdminDescribeShareGroupRequest.class);
-        } else {
-            throw new MethodNotAllowedException("Unsupported HTTP method.");
-        }
-    }
-
-    private void decodeDescribeStreamsGroup(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
-        if (httpRequest.method() == HttpMethod.POST) {
-            decodeRequest(ctx, httpRequest, AdminDescribeStreamsGroupRequest.class);
-        } else {
-            throw new MethodNotAllowedException("Unsupported HTTP method.");
-        }
-    }
-
-    private void decodeListConsumerGroupOffsets(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
-        if (httpRequest.method() == HttpMethod.POST) {
-            decodeRequest(ctx, httpRequest, AdminListConsumerGroupOffsetsRequest.class);
-        } else {
-            throw new MethodNotAllowedException("Unsupported HTTP method.");
-        }
-    }
-
-    private void decodeAlterConsumerGroupOffsets(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
-        if (httpRequest.method() == HttpMethod.POST) {
-            decodeRequest(ctx, httpRequest, AdminAlterConsumerGroupOffsetsRequest.class);
-        } else {
-            throw new MethodNotAllowedException("Unsupported HTTP method.");
-        }
-    }
-
-    private void decodeDeleteConsumerGroupOffsets(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
-        if (httpRequest.method() == HttpMethod.POST) {
-            decodeRequest(ctx, httpRequest, AdminDeleteConsumerGroupOffsetsRequest.class);
-        } else {
-            throw new MethodNotAllowedException("Unsupported HTTP method.");
-        }
-    }
-
-    private void decodeRemoveMembersFromConsumerGroup(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
-        if (httpRequest.method() == HttpMethod.POST) {
-            decodeRequest(ctx, httpRequest, AdminRemoveMembersFromConsumerGroupRequest.class);
-        } else {
-            throw new MethodNotAllowedException("Unsupported HTTP method.");
-        }
-    }
-
-    private void decodeDeleteConsumerGroup(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
-        if (httpRequest.method() == HttpMethod.POST) {
-            decodeRequest(ctx, httpRequest, AdminDeleteConsumerGroupRequest.class);
-        } else {
-            throw new MethodNotAllowedException("Unsupported HTTP method.");
-        }
-    }
-
-    private void decodeDeleteConsumerGroups(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
-        if (httpRequest.method() == HttpMethod.POST) {
-            decodeRequest(ctx, httpRequest, AdminDeleteConsumerGroupsRequest.class);
-        } else {
-            throw new MethodNotAllowedException("Unsupported HTTP method.");
-        }
-    }
-
-    private void decodeDeleteShareGroup(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
-        if (httpRequest.method() == HttpMethod.POST) {
-            decodeRequest(ctx, httpRequest, AdminDeleteShareGroupRequest.class);
-        } else {
-            throw new MethodNotAllowedException("Unsupported HTTP method.");
-        }
-    }
-
-    private void decodeDeleteShareGroups(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
-        if (httpRequest.method() == HttpMethod.POST) {
-            decodeRequest(ctx, httpRequest, AdminDeleteShareGroupsRequest.class);
-        } else {
-            throw new MethodNotAllowedException("Unsupported HTTP method.");
-        }
-    }
-
-    private void decodeDeleteStreamsGroup(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
-        if (httpRequest.method() == HttpMethod.POST) {
-            decodeRequest(ctx, httpRequest, AdminDeleteStreamsGroupRequest.class);
-        } else {
-            throw new MethodNotAllowedException("Unsupported HTTP method.");
-        }
-    }
-
-    private void decodeDeleteStreamsGroups(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
-        if (httpRequest.method() == HttpMethod.POST) {
-            decodeRequest(ctx, httpRequest, AdminDeleteStreamsGroupsRequest.class);
-        } else {
-            throw new MethodNotAllowedException("Unsupported HTTP method.");
-        }
-    }
-
-    private void decodeListEarliestOffsets(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
-        if (httpRequest.method() == HttpMethod.POST) {
-            decodeRequest(ctx, httpRequest, AdminListEarliestOffsetsRequest.class);
-        } else {
-            throw new MethodNotAllowedException("Unsupported HTTP method.");
-        }
-    }
-
-    private void decodeListEarliestLocalOffsets(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
-        if (httpRequest.method() == HttpMethod.POST) {
-            decodeRequest(ctx, httpRequest, AdminListEarliestLocalOffsetsRequest.class);
-        } else {
-            throw new MethodNotAllowedException("Unsupported HTTP method.");
-        }
-    }
-
-    private void decodeListLatestOffsets(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
-        if (httpRequest.method() == HttpMethod.POST) {
-            decodeRequest(ctx, httpRequest, AdminListLatestOffsetsRequest.class);
-        } else {
-            throw new MethodNotAllowedException("Unsupported HTTP method.");
-        }
-    }
-
-    private void decodeListLatestTieredOffsets(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
-        if (httpRequest.method() == HttpMethod.POST) {
-            decodeRequest(ctx, httpRequest, AdminListLatestTieredOffsetsRequest.class);
-        } else {
-            throw new MethodNotAllowedException("Unsupported HTTP method.");
-        }
-    }
-
-    private void decodeListMaxTimestampOffsets(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
-        if (httpRequest.method() == HttpMethod.POST) {
-            decodeRequest(ctx, httpRequest, AdminListMaxTimestampOffsetsRequest.class);
-        } else {
-            throw new MethodNotAllowedException("Unsupported HTTP method.");
-        }
-    }
-
-    private void decodeListTimestampOffsets(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
-        if (httpRequest.method() == HttpMethod.POST) {
-            decodeRequest(ctx, httpRequest, AdminListTimestampOffsetsRequest.class);
-        } else {
-            throw new MethodNotAllowedException("Unsupported HTTP method.");
-        }
     }
 
     private void decodeListRequest(ChannelHandlerContext ctx, FullHttpRequest httpRequest) {

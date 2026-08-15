@@ -67,113 +67,62 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
 
     @Override
     protected void processRequest(ChannelHandlerContext ctx, RequestBearer requestBearer) {
-        var requestClass = requestBearer.request().getClass();
-        if (requestClass == AdminDescribeTopicRequest.class)
-            processDescribeTopic(ctx, requestBearer);
-        else if (requestClass == AdminCreateTopicRequest.class)
-            processCreateTopic(ctx, requestBearer);
-        else if (requestClass == AdminCreateTopicsRequest.class)
-            processCreateTopics(ctx, requestBearer);
-        else if (requestClass == AdminDeleteTopicRequest.class)
-            processDeleteTopic(ctx, requestBearer);
-        else if (requestClass == AdminDeleteTopicsRequest.class)
-            processDeleteTopics(ctx, requestBearer);
-        else if (requestClass == AdminDeleteRecordsRequest.class)
-            processDeleteRecords(ctx, requestBearer);
-        else if (requestClass == AdminListTopicsRequest.class)
-            processListTopics(ctx, requestBearer);
-        else if (requestClass == AdminDescribeTopicConfigsRequest.class)
-            processDescribeTopicConfigs(ctx, requestBearer);
-        else if (requestClass == AdminDescribeBrokerConfigsRequest.class)
-            processDescribeBrokerConfigs(ctx, requestBearer);
-        else if (requestClass == AdminDescribeGroupConfigsRequest.class)
-            processDescribeGroupConfigs(ctx, requestBearer);
-        else if (requestClass == AdminDescribeClusterRequest.class)
-            processDescribeCluster(ctx, requestBearer);
-        else if (requestClass == AdminDescribeFeaturesRequest.class)
-            processDescribeFeatures(ctx, requestBearer);
-        else if (requestClass == AdminDescribeLogDirsRequest.class)
-            processDescribeLogDirs(ctx, requestBearer);
-        else if (requestClass == AdminUpdateFeatureRequest.class)
-            processUpdateFeature(ctx, requestBearer);
-        else if (requestClass == AdminCreateRequest.class)
-            processCreate(ctx, requestBearer);
-        else if (requestClass == AdminRemoveRequest.class)
-            processRemove(ctx, requestBearer);
-        else if (requestClass == AdminTouchRequest.class)
-            processTouch(ctx, requestBearer);
-        else if (requestClass == AdminListRequest.class)
-            processList(ctx, requestBearer);
-        else if (requestClass == AdminAlterTopicConfigRequest.class)
-            processAlterTopicConfig(ctx, requestBearer);
-        else if (requestClass == AdminAlterGroupConfigRequest.class)
-            processAlterGroupConfig(ctx, requestBearer);
-        else if (requestClass == AdminDeleteTopicConfigRequest.class)
-            processDeleteTopicConfig(ctx, requestBearer);
-        else if (requestClass == AdminDeleteGroupConfigRequest.class)
-            processDeleteGroupConfig(ctx, requestBearer);
-        else if (requestClass == AdminDescribeUserScramCredentialsRequest.class)
-            processDescribeUserScramCredentials(ctx, requestBearer);
-        else if (requestClass == AdminUpsertUserScramCredentialsRequest.class)
-            processUpsertUserScramCredentials(ctx, requestBearer);
-        else if (requestClass == AdminDeleteUserScramCredentialsRequest.class)
-            processDeleteUserScramCredentials(ctx, requestBearer);
-        else if (requestClass == AdminDescribeAclsRequest.class)
-            processDescribeAcls(ctx, requestBearer);
-        else if (requestClass == AdminCreateAclsRequest.class)
-            processCreateAcls(ctx, requestBearer);
-        else if (requestClass == AdminDeleteAclsRequest.class)
-            processDeleteAcls(ctx, requestBearer);
-        else if (requestClass == AdminCreatePartitionsRequest.class)
-            processCreatePartitions(ctx, requestBearer);
-        else if (requestClass == AdminDescribeProducersRequest.class)
-            processDescribeProducers(ctx, requestBearer);
-        else if (requestClass == AdminAbortTransactionRequest.class)
-            processAbortTransaction(ctx, requestBearer);
-        else if (requestClass == AdminListGroupsRequest.class)
-            processListGroups(ctx, requestBearer);
-        else if (requestClass == AdminDescribeClassicGroupRequest.class)
-            processDescribeClassicGroup(ctx, requestBearer);
-        else if (requestClass == AdminDescribeConsumerGroupRequest.class)
-            processDescribeConsumerGroup(ctx, requestBearer);
-        else if (requestClass == AdminDescribeShareGroupRequest.class)
-            processDescribeShareGroup(ctx, requestBearer);
-        else if (requestClass == AdminDescribeStreamsGroupRequest.class)
-            processDescribeStreamsGroup(ctx, requestBearer);
-        else if (requestClass == AdminListConsumerGroupOffsetsRequest.class)
-            processListConsumerGroupOffsets(ctx, requestBearer);
-        else if (requestClass == AdminAlterConsumerGroupOffsetsRequest.class)
-            processAlterConsumerGroupOffsets(ctx, requestBearer);
-        else if (requestClass == AdminDeleteConsumerGroupOffsetsRequest.class)
-            processDeleteConsumerGroupOffsets(ctx, requestBearer);
-        else if (requestClass == AdminRemoveMembersFromConsumerGroupRequest.class)
-            processRemoveMembersFromConsumerGroup(ctx, requestBearer);
-        else if (requestClass == AdminDeleteConsumerGroupRequest.class)
-            processDeleteConsumerGroup(ctx, requestBearer);
-        else if (requestClass == AdminDeleteConsumerGroupsRequest.class)
-            processDeleteConsumerGroups(ctx, requestBearer);
-        else if (requestClass == AdminDeleteShareGroupRequest.class)
-            processDeleteShareGroup(ctx, requestBearer);
-        else if (requestClass == AdminDeleteShareGroupsRequest.class)
-            processDeleteShareGroups(ctx, requestBearer);
-        else if (requestClass == AdminDeleteStreamsGroupRequest.class)
-            processDeleteStreamsGroup(ctx, requestBearer);
-        else if (requestClass == AdminDeleteStreamsGroupsRequest.class)
-            processDeleteStreamsGroups(ctx, requestBearer);
-        else if (requestClass == AdminListEarliestOffsetsRequest.class)
-            processListEarliestOffsetsRequest(ctx, requestBearer);
-        else if (requestClass == AdminListEarliestLocalOffsetsRequest.class)
-            processListEarliestLocalOffsetsRequest(ctx, requestBearer);
-        else if (requestClass == AdminListLatestOffsetsRequest.class)
-            processListLatestOffsetsRequest(ctx, requestBearer);
-        else if (requestClass == AdminListLatestTieredOffsetsRequest.class)
-            processListLatestTieredOffsetsRequest(ctx, requestBearer);
-        else if (requestClass == AdminListMaxTimestampOffsetsRequest.class)
-            processListMaxTimestampOffsetsRequest(ctx, requestBearer);
-        else if (requestClass == AdminListTimestampOffsetsRequest.class)
-            processListTimestampOffsetsRequest(ctx, requestBearer);
-        else
-            throw new RuntimeException("Unexpected admin request type: " + requestClass.getName());
+        switch (requestBearer.request()) {
+            case AdminDescribeTopicRequest ignored -> processDescribeTopic(ctx, requestBearer);
+            case AdminCreateTopicRequest ignored -> processCreateTopic(ctx, requestBearer);
+            case AdminCreateTopicsRequest ignored -> processCreateTopics(ctx, requestBearer);
+            case AdminDeleteTopicRequest ignored -> processDeleteTopic(ctx, requestBearer);
+            case AdminDeleteTopicsRequest ignored -> processDeleteTopics(ctx, requestBearer);
+            case AdminDeleteRecordsRequest ignored -> processDeleteRecords(ctx, requestBearer);
+            case AdminListTopicsRequest ignored -> processListTopics(ctx, requestBearer);
+            case AdminDescribeTopicConfigsRequest ignored -> processDescribeTopicConfigs(ctx, requestBearer);
+            case AdminDescribeBrokerConfigsRequest ignored -> processDescribeBrokerConfigs(ctx, requestBearer);
+            case AdminDescribeGroupConfigsRequest ignored -> processDescribeGroupConfigs(ctx, requestBearer);
+            case AdminDescribeClusterRequest ignored -> processDescribeCluster(ctx, requestBearer);
+            case AdminDescribeFeaturesRequest ignored -> processDescribeFeatures(ctx, requestBearer);
+            case AdminDescribeLogDirsRequest ignored -> processDescribeLogDirs(ctx, requestBearer);
+            case AdminUpdateFeatureRequest ignored -> processUpdateFeature(ctx, requestBearer);
+            case AdminCreateRequest ignored -> processCreate(ctx, requestBearer);
+            case AdminRemoveRequest ignored -> processRemove(ctx, requestBearer);
+            case AdminTouchRequest ignored -> processTouch(ctx, requestBearer);
+            case AdminListRequest ignored -> processList(ctx, requestBearer);
+            case AdminAlterTopicConfigRequest ignored -> processAlterTopicConfig(ctx, requestBearer);
+            case AdminAlterGroupConfigRequest ignored -> processAlterGroupConfig(ctx, requestBearer);
+            case AdminDeleteTopicConfigRequest ignored -> processDeleteTopicConfig(ctx, requestBearer);
+            case AdminDeleteGroupConfigRequest ignored -> processDeleteGroupConfig(ctx, requestBearer);
+            case AdminDescribeUserScramCredentialsRequest ignored -> processDescribeUserScramCredentials(ctx, requestBearer);
+            case AdminUpsertUserScramCredentialsRequest ignored -> processUpsertUserScramCredentials(ctx, requestBearer);
+            case AdminDeleteUserScramCredentialsRequest ignored -> processDeleteUserScramCredentials(ctx, requestBearer);
+            case AdminDescribeAclsRequest ignored -> processDescribeAcls(ctx, requestBearer);
+            case AdminCreateAclsRequest ignored -> processCreateAcls(ctx, requestBearer);
+            case AdminDeleteAclsRequest ignored -> processDeleteAcls(ctx, requestBearer);
+            case AdminCreatePartitionsRequest ignored -> processCreatePartitions(ctx, requestBearer);
+            case AdminDescribeProducersRequest ignored -> processDescribeProducers(ctx, requestBearer);
+            case AdminAbortTransactionRequest ignored -> processAbortTransaction(ctx, requestBearer);
+            case AdminListGroupsRequest ignored -> processListGroups(ctx, requestBearer);
+            case AdminDescribeClassicGroupRequest ignored -> processDescribeClassicGroup(ctx, requestBearer);
+            case AdminDescribeConsumerGroupRequest ignored -> processDescribeConsumerGroup(ctx, requestBearer);
+            case AdminDescribeShareGroupRequest ignored -> processDescribeShareGroup(ctx, requestBearer);
+            case AdminDescribeStreamsGroupRequest ignored -> processDescribeStreamsGroup(ctx, requestBearer);
+            case AdminListConsumerGroupOffsetsRequest ignored -> processListConsumerGroupOffsets(ctx, requestBearer);
+            case AdminAlterConsumerGroupOffsetsRequest ignored -> processAlterConsumerGroupOffsets(ctx, requestBearer);
+            case AdminDeleteConsumerGroupOffsetsRequest ignored -> processDeleteConsumerGroupOffsets(ctx, requestBearer);
+            case AdminRemoveMembersFromConsumerGroupRequest ignored -> processRemoveMembersFromConsumerGroup(ctx, requestBearer);
+            case AdminDeleteConsumerGroupRequest ignored -> processDeleteConsumerGroup(ctx, requestBearer);
+            case AdminDeleteConsumerGroupsRequest ignored -> processDeleteConsumerGroups(ctx, requestBearer);
+            case AdminDeleteShareGroupRequest ignored -> processDeleteShareGroup(ctx, requestBearer);
+            case AdminDeleteShareGroupsRequest ignored -> processDeleteShareGroups(ctx, requestBearer);
+            case AdminDeleteStreamsGroupRequest ignored -> processDeleteStreamsGroup(ctx, requestBearer);
+            case AdminDeleteStreamsGroupsRequest ignored -> processDeleteStreamsGroups(ctx, requestBearer);
+            case AdminListEarliestOffsetsRequest ignored -> processListEarliestOffsetsRequest(ctx, requestBearer);
+            case AdminListEarliestLocalOffsetsRequest ignored -> processListEarliestLocalOffsetsRequest(ctx, requestBearer);
+            case AdminListLatestOffsetsRequest ignored -> processListLatestOffsetsRequest(ctx, requestBearer);
+            case AdminListLatestTieredOffsetsRequest ignored -> processListLatestTieredOffsetsRequest(ctx, requestBearer);
+            case AdminListMaxTimestampOffsetsRequest ignored -> processListMaxTimestampOffsetsRequest(ctx, requestBearer);
+            case AdminListTimestampOffsetsRequest ignored -> processListTimestampOffsetsRequest(ctx, requestBearer);
+            default ->
+                    throw new RuntimeException("Unexpected admin request type: " + requestBearer.request().getClass().getName());
+        }
     }
 
     // region Management

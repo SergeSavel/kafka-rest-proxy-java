@@ -35,12 +35,38 @@ import pro.savel.kafka.common.exceptions.MethodNotAllowedException;
 import pro.savel.kafka.consumer.requests.*;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
 
 @ChannelHandler.Sharable
 public class ConsumerRequestDecoder extends ChannelInboundHandlerAdapter {
 
     public static final String URI_PREFIX = "/consumer";
     private static final Logger logger = LoggerFactory.getLogger(ConsumerRequestDecoder.class);
+
+    @SuppressWarnings("deprecation")
+    private static final Map<String, Class<? extends ConsumerRequest>> REQUEST_TYPES = Map.ofEntries(
+            Map.entry("/create", ConsumerCreateRequest.class),
+            Map.entry("/release", ConsumerReleaseRequest.class),
+            Map.entry("/touch", ConsumerTouchRequest.class),
+            Map.entry("/poll", ConsumerPollRequest.class),
+            Map.entry("/commit", ConsumerCommitRequest.class),
+            Map.entry("/seek", ConsumerSeekRequest.class),
+            Map.entry("/seek-to-beginning", ConsumerSeekToBeginningRequest.class),
+            Map.entry("/seek-to-end", ConsumerSeekToEndRequest.class),
+            Map.entry("/get-position", ConsumerGetPositionRequest.class),
+            Map.entry("/assign", ConsumerAssignRequest.class),
+            Map.entry("/get-assignment", ConsumerGetAssignmentRequest.class),
+            Map.entry("/subscribe", ConsumerSubscribeRequest.class),
+            Map.entry("/unsubscribe", ConsumerUnsubscribeRequest.class),
+            Map.entry("/get-subscription", ConsumerGetSubscriptionRequest.class),
+            Map.entry("/get-partitions", ConsumerGetPartitionsRequest.class),
+            Map.entry("/list-partitions", ConsumerListPartitionsRequest.class), // deprecated
+            Map.entry("/list-topics", ConsumerListTopicsRequest.class),
+            Map.entry("/get-group-metadata", ConsumerGetGroupMetadataRequest.class),
+            Map.entry("/get-committed", ConsumerGetCommittedRequest.class),
+            Map.entry("/get-beginning-offsets", ConsumerGetBeginningOffsetsRequest.class),
+            Map.entry("/get-end-offsets", ConsumerGetEndOffsetsRequest.class)
+    );
 
     private final ObjectMapper objectMapper;
     private final Validator validator;
@@ -78,185 +104,22 @@ public class ConsumerRequestDecoder extends ChannelInboundHandlerAdapter {
     private void decode(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
         var decoder = new QueryStringDecoder(httpRequest.uri(), StandardCharsets.UTF_8, true);
         var pathMethod = decoder.path().substring(URI_PREFIX.length());
-        switch (pathMethod) {
-            case "/poll" -> decodePoll(ctx, httpRequest);
-            case "/commit" -> decodeCommit(ctx, httpRequest);
-            case "/seek" -> decodeSeek(ctx, httpRequest);
-            case "/seek-to-beginning" -> decodeSeekToBeginning(ctx, httpRequest);
-            case "/seek-to-end" -> decodeSeekToEnd(ctx, httpRequest);
-            case "/get-position" -> decodeGetPosition(ctx, httpRequest);
-            case "/assign" -> decodeAssign(ctx, httpRequest);
-            case "/get-assignment" -> decodeGetAssignment(ctx, httpRequest);
-            case "/subscribe" -> decodeSubscribe(ctx, httpRequest);
-            case "/unsubscribe" -> decodeUnsubscribe(ctx, httpRequest);
-            case "/get-subscription" -> decodeGetSubscription(ctx, httpRequest);
-            case "/get-partitions" -> decodeGetPartitions(ctx, httpRequest);
-            case "/list-partitions" -> decodeListPartitions(ctx, httpRequest);
-            case "/list-topics" -> decodeListTopics(ctx, httpRequest);
-            case "/get-group-metadata" -> decodeGetGroupMetadata(ctx, httpRequest);
-            case "/get-committed" -> decodeGetCommitted(ctx, httpRequest);
-            case "/get-beginning-offsets" -> decodeGetBeginningOffsets(ctx, httpRequest);
-            case "/get-end-offsets" -> decodeGetEndOffsets(ctx, httpRequest);
-            case "/touch" -> decodeTouch(ctx, httpRequest);
-            case "/create" -> decodeCreate(ctx, httpRequest);
-            case "/release" -> decodeRelease(ctx, httpRequest);
-            case "" -> decodeList(ctx, httpRequest);
-            default -> HttpUtils.writeNotFoundAndClose(ctx);
-        }
-    }
-
-    private void decodeList(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws MethodNotAllowedException {
-        if (httpRequest.method() == HttpMethod.GET)
+        if (pathMethod.isEmpty()) {
+            requireMethod(httpRequest, HttpMethod.GET);
             decodeListRequest(ctx, httpRequest);
-        else
-            throw new MethodNotAllowedException("Unsupported HTTP method.");
+            return;
+        }
+        var requestType = REQUEST_TYPES.get(pathMethod);
+        if (requestType == null) {
+            HttpUtils.writeNotFoundAndClose(ctx);
+            return;
+        }
+        requireMethod(httpRequest, HttpMethod.POST);
+        decodeRequest(ctx, httpRequest, requestType);
     }
 
-    private void decodeCreate(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
-        if (httpRequest.method() == HttpMethod.POST)
-            decodeRequest(ctx, httpRequest, ConsumerCreateRequest.class);
-        else
-            throw new MethodNotAllowedException("Unsupported HTTP method.");
-    }
-
-    private void decodeRelease(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
-        if (httpRequest.method() == HttpMethod.POST)
-            decodeRequest(ctx, httpRequest, ConsumerReleaseRequest.class);
-        else
-            throw new MethodNotAllowedException("Unsupported HTTP method.");
-    }
-
-    private void decodeTouch(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
-        if (httpRequest.method() == HttpMethod.POST)
-            decodeRequest(ctx, httpRequest, ConsumerTouchRequest.class);
-        else
-            throw new MethodNotAllowedException("Unsupported HTTP method.");
-    }
-
-    private void decodeAssign(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
-        if (httpRequest.method() == HttpMethod.POST)
-            decodeRequest(ctx, httpRequest, ConsumerAssignRequest.class);
-        else
-            throw new MethodNotAllowedException("Unsupported HTTP method.");
-    }
-
-    private void decodeGetAssignment(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
-        if (httpRequest.method() == HttpMethod.POST)
-            decodeRequest(ctx, httpRequest, ConsumerGetAssignmentRequest.class);
-        else
-            throw new MethodNotAllowedException("Unsupported HTTP method.");
-    }
-
-    private void decodeSeek(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
-        if (httpRequest.method() == HttpMethod.POST)
-            decodeRequest(ctx, httpRequest, ConsumerSeekRequest.class);
-        else
-            throw new MethodNotAllowedException("Unsupported HTTP method.");
-    }
-
-    private void decodeSeekToBeginning(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
-        if (httpRequest.method() == HttpMethod.POST)
-            decodeRequest(ctx, httpRequest, ConsumerSeekToBeginningRequest.class);
-        else
-            throw new MethodNotAllowedException("Unsupported HTTP method.");
-    }
-
-    private void decodeSeekToEnd(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
-        if (httpRequest.method() == HttpMethod.POST)
-            decodeRequest(ctx, httpRequest, ConsumerSeekToEndRequest.class);
-        else
-            throw new MethodNotAllowedException("Unsupported HTTP method.");
-    }
-
-    private void decodeGetPosition(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
-        if (httpRequest.method() == HttpMethod.POST)
-            decodeRequest(ctx, httpRequest, ConsumerGetPositionRequest.class);
-        else
-            throw new MethodNotAllowedException("Unsupported HTTP method.");
-    }
-
-    private void decodeSubscribe(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
-        if (httpRequest.method() == HttpMethod.POST)
-            decodeRequest(ctx, httpRequest, ConsumerSubscribeRequest.class);
-        else
-            throw new MethodNotAllowedException("Unsupported HTTP method.");
-    }
-
-    private void decodeUnsubscribe(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
-        if (httpRequest.method() == HttpMethod.POST)
-            decodeRequest(ctx, httpRequest, ConsumerUnsubscribeRequest.class);
-        else
-            throw new MethodNotAllowedException("Unsupported HTTP method.");
-    }
-
-    private void decodeGetSubscription(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
-        if (httpRequest.method() == HttpMethod.POST)
-            decodeRequest(ctx, httpRequest, ConsumerGetSubscriptionRequest.class);
-        else
-            throw new MethodNotAllowedException("Unsupported HTTP method.");
-    }
-
-    private void decodeListTopics(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
-        if (httpRequest.method() == HttpMethod.POST)
-            decodeRequest(ctx, httpRequest, ConsumerListTopicsRequest.class);
-        else
-            throw new MethodNotAllowedException("Unsupported HTTP method.");
-    }
-
-    private void decodeGetPartitions(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
-        if (httpRequest.method() == HttpMethod.POST)
-            decodeRequest(ctx, httpRequest, ConsumerGetPartitionsRequest.class);
-        else
-            throw new MethodNotAllowedException("Unsupported HTTP method.");
-    }
-
-    @Deprecated
-    private void decodeListPartitions(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
-        if (httpRequest.method() == HttpMethod.POST)
-            decodeRequest(ctx, httpRequest, ConsumerListPartitionsRequest.class);
-        else
-            throw new MethodNotAllowedException("Unsupported HTTP method.");
-    }
-
-    private void decodeGetGroupMetadata(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
-        if (httpRequest.method() == HttpMethod.POST)
-            decodeRequest(ctx, httpRequest, ConsumerGetGroupMetadataRequest.class);
-        else
-            throw new MethodNotAllowedException("Unsupported HTTP method.");
-    }
-
-    private void decodeGetCommitted(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
-        if (httpRequest.method() == HttpMethod.POST)
-            decodeRequest(ctx, httpRequest, ConsumerGetCommittedRequest.class);
-        else
-            throw new MethodNotAllowedException("Unsupported HTTP method.");
-    }
-
-    private void decodeGetBeginningOffsets(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
-        if (httpRequest.method() == HttpMethod.POST)
-            decodeRequest(ctx, httpRequest, ConsumerGetBeginningOffsetsRequest.class);
-        else
-            throw new MethodNotAllowedException("Unsupported HTTP method.");
-    }
-
-    private void decodeGetEndOffsets(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
-        if (httpRequest.method() == HttpMethod.POST)
-            decodeRequest(ctx, httpRequest, ConsumerGetEndOffsetsRequest.class);
-        else
-            throw new MethodNotAllowedException("Unsupported HTTP method.");
-    }
-
-    private void decodePoll(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
-        if (httpRequest.method() == HttpMethod.POST)
-            decodeRequest(ctx, httpRequest, ConsumerPollRequest.class);
-        else
-            throw new MethodNotAllowedException("Unsupported HTTP method.");
-    }
-
-    private void decodeCommit(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
-        if (httpRequest.method() == HttpMethod.POST)
-            decodeRequest(ctx, httpRequest, ConsumerCommitRequest.class);
-        else
+    private static void requireMethod(FullHttpRequest httpRequest, HttpMethod method) throws MethodNotAllowedException {
+        if (httpRequest.method() != method)
             throw new MethodNotAllowedException("Unsupported HTTP method.");
     }
 

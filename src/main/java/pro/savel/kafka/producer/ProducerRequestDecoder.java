@@ -35,6 +35,7 @@ import pro.savel.kafka.common.exceptions.MethodNotAllowedException;
 import pro.savel.kafka.producer.requests.*;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
 
 @ChannelHandler.Sharable
 public class ProducerRequestDecoder extends ChannelInboundHandlerAdapter {
@@ -42,6 +43,16 @@ public class ProducerRequestDecoder extends ChannelInboundHandlerAdapter {
     private static final Logger logger = LoggerFactory.getLogger(ProducerRequestDecoder.class);
 
     public static final String URI_PREFIX = "/producer";
+
+    private static final Map<String, Class<? extends ProducerRequest>> REQUEST_TYPES = Map.of(
+            "/create", ProducerCreateRequest.class,
+            "/release", ProducerRemoveRequest.class,
+            "/touch", ProducerTouchRequest.class,
+            "/get-partitions", ProducerGetPartitionsRequest.class,
+            "/begin-transaction", ProducerBeginTransactionRequest.class,
+            "/commit-transaction", ProducerCommitTransactionRequest.class,
+            "/abort-transaction", ProducerAbortTransactionRequest.class
+    );
 
     private final ObjectMapper objectMapper;
     private final Validator validator;
@@ -79,85 +90,25 @@ public class ProducerRequestDecoder extends ChannelInboundHandlerAdapter {
     private void decode(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
         var decoder = new QueryStringDecoder(httpRequest.uri(), StandardCharsets.UTF_8, true);
         var pathMethod = decoder.path().substring(URI_PREFIX.length());
-        switch (pathMethod) {
-            case "/send" -> decodeSend(ctx, httpRequest);
-            case "/get-partitions" -> decodeGetPartitions(ctx, httpRequest);
-            case "/begin-transaction" -> decodeBeginTransaction(ctx, httpRequest);
-            case "/commit-transaction" -> decodeCommitTransaction(ctx, httpRequest);
-            case "/abort-transaction" -> decodeAbortTransaction(ctx, httpRequest);
-            case "/touch" -> decodeTouch(ctx, httpRequest);
-            case "/create" -> decodeCreate(ctx, httpRequest);
-            case "/release" -> decodeRemove(ctx, httpRequest);
-            case "" -> decodeList(ctx, httpRequest);
-            default -> HttpUtils.writeNotFoundAndClose(ctx);
-        }
-    }
-
-    private void decodeList(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws MethodNotAllowedException {
-        if (httpRequest.method() == HttpMethod.GET) {
+        if (pathMethod.isEmpty()) {
+            requireMethod(httpRequest, HttpMethod.GET);
             decodeListRequest(ctx, httpRequest);
-        } else {
-            throw new MethodNotAllowedException("Unsupported HTTP method.");
-        }
-    }
-
-    private void decodeCreate(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
-        if (httpRequest.method() == HttpMethod.POST) {
-            decodeRequest(ctx, httpRequest, ProducerCreateRequest.class);
-        } else {
-            throw new MethodNotAllowedException("Unsupported HTTP method.");
-        }
-    }
-
-    private void decodeRemove(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
-        if (httpRequest.method() == HttpMethod.POST) {
-            decodeRequest(ctx, httpRequest, ProducerRemoveRequest.class);
-        } else {
-            throw new MethodNotAllowedException("Unsupported HTTP method.");
-        }
-    }
-
-    private void decodeTouch(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
-        if (httpRequest.method() == HttpMethod.POST) {
-            decodeRequest(ctx, httpRequest, ProducerTouchRequest.class);
-        } else {
-            throw new MethodNotAllowedException("Unsupported HTTP method.");
-        }
-    }
-
-    private void decodeSend(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
-        if (httpRequest.method() == HttpMethod.POST) {
+        } else if ("/send".equals(pathMethod)) {
+            requireMethod(httpRequest, HttpMethod.POST);
             decodeSendRequest(ctx, httpRequest);
         } else {
-            throw new MethodNotAllowedException("Unsupported HTTP method.");
+            var requestType = REQUEST_TYPES.get(pathMethod);
+            if (requestType == null) {
+                HttpUtils.writeNotFoundAndClose(ctx);
+                return;
+            }
+            requireMethod(httpRequest, HttpMethod.POST);
+            decodeRequest(ctx, httpRequest, requestType);
         }
     }
 
-    private void decodeGetPartitions(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
-        if (httpRequest.method() == HttpMethod.POST)
-            decodeRequest(ctx, httpRequest, ProducerGetPartitionsRequest.class);
-        else
-            throw new MethodNotAllowedException("Unsupported HTTP method.");
-    }
-
-    private void decodeBeginTransaction(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
-        if (httpRequest.method() == HttpMethod.POST)
-            decodeRequest(ctx, httpRequest, ProducerBeginTransactionRequest.class);
-        else
-            throw new MethodNotAllowedException("Unsupported HTTP method.");
-    }
-
-    private void decodeCommitTransaction(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
-        if (httpRequest.method() == HttpMethod.POST)
-            decodeRequest(ctx, httpRequest, ProducerCommitTransactionRequest.class);
-        else
-            throw new MethodNotAllowedException("Unsupported HTTP method.");
-    }
-
-    private void decodeAbortTransaction(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws BadRequestException, MethodNotAllowedException {
-        if (httpRequest.method() == HttpMethod.POST)
-            decodeRequest(ctx, httpRequest, ProducerAbortTransactionRequest.class);
-        else
+    private static void requireMethod(FullHttpRequest httpRequest, HttpMethod method) throws MethodNotAllowedException {
+        if (httpRequest.method() != method)
             throw new MethodNotAllowedException("Unsupported HTTP method.");
     }
 

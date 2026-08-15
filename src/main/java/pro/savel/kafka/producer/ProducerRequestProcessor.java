@@ -38,27 +38,19 @@ public class ProducerRequestProcessor extends AbstractRequestProcessor {
 
     @Override
     protected void processRequest(ChannelHandlerContext ctx, RequestBearer requestBearer) {
-        var requestClass = requestBearer.request().getClass();
-        if (requestClass == ProducerSendRequest.class)
-            processSend(ctx, requestBearer);
-        else if (requestClass == ProducerGetPartitionsRequest.class)
-            processGetPartitions(ctx, requestBearer);
-        else if (requestClass == ProducerCreateRequest.class)
-            processCreate(ctx, requestBearer);
-        else if (requestClass == ProducerRemoveRequest.class)
-            processRemove(ctx, requestBearer);
-        else if (requestClass == ProducerTouchRequest.class)
-            processTouch(ctx, requestBearer);
-        else if (requestClass == ProducerBeginTransactionRequest.class)
-            processBeginTransaction(ctx, requestBearer);
-        else if (requestClass == ProducerCommitTransactionRequest.class)
-            processCommitTransaction(ctx, requestBearer);
-        else if (requestClass == ProducerAbortTransactionRequest.class)
-            processAbortTransaction(ctx, requestBearer);
-        else if (requestClass == ProducerListRequest.class)
-            processList(ctx, requestBearer);
-        else
-            throw new RuntimeException("Unexpected producer request type: " + requestClass.getName());
+        switch (requestBearer.request()) {
+            case ProducerSendRequest ignored -> processSend(ctx, requestBearer);
+            case ProducerGetPartitionsRequest ignored -> processGetPartitions(ctx, requestBearer);
+            case ProducerCreateRequest ignored -> processCreate(ctx, requestBearer);
+            case ProducerRemoveRequest ignored -> processRemove(ctx, requestBearer);
+            case ProducerTouchRequest ignored -> processTouch(ctx, requestBearer);
+            case ProducerBeginTransactionRequest ignored -> processBeginTransaction(ctx, requestBearer);
+            case ProducerCommitTransactionRequest ignored -> processCommitTransaction(ctx, requestBearer);
+            case ProducerAbortTransactionRequest ignored -> processAbortTransaction(ctx, requestBearer);
+            case ProducerListRequest ignored -> processList(ctx, requestBearer);
+            default ->
+                    throw new RuntimeException("Unexpected producer request type: " + requestBearer.request().getClass().getName());
+        }
     }
 
 //region Management

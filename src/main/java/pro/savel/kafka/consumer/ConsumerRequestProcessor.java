@@ -50,53 +50,32 @@ public class ConsumerRequestProcessor extends AbstractRequestProcessor {
     @SuppressWarnings("deprecation")
     @Override
     protected void processRequest(ChannelHandlerContext ctx, RequestBearer requestBearer) {
-        var requestClass = requestBearer.request().getClass();
-        if (requestClass == ConsumerPollRequest.class)
-            processPoll(ctx, requestBearer);
-        else if (requestClass == ConsumerCommitRequest.class)
-            processCommit(ctx, requestBearer);
-        else if (requestClass == ConsumerSeekRequest.class)
-            processSeek(ctx, requestBearer);
-        else if (requestClass == ConsumerSeekToBeginningRequest.class)
-            processSeekToBeginning(ctx, requestBearer);
-        else if (requestClass == ConsumerSeekToEndRequest.class)
-            processSeekToEnd(ctx, requestBearer);
-        else if (requestClass == ConsumerGetPartitionsRequest.class)
-            processGetPartitions(ctx, requestBearer);
-        else if (requestClass == ConsumerListPartitionsRequest.class)
-            processListPartitions(ctx, requestBearer);
-        else if (requestClass == ConsumerAssignRequest.class)
-            processAssign(ctx, requestBearer);
-        else if (requestClass == ConsumerSubscribeRequest.class)
-            processSubscribe(ctx, requestBearer);
-        else if (requestClass == ConsumerUnsubscribeRequest.class)
-            processUnsubscribe(ctx, requestBearer);
-        else if (requestClass == ConsumerGetGroupMetadataRequest.class)
-            processGetGroupMetadata(ctx, requestBearer);
-        else if (requestClass == ConsumerGetCommittedRequest.class)
-            processGetCommitted(ctx, requestBearer);
-        else if (requestClass == ConsumerGetBeginningOffsetsRequest.class)
-            processGetBeginningOffsets(ctx, requestBearer);
-        else if (requestClass == ConsumerGetEndOffsetsRequest.class)
-            processGetEndOffsets(ctx, requestBearer);
-        else if (requestClass == ConsumerListTopicsRequest.class)
-            processListTopics(ctx, requestBearer);
-        else if (requestClass == ConsumerGetPositionRequest.class)
-            processGetPosition(ctx, requestBearer);
-        else if (requestClass == ConsumerGetAssignmentRequest.class)
-            processGetAssignment(ctx, requestBearer);
-        else if (requestClass == ConsumerGetSubscriptionRequest.class)
-            processGetSubscription(ctx, requestBearer);
-        else if (requestClass == ConsumerCreateRequest.class)
-            processCreate(ctx, requestBearer);
-        else if (requestClass == ConsumerReleaseRequest.class)
-            processRemove(ctx, requestBearer);
-        else if (requestClass == ConsumerListRequest.class)
-            processList(ctx, requestBearer);
-        else if (requestClass == ConsumerTouchRequest.class)
-            processTouch(ctx, requestBearer);
-        else
-            throw new RuntimeException("Unexpected consumer request type: " + requestClass.getName());
+        switch (requestBearer.request()) {
+            case ConsumerPollRequest ignored -> processPoll(ctx, requestBearer);
+            case ConsumerCommitRequest ignored -> processCommit(ctx, requestBearer);
+            case ConsumerSeekRequest ignored -> processSeek(ctx, requestBearer);
+            case ConsumerSeekToBeginningRequest ignored -> processSeekToBeginning(ctx, requestBearer);
+            case ConsumerSeekToEndRequest ignored -> processSeekToEnd(ctx, requestBearer);
+            case ConsumerGetPartitionsRequest ignored -> processGetPartitions(ctx, requestBearer);
+            case ConsumerListPartitionsRequest ignored -> processListPartitions(ctx, requestBearer);
+            case ConsumerAssignRequest ignored -> processAssign(ctx, requestBearer);
+            case ConsumerSubscribeRequest ignored -> processSubscribe(ctx, requestBearer);
+            case ConsumerUnsubscribeRequest ignored -> processUnsubscribe(ctx, requestBearer);
+            case ConsumerGetGroupMetadataRequest ignored -> processGetGroupMetadata(ctx, requestBearer);
+            case ConsumerGetCommittedRequest ignored -> processGetCommitted(ctx, requestBearer);
+            case ConsumerGetBeginningOffsetsRequest ignored -> processGetBeginningOffsets(ctx, requestBearer);
+            case ConsumerGetEndOffsetsRequest ignored -> processGetEndOffsets(ctx, requestBearer);
+            case ConsumerListTopicsRequest ignored -> processListTopics(ctx, requestBearer);
+            case ConsumerGetPositionRequest ignored -> processGetPosition(ctx, requestBearer);
+            case ConsumerGetAssignmentRequest ignored -> processGetAssignment(ctx, requestBearer);
+            case ConsumerGetSubscriptionRequest ignored -> processGetSubscription(ctx, requestBearer);
+            case ConsumerCreateRequest ignored -> processCreate(ctx, requestBearer);
+            case ConsumerReleaseRequest ignored -> processRemove(ctx, requestBearer);
+            case ConsumerListRequest ignored -> processList(ctx, requestBearer);
+            case ConsumerTouchRequest ignored -> processTouch(ctx, requestBearer);
+            default ->
+                    throw new RuntimeException("Unexpected consumer request type: " + requestBearer.request().getClass().getName());
+        }
     }
 
     // region Management
