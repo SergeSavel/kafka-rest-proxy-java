@@ -122,7 +122,7 @@ public class ConsumerRequestProcessor extends AbstractRequestProcessor {
         var request = (ConsumerPollRequest) requestBearer.request();
         var consumer = getConsumer(request.getConsumerId(), request.getToken());
         execute(ctx, () -> {
-            var records = consumer.poll(Duration.ofMillis(request.getTimeout()));
+            var records = consumer.poll(Duration.ofMillis(request.resolveTimeoutMs()));
             var response = ConsumerPollResponse.of(records);
             return new ConsumerResponseBearer(requestBearer, HttpResponseStatus.OK, response);
         }, ctx::writeAndFlush);

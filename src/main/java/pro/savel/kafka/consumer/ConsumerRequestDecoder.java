@@ -153,8 +153,13 @@ public class ConsumerRequestDecoder extends ChannelInboundHandlerAdapter {
                 return;
             }
         }
-        if (request instanceof ConsumerPollRequest pollRequest && pollRequest.getTimeout() > maxPollTimeoutMs)
-            throw new BadRequestException("Poll timeout must not exceed " + maxPollTimeoutMs + " ms.");
+        if (request instanceof ConsumerPollRequest pollRequest) {
+            var timeoutMs = pollRequest.resolveTimeoutMs();
+            if (timeoutMs == null)
+                throw new BadRequestException("Poll timeout must be specified.");
+            if (timeoutMs > maxPollTimeoutMs)
+                throw new BadRequestException("Poll timeout must not exceed " + maxPollTimeoutMs + " ms.");
+        }
         passBearer(ctx, httpRequest, request);
     }
 }

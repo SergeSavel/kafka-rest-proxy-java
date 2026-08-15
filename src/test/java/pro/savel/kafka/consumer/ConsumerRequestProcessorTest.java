@@ -213,7 +213,7 @@ class ConsumerRequestProcessorTest {
         var request = new ConsumerPollRequest();
         request.setConsumerId(wrapper.getId());
         request.setToken(wrapper.getToken());
-        request.setTimeout(1000);
+        request.setTimeout(1000L);
 
         channel.writeInbound(bearer(request));
 

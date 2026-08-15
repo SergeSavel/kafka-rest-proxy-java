@@ -25,5 +25,19 @@ public class ConsumerPollRequest implements ConsumerRequest {
     @NotEmpty
     private String token;
     @PositiveOrZero
-    private long timeout;
+    private Long timeoutMs;
+    /**
+     * @deprecated Use {@link #timeoutMs} instead.
+     */
+    @Deprecated
+    @PositiveOrZero
+    private Long timeout;
+
+    /**
+     * The effective poll timeout: timeoutMs when present, otherwise the deprecated timeout.
+     * Null when neither is set.
+     */
+    public Long resolveTimeoutMs() {
+        return timeoutMs != null ? timeoutMs : timeout;
+    }
 }

@@ -104,10 +104,52 @@ class ConsumerRequestDecoderTest {
         strictChannel.finishAndReleaseAll();
     }
 
+    @Test
+    void decodePoll_timeoutMs_passesRequest() {
+        assertTrue(channel.writeInbound(pollRequestWithBody(
+                "{\"consumerId\":\"consumer-1\",\"token\":\"token-1\",\"timeoutMs\":1000}")));
+
+        RequestBearer bearer = channel.readInbound();
+        var request = (ConsumerPollRequest) bearer.request();
+        assertEquals(1000L, request.resolveTimeoutMs());
+    }
+
+    @Test
+    void decodePoll_timeoutMsAboveLimit_returnsBadRequest() {
+        assertFalse(channel.writeInbound(pollRequestWithBody(
+                "{\"consumerId\":\"consumer-1\",\"token\":\"token-1\",\"timeoutMs\":" + (LIMIT_MS + 1) + "}")));
+
+        FullHttpResponse response = channel.readOutbound();
+        assertEquals(HttpResponseStatus.BAD_REQUEST, response.status());
+        response.release();
+    }
+
+    @Test
+    void decodePoll_bothTimeoutFields_timeoutMsWins() {
+        assertTrue(channel.writeInbound(pollRequestWithBody(
+                "{\"consumerId\":\"consumer-1\",\"token\":\"token-1\",\"timeout\":5000,\"timeoutMs\":1000}")));
+
+        RequestBearer bearer = channel.readInbound();
+        var request = (ConsumerPollRequest) bearer.request();
+        assertEquals(1000L, request.resolveTimeoutMs());
+    }
+
+    @Test
+    void decodePoll_noTimeout_returnsBadRequest() {
+        assertFalse(channel.writeInbound(pollRequestWithBody(
+                "{\"consumerId\":\"consumer-1\",\"token\":\"token-1\"}")));
+
+        FullHttpResponse response = channel.readOutbound();
+        assertEquals(HttpResponseStatus.BAD_REQUEST, response.status());
+        response.release();
+    }
+
     private static FullHttpRequest pollRequest(long timeout) {
-        var body = Unpooled.copiedBuffer(
-                "{\"consumerId\":\"consumer-1\",\"token\":\"token-1\",\"timeout\":" + timeout + "}",
-                StandardCharsets.UTF_8);
+        return pollRequestWithBody("{\"consumerId\":\"consumer-1\",\"token\":\"token-1\",\"timeout\":" + timeout + "}");
+    }
+
+    private static FullHttpRequest pollRequestWithBody(String bodyJson) {
+        var body = Unpooled.copiedBuffer(bodyJson, StandardCharsets.UTF_8);
         var request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/consumer/poll", body);
         request.headers().set(HttpHeaderNames.CONTENT_TYPE, "application/json");
         request.headers().setInt(HttpHeaderNames.CONTENT_LENGTH, body.readableBytes());

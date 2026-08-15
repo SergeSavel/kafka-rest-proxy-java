@@ -1510,7 +1510,7 @@ paths:
             example:
               consumerId: 7c9e6679-7425-40de-944b-e07fc1f90ae7
               token: 1b4e28ba-2fa1-11d2-883f-0016d3cca427
-              timeout: 1000
+              timeoutMs: 1000
       responses:
         '200':
           description: Polled messages
@@ -3351,15 +3351,21 @@ components:
       allOf:
         - $ref: '#/components/schemas/ConsumerInstanceRef'
         - type: object
-          required: [timeout]
           properties:
-            timeout:
+            timeoutMs:
               type: integer
               format: int64
               minimum: 0
               description: |
                 Poll timeout in milliseconds. Capped at the gateway's netty.readTimeoutSeconds
                 (300000 ms by default); a larger value is rejected with 400.
+                Either timeoutMs or the deprecated timeout must be present.
+            timeout:
+              type: integer
+              format: int64
+              minimum: 0
+              deprecated: true
+              description: Deprecated, use timeoutMs.
 
     ConsumerPollStringResponse:
       type: array
