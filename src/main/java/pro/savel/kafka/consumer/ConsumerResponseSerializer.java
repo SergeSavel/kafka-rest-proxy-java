@@ -126,7 +126,7 @@ public class ConsumerResponseSerializer {
     }
 
     private static ByteBuf serializePollBinary(ByteBufAllocator allocator, ConsumerPollResponse response) {
-        var buf = allocator.buffer(calculatePollBinaryCapacity(response));
+        var buf = allocator.buffer(Math.toIntExact(calculatePollBinarySize(response)));
         try {
             buf.writeShort(1); //version
             buf.writeInt(response.size());
@@ -200,11 +200,11 @@ public class ConsumerResponseSerializer {
         buf.writeBytes(bytes);
     }
 
-    private static int calculatePollBinaryCapacity(ConsumerPollResponse response) {
+    static long calculatePollBinarySize(ConsumerPollResponse response) {
         long capacity = Short.BYTES + Integer.BYTES;
         for (var message : response)
             capacity += calculatePollBinaryMessageCapacity(message);
-        return Math.toIntExact(capacity);
+        return capacity;
     }
 
     private static int calculatePollBinaryMessageCapacity(ConsumerPollResponse.Message message) {

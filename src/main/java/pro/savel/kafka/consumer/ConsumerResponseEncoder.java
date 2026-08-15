@@ -100,8 +100,17 @@ public class ConsumerResponseEncoder extends ChannelOutboundHandlerAdapter {
                 objectMapper, pollResponse, bearer.getSerializeTo(), responseChunkBytes);
         var future = ctx.write(new HttpChunkedInput(input), promise.unvoid());
         future.addListener(result -> {
-            if (!result.isSuccess() || !bearer.isConnectionKeepAlive())
+            if (!result.isSuccess()) {
+                logger.error("Failed to write poll response.", result.cause());
                 ctx.close();
+            } else {
+                if (logger.isDebugEnabled() && bearer.getSerializeTo() == Serde.BINARY)
+                    logger.debug("Poll response written: {} messages, {} of {} bytes.",
+                            pollResponse.size(), input.progress(),
+                            ConsumerResponseSerializer.calculatePollBinarySize(pollResponse));
+                if (!bearer.isConnectionKeepAlive())
+                    ctx.close();
+            }
         });
     }
 
