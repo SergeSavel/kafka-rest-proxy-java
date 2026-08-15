@@ -18,6 +18,7 @@ import lombok.Getter;
 
 import java.time.Duration;
 import java.util.Properties;
+import java.util.concurrent.TimeUnit;
 
 @Getter
 public abstract class ClientWrapper implements AutoCloseable {
@@ -30,7 +31,10 @@ public abstract class ClientWrapper implements AutoCloseable {
     private final int expirationTimeout;
     private final String owner;
 
+    // expiresAt is wall clock for the list endpoints; the retirer decides by the monotonic
+    // deadline, so clock adjustments can neither expire instances early nor keep them alive.
     private volatile long expiresAt;
+    private volatile long deadlineNanos;
 
     protected ClientWrapper(String id, String name, Properties config, int expirationTimeout, String owner) {
         this.id = id;
@@ -43,6 +47,7 @@ public abstract class ClientWrapper implements AutoCloseable {
 
     public void touch() {
         expiresAt = System.currentTimeMillis() + expirationTimeout;
+        deadlineNanos = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(expirationTimeout);
     }
 
     @Override

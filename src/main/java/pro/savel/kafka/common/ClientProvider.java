@@ -96,10 +96,12 @@ public abstract class ClientProvider<Wrapper extends ClientWrapper> implements A
     }
 
     void retireClients() {
-        var currentTimestamp = System.currentTimeMillis();
+        var now = System.nanoTime();
         var clients = getItems();
         for (var client : clients) {
-            if (client.getExpiresAt() <= currentTimestamp && wrappers.remove(client.getId(), client)) {
+            // Subtraction, not a direct comparison: nanoTime has an arbitrary origin, so only
+            // differences between two readings are meaningful.
+            if (client.getDeadlineNanos() - now <= 0 && wrappers.remove(client.getId(), client)) {
                 closeInBackground(client);
                 logger.info("Removed expired {} with name '{}' and id '{}'.", client.getClass().getSimpleName(), client.getName(), client.getId());
             }
