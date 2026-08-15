@@ -46,7 +46,14 @@ if (-not $classPath) {
 # prunsrv grants the service user write access to --LogPath during install, so the directory must exist.
 New-Item -ItemType Directory -Force -Path $LogDir | Out-Null
 
-& $Prunsrv "//IS//$ServiceName" `
+# //IS// fails when the service already exists; update it instead, so re-running the script after
+# replacing the distribution refreshes the classpath (it bakes in the jar file names).
+$mode = "//IS//$ServiceName"
+if (Test-Path "HKLM:\SYSTEM\CurrentControlSet\Services\$ServiceName") {
+    $mode = "//US//$ServiceName"
+}
+
+& $Prunsrv $mode `
     --DisplayName="Kafka Gateway" `
     --Description="Kafka HTTP Gateway" `
     --Startup=auto `
@@ -61,7 +68,7 @@ New-Item -ItemType Directory -Force -Path $LogDir | Out-Null
     --LogPath="$LogDir"
 
 if ($LASTEXITCODE -eq 0) {
-    Write-Host "Service '$ServiceName' installed. Start it with: $Prunsrv //ES//$ServiceName"
+    Write-Host "Service '$ServiceName' configured. Start it with: $Prunsrv //ES//$ServiceName"
 }
 else {
     exit $LASTEXITCODE

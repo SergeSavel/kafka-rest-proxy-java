@@ -91,6 +91,9 @@ Run the provided script from an elevated prompt:
 powershell -ExecutionPolicy Bypass -File .\install-windows-service.ps1 -InstallDir C:\kafka-gateway
 ```
 
+To upgrade, replace the distribution files and re-run the script: it detects the existing service
+and updates it, refreshing the classpath (which bakes in the jar file names).
+
 Parameters:
 
 | Parameter           | Default                        | Description                                                                                    |
