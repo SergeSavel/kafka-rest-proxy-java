@@ -135,6 +135,30 @@ class ConsumerRequestDecoderTest {
     }
 
     @Test
+    void decodePoll_deprecatedTimeoutZero_isSpecifiedNotAbsent() {
+        // Zero is a legitimate non-blocking poll, and it is what a primitive-typed field would have
+        // conflated with "not set" - the deprecated field must still count as present.
+        assertTrue(channel.writeInbound(pollRequestWithBody(
+                "{\"consumerId\":\"consumer-1\",\"token\":\"token-1\",\"timeout\":0}")));
+
+        RequestBearer bearer = channel.readInbound();
+        var request = (ConsumerPollRequest) bearer.request();
+        assertEquals(0L, request.resolveTimeoutMs());
+    }
+
+    @Test
+    void decodePoll_timeoutMsZero_winsOverDeprecatedTimeout() {
+        // The other branch of the same rule: a zero timeoutMs must take precedence rather than be
+        // skipped as if unset, which would silently fall back to the deprecated field.
+        assertTrue(channel.writeInbound(pollRequestWithBody(
+                "{\"consumerId\":\"consumer-1\",\"token\":\"token-1\",\"timeout\":5000,\"timeoutMs\":0}")));
+
+        RequestBearer bearer = channel.readInbound();
+        var request = (ConsumerPollRequest) bearer.request();
+        assertEquals(0L, request.resolveTimeoutMs());
+    }
+
+    @Test
     void decodePoll_noTimeout_returnsBadRequest() {
         assertFalse(channel.writeInbound(pollRequestWithBody(
                 "{\"consumerId\":\"consumer-1\",\"token\":\"token-1\"}")));
