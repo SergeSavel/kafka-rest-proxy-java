@@ -3357,6 +3357,7 @@ components:
               type: integer
               format: int64
               minimum: 0
+              maximum: 300000
               description: Poll timeout in milliseconds
 
     ConsumerPollStringResponse:
