@@ -67,7 +67,7 @@ class ServerInitializer extends ChannelInitializer<SocketChannel> {
     private final BasicAuthenticationHandler basicAuthenticationHandler = new BasicAuthenticationHandler(objectMapper);
 
     private final ProducerRequestDecoder producerRequestDecoder = new ProducerRequestDecoder(objectMapper, validatorFactory);
-    private final ConsumerRequestDecoder consumerRequestDecoder = new ConsumerRequestDecoder(objectMapper, validatorFactory);
+    private final ConsumerRequestDecoder consumerRequestDecoder;
     private final AdminRequestDecoder adminRequestDecoder = new AdminRequestDecoder(objectMapper, validatorFactory);
     private final VersionRequestDecoder versionRequestDecoder = new VersionRequestDecoder();
     private final DefaultRequestDecoder defaultRequestDecoder = new DefaultRequestDecoder();
@@ -95,6 +95,7 @@ class ServerInitializer extends ChannelInitializer<SocketChannel> {
     ServerInitializer(ServerConfig config) {
         this.config = config;
         consumerResponseEncoder = new ConsumerResponseEncoder(objectMapper, config.responseChunkBytes());
+        consumerRequestDecoder = new ConsumerRequestDecoder(objectMapper, validatorFactory, config.readTimeoutSeconds());
     }
 
     public void initialize() {

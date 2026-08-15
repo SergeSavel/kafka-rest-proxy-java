@@ -3357,8 +3357,9 @@ components:
               type: integer
               format: int64
               minimum: 0
-              maximum: 300000
-              description: Poll timeout in milliseconds
+              description: |
+                Poll timeout in milliseconds. Capped at the gateway's netty.readTimeoutSeconds
+                (300000 ms by default); a larger value is rejected with 400.
 
     ConsumerPollStringResponse:
       type: array

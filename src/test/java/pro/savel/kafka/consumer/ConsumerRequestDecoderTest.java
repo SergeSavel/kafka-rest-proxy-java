@@ -42,10 +42,22 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ConsumerRequestDecoderTest {
 
+    private static final int READ_TIMEOUT_SECONDS = 300;
+    private static final long LIMIT_MS = READ_TIMEOUT_SECONDS * 1000L;
+
     private EmbeddedChannel channel;
 
     @BeforeEach
     void setUp() {
+        channel = new EmbeddedChannel(decoder(READ_TIMEOUT_SECONDS));
+    }
+
+    @AfterEach
+    void tearDown() {
+        channel.finishAndReleaseAll();
+    }
+
+    private static ConsumerRequestDecoder decoder(int maxPollTimeoutSeconds) {
         var objectMapper = new ObjectMapper()
                 .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, true)
                 .configure(DeserializationFeature.FAIL_ON_NULL_FOR_PRIMITIVES, true)
@@ -54,17 +66,12 @@ class ConsumerRequestDecoderTest {
                 .configure()
                 .messageInterpolator(new ParameterMessageInterpolator())
                 .buildValidatorFactory();
-        channel = new EmbeddedChannel(new ConsumerRequestDecoder(objectMapper, validatorFactory));
-    }
-
-    @AfterEach
-    void tearDown() {
-        channel.finishAndReleaseAll();
+        return new ConsumerRequestDecoder(objectMapper, validatorFactory, maxPollTimeoutSeconds);
     }
 
     @Test
     void decodePoll_timeoutAboveLimit_returnsBadRequest() {
-        assertFalse(channel.writeInbound(pollRequest(300_001)));
+        assertFalse(channel.writeInbound(pollRequest(LIMIT_MS + 1)));
 
         FullHttpResponse response = channel.readOutbound();
         assertEquals(HttpResponseStatus.BAD_REQUEST, response.status());
@@ -73,11 +80,28 @@ class ConsumerRequestDecoderTest {
 
     @Test
     void decodePoll_timeoutAtLimit_passesRequest() {
-        assertTrue(channel.writeInbound(pollRequest(300_000)));
+        assertTrue(channel.writeInbound(pollRequest(LIMIT_MS)));
 
         RequestBearer bearer = channel.readInbound();
         var request = (ConsumerPollRequest) bearer.request();
-        assertEquals(300_000, request.getTimeout());
+        assertEquals(LIMIT_MS, request.getTimeout());
+    }
+
+    @Test
+    void decodePoll_limitFollowsConfiguredReadTimeout() {
+        // A timeout the default limit would have accepted, rejected by a decoder built with a
+        // lower read timeout - so the bound really tracks the setting rather than a constant.
+        var strictChannel = new EmbeddedChannel(decoder(60));
+
+        assertTrue(strictChannel.writeInbound(pollRequest(60_000)));
+        RequestBearer accepted = strictChannel.readInbound();
+        assertEquals(60_000, ((ConsumerPollRequest) accepted.request()).getTimeout());
+
+        assertFalse(strictChannel.writeInbound(pollRequest(60_001)));
+        FullHttpResponse response = strictChannel.readOutbound();
+        assertEquals(HttpResponseStatus.BAD_REQUEST, response.status());
+        response.release();
+        strictChannel.finishAndReleaseAll();
     }
 
     private static FullHttpRequest pollRequest(long timeout) {

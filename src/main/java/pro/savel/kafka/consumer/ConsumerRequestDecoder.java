@@ -36,6 +36,7 @@ import pro.savel.kafka.consumer.requests.*;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 @ChannelHandler.Sharable
 public class ConsumerRequestDecoder extends ChannelInboundHandlerAdapter {
@@ -70,10 +71,20 @@ public class ConsumerRequestDecoder extends ChannelInboundHandlerAdapter {
 
     private final ObjectMapper objectMapper;
     private final Validator validator;
+    private final long maxPollTimeoutMs;
 
-    public ConsumerRequestDecoder(ObjectMapper objectMapper, ValidatorFactory validatorFactory) {
+    /**
+     * @param maxPollTimeoutSeconds the longest poll a client may request. Derived from the read
+     *                              timeout: a poll holds the connection with reading suspended, so
+     *                              ClientReadTimeoutHandler exempts it from that timeout, and this
+     *                              cap is what replaces the bound it would otherwise impose.
+     */
+    public ConsumerRequestDecoder(ObjectMapper objectMapper, ValidatorFactory validatorFactory, int maxPollTimeoutSeconds) {
+        if (maxPollTimeoutSeconds <= 0)
+            throw new IllegalArgumentException("maxPollTimeoutSeconds must be greater than 0");
         this.objectMapper = objectMapper;
         this.validator = validatorFactory == null ? null : validatorFactory.getValidator();
+        this.maxPollTimeoutMs = TimeUnit.SECONDS.toMillis(maxPollTimeoutSeconds);
     }
 
     @Override
@@ -142,6 +153,8 @@ public class ConsumerRequestDecoder extends ChannelInboundHandlerAdapter {
                 return;
             }
         }
+        if (request instanceof ConsumerPollRequest pollRequest && pollRequest.getTimeout() > maxPollTimeoutMs)
+            throw new BadRequestException("Poll timeout must not exceed " + maxPollTimeoutMs + " ms.");
         passBearer(ctx, httpRequest, request);
     }
 }

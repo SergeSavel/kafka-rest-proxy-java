@@ -14,7 +14,6 @@
 
 package pro.savel.kafka.consumer.requests;
 
-import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.PositiveOrZero;
 import lombok.Data;
@@ -26,6 +25,5 @@ public class ConsumerPollRequest implements ConsumerRequest {
     @NotEmpty
     private String token;
     @PositiveOrZero
-    @Max(300_000)
     private long timeout;
 }
