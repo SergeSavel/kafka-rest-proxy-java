@@ -945,7 +945,7 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
 
     /**
      * The common shape of an admin endpoint: map the completed Kafka result to a response and write
-     * it, or report the failure. A null response means an empty body.
+     * it or report the failure. A null response means an empty body.
      */
     private <T> void respondWith(KafkaFuture<T> future, ChannelHandlerContext ctx, RequestBearer requestBearer,
                                  HttpResponseStatus status, String action, Function<T, AdminResponse> mapper) {
