@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Kafka HTTP Gateway
-  version: 5.1.0
+  version: 5.1.1
   description: |
     HTTP gateway exposing Kafka Producer, Consumer and AdminClient APIs over HTTP.
 
@@ -99,7 +99,7 @@ paths:
             text/plain:
               schema:
                 type: string
-                example: '5.1.0'
+                example: '5.1.1'
         '400': {$ref: '#/components/responses/BadRequest'}
         '404': {$ref: '#/components/responses/NotFound'}
         '500': {$ref: '#/components/responses/InternalServerError'}

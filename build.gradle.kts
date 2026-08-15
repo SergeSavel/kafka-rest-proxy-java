@@ -8,7 +8,7 @@ plugins {
 val nettyVersion = "4.2.17.Final"
 
 group = "pro.savel.kafka"
-version = "5.1.0"
+version = "5.1.1"
 
 java {
     toolchain {
