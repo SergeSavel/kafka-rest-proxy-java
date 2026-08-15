@@ -21,7 +21,6 @@ import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpChunkedInput;
 import io.netty.handler.codec.http.HttpHeaderValues;
-import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.util.ReferenceCountUtil;
 import org.slf4j.Logger;
@@ -91,7 +90,10 @@ public class ConsumerResponseEncoder extends ChannelOutboundHandlerAdapter {
             httpResponse.headers().set(HttpUtils.ASCII_CONTENT_TYPE, HttpUtils.ASCII_APPLICATION_OCTET_STREAM);
         else
             throw new IllegalStateException("Unexpected serde: " + bearer.getSerializeTo());
-        HttpUtil.setTransferEncodingChunked(httpResponse, true);
+        // Canonical-case header names: Netty's own constants are lowercase, which an RFC-legal
+        // client accepts but a case-sensitive one does not. The encoder matches names
+        // case-insensitively, so the chunked framing still applies.
+        httpResponse.headers().set(HttpUtils.ASCII_TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
         if (!bearer.isConnectionKeepAlive())
             httpResponse.headers().set(HttpUtils.ASCII_CONNECTION, HttpHeaderValues.CLOSE);
 

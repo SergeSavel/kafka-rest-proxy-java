@@ -74,6 +74,12 @@ class ConsumerResponseEncoderTest {
 
         var headers = assertInstanceOf(HttpResponse.class, channel.readOutbound());
         assertTrue(HttpUtil.isTransferEncodingChunked(headers));
+        var canonicalTransferEncoding = false;
+        for (var header : headers.headers()) {
+            if ("chunked".contentEquals(header.getValue()) && "Transfer-Encoding".contentEquals(header.getKey()))
+                canonicalTransferEncoding = true;
+        }
+        assertTrue(canonicalTransferEncoding, "Transfer-Encoding must keep the canonical case for case-sensitive clients");
         assertFalse(headers.headers().contains(HttpHeaderNames.CONTENT_LENGTH));
 
         var body = Unpooled.buffer();

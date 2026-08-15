@@ -36,6 +36,7 @@ public abstract class HttpUtils {
     public static final AsciiString ASCII_CONTENT_TYPE = AsciiString.cached("Content-Type");
     public static final AsciiString ASCII_CONTENT_LENGTH = AsciiString.cached("Content-Length");
     public static final AsciiString ASCII_CONNECTION = AsciiString.cached("Connection");
+    public static final AsciiString ASCII_TRANSFER_ENCODING = AsciiString.cached("Transfer-Encoding");
     public static final AsciiString ASCII_APPLICATION_JSON_CHARSET_UTF8 = AsciiString.cached(APPLICATION_JSON_CHARSET_UTF8);
     public static final AsciiString ASCII_APPLICATION_OCTET_STREAM = AsciiString.cached(APPLICATION_OCTET_STREAM);
     public static final AsciiString ASCII_TEXT_PLAIN_CHARSET_UTF8 = AsciiString.cached(TEXT_PLAIN_CHARSET_UTF8);
