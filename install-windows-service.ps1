@@ -63,7 +63,7 @@ if (Test-Path "HKLM:\SYSTEM\CurrentControlSet\Services\$ServiceName") {
     --StopMode=jvm --StopClass=pro.savel.kafka.Application --StopMethod=stop `
     --StopTimeout=$StopTimeout `
     --StartPath="$WorkDir" `
-    "++JvmOptions=$JvmOpts" `
+    "--JvmOptions=$JvmOpts" `
     --StdOutput=auto --StdError=auto `
     --LogPath="$LogDir"
 
