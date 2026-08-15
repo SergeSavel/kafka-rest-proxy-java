@@ -50,9 +50,6 @@ public class ConsumerResponseEncoder extends ChannelOutboundHandlerAdapter {
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
         if (msg instanceof ConsumerResponseBearer bearer) {
             try {
-                if (logger.isDebugEnabled()) {
-                    logger.debug("Encoding consumer response.");
-                }
                 if (bearer.getResponse() instanceof ConsumerPollResponse pollResponse)
                     writePollResponse(ctx, bearer, pollResponse, promise);
                 else if (bearer.getResponse() != null && bearer.getSerializeTo() == Serde.BINARY) {
