@@ -6,7 +6,7 @@ Lightweight Kafka HTTP Gateway built on Netty — exposes Kafka Producer, Consum
 
 ```
 HTTP Request
-  → HttpServerCodec → HttpVersionHandler → ReadTimeoutHandler(300s) → WriteTimeoutHandler(300s)
+  → HttpServerCodec → HttpVersionHandler → ClientReadTimeoutHandler(300s) → WriteTimeoutHandler(300s)
   → JsonRequestSizeLimitHandler(4MB JSON)
   → HttpObjectAggregator(32MB)
   → HttpRequestFlowControlHandler (one active request per connection)
@@ -102,4 +102,5 @@ These are intentional design choices — do not flag as issues:
 - **Validation:** Jakarta Validation (`@NotEmpty`, `@NotNull`, `@Positive`) enforced via Hibernate Validator
 - **Logging:** SLF4J + Log4j2; root level WARN, `pro.savel` at INFO
 - **License:** Apache 2.0 header on all source files
-- **Tests:** JUnit 6 + Mockito; covers common (Utils, CommonErrors, RequestBearer, ClientProvider, mappers), serializers, exceptions, auth handler
+- **Tests:** JUnit 6 + Mockito; cover common utilities and mappers, serializers, exceptions, decoders, processors,
+  and pipeline handlers
