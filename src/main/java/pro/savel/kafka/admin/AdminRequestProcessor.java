@@ -51,6 +51,7 @@ import pro.savel.kafka.common.*;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 import java.util.stream.Collectors;
@@ -254,15 +255,8 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         if (request.getTimeoutMs() != null)
             options.timeoutMs(request.getTimeoutMs());
         var describeResult = admin.describeFeatures(options);
-        whenComplete(describeResult.featureMetadata(), ctx, (metadata, error) -> {
-            if (error == null) {
-                var response = AdminDescribeFeaturesResponse.of(metadata);
-                ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
-            } else if (!handleError(ctx, error)) {
-                logger.error("Unable to describe features.", error);
-                HttpUtils.writeInternalServerErrorAndClose(ctx, error.getMessage());
-            }
-        });
+        respondWith(describeResult.featureMetadata(), ctx, requestBearer, HttpResponseStatus.OK,
+                "describe features", AdminDescribeFeaturesResponse::of);
     }
 
     private void processDescribeLogDirs(ChannelHandlerContext ctx, RequestBearer requestBearer) {
@@ -273,15 +267,8 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         if (request.getTimeoutMs() != null)
             options.timeoutMs(request.getTimeoutMs());
         var describeResult = admin.describeLogDirs(brokers, options);
-        whenComplete(describeResult.allDescriptions(), ctx, (descriptions, error) -> {
-            if (error == null) {
-                var response = AdminDescribeLogDirsResponse.of(descriptions);
-                ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
-            } else if (!handleError(ctx, error)) {
-                logger.error("Unable to get log dir descriptions.", error);
-                HttpUtils.writeInternalServerErrorAndClose(ctx, error.getMessage());
-            }
-        });
+        respondWith(describeResult.allDescriptions(), ctx, requestBearer, HttpResponseStatus.OK,
+                "get log dir descriptions", AdminDescribeLogDirsResponse::of);
     }
 
     private void processUpdateFeature(ChannelHandlerContext ctx, RequestBearer requestBearer) {
@@ -303,14 +290,7 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
             options.timeoutMs(request.getTimeoutMs());
         var updateFeatures = Collections.singletonMap(request.getFeatureName(), featureUpdate);
         var updateResult = admin.updateFeatures(updateFeatures, options);
-        whenComplete(updateResult.all(), ctx, (ignore, error) -> {
-            if (error == null) {
-                ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, null));
-            } else if (!handleError(ctx, error)) {
-                logger.error("Unable to update feature.", error);
-                HttpUtils.writeInternalServerErrorAndClose(ctx, error.getMessage());
-            }
-        });
+        respondWith(updateResult.all(), ctx, requestBearer, HttpResponseStatus.OK, "update feature", ignore -> null);
     }
 
     // endregion
@@ -334,21 +314,14 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         if (request.getTimeoutMs() != null)
             options.timeoutMs(request.getTimeoutMs());
         var topicsResult = admin.listTopics(options);
-        whenComplete(topicsResult.listings(), ctx, (listings, error) -> {
-            if (error == null) {
-                var filtered = listings;
-                if (pattern != null) {
-                    filtered = listings.stream()
+        respondWith(topicsResult.listings(), ctx, requestBearer, HttpResponseStatus.OK, "get topic listings",
+                listings -> {
+                    if (pattern == null)
+                        return AdminListTopicsResponse.of(listings);
+                    return AdminListTopicsResponse.of(listings.stream()
                             .filter(t -> pattern.matcher(t.name()).matches())
-                            .toList();
-                }
-                var response = AdminListTopicsResponse.of(filtered);
-                ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
-            } else if (!handleError(ctx, error)) {
-                logger.error("Unable to get topic listings.", error);
-                HttpUtils.writeInternalServerErrorAndClose(ctx, error.getMessage());
-            }
-        });
+                            .toList());
+                });
     }
 
     private void processDescribeTopic(ChannelHandlerContext ctx, RequestBearer requestBearer) {
@@ -372,22 +345,9 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         var describeResult = admin.describeTopics(topicCollection, options);
         KafkaFuture<? extends Map<?, TopicDescription>> descriptions =
                 request.getTopicId() != null ? describeResult.allTopicIds() : describeResult.allTopicNames();
-        whenComplete(descriptions, ctx, (topicDescriptions, error) -> {
-            if (error == null) {
-                if (topicDescriptions.isEmpty()) {
-                    HttpUtils.writeNotFoundAndClose(ctx, "Topic not found.");
-                    return;
-                }
-                for (TopicDescription topicDescription : topicDescriptions.values()) {
-                    var response = AdminDescribeTopicResponse.of(topicDescription);
-                    ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
-                    break;
-                }
-            } else if (!handleError(ctx, error)) {
-                logger.error("Unable to get topic description.", error);
-                HttpUtils.writeInternalServerErrorAndClose(ctx, error.getMessage());
-            }
-        });
+        respondWithOrNotFound(descriptions, ctx, requestBearer, "get topic description", "Topic not found.",
+                topicDescriptions -> topicDescriptions.isEmpty() ? null
+                        : AdminDescribeTopicResponse.of(topicDescriptions.values().iterator().next()));
     }
 
     private void processCreateTopic(ChannelHandlerContext ctx, RequestBearer requestBearer) {
@@ -459,14 +419,7 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         if (request.getTimeoutMs() != null)
             options.timeoutMs(request.getTimeoutMs());
         var deleteResult = admin.deleteTopics(topics, options);
-        whenComplete(deleteResult.all(), ctx, (ignore, error) -> {
-            if (error == null)
-                ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null));
-            else if (!handleError(ctx, error)) {
-                logger.error("Unable to delete topic.", error);
-                HttpUtils.writeInternalServerErrorAndClose(ctx, error.getMessage());
-            }
-        });
+        respondWith(deleteResult.all(), ctx, requestBearer, HttpResponseStatus.NO_CONTENT, "delete topic", ignore -> null);
     }
 
     private void processDeleteTopics(ChannelHandlerContext ctx, RequestBearer requestBearer) {
@@ -504,15 +457,8 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
             options.timeoutMs(request.getTimeoutMs());
         var records = Collections.singletonMap(topicPartition, RecordsToDelete.beforeOffset(request.getBeforeOffset()));
         var deleteResult = admin.deleteRecords(records, options);
-        whenComplete(deleteResult.lowWatermarks().get(topicPartition), ctx, (deleted, error) -> {
-            if (error == null) {
-                var response = AdminDeleteRecordsResponse.of(deleted);
-                ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
-            } else if (!handleError(ctx, error)) {
-                logger.error("Unable to delete records.", error);
-                HttpUtils.writeInternalServerErrorAndClose(ctx, error.getMessage());
-            }
-        });
+        respondWith(deleteResult.lowWatermarks().get(topicPartition), ctx, requestBearer, HttpResponseStatus.OK,
+                "delete records", AdminDeleteRecordsResponse::of);
     }
 
     private void processCreatePartitions(ChannelHandlerContext ctx, RequestBearer requestBearer) {
@@ -523,14 +469,7 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         if (request.getTimeoutMs() != null)
             options.timeoutMs(request.getTimeoutMs());
         var createResult = admin.createPartitions(Collections.singletonMap(request.getTopicName(), newPartitions), options);
-        whenComplete(createResult.all(), ctx, (topics, error) -> {
-            if (error == null)
-                ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null));
-            else if (!handleError(ctx, error)) {
-                logger.error("Unable to create partitions.", error);
-                HttpUtils.writeInternalServerErrorAndClose(ctx, error.getMessage());
-            }
-        });
+        respondWith(createResult.all(), ctx, requestBearer, HttpResponseStatus.NO_CONTENT, "create partitions", ignore -> null);
     }
 
     // endregion
@@ -564,21 +503,9 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         if (timeoutMs != null)
             options.timeoutMs(timeoutMs);
         var describeResult = admin.describeConfigs(Collections.singleton(resource), options);
-        whenComplete(describeResult.all(), ctx, (configs, error) -> {
-            if (error == null) {
-                if (configs.isEmpty()) {
-                    HttpUtils.writeNotFoundAndClose(ctx, notFoundMessage);
-                    return;
-                }
-                configs.values().forEach(config -> {
-                    AdminConfigResponse response = AdminConfigResponse.of(config);
-                    ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
-                });
-            } else if (!handleError(ctx, error)) {
-                logger.error("Unable to describe configs.", error);
-                HttpUtils.writeInternalServerErrorAndClose(ctx, error.getMessage());
-            }
-        });
+        respondWithOrNotFound(describeResult.all(), ctx, requestBearer, "describe configs", notFoundMessage,
+                configs -> configs.isEmpty() ? null
+                        : AdminConfigResponse.of(configs.values().iterator().next()));
     }
 
     private void processAlterTopicConfig(ChannelHandlerContext ctx, RequestBearer requestBearer) {
@@ -631,15 +558,7 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         if (timeoutMs != null)
             options.timeoutMs(timeoutMs);
         var alterConfigsResult = admin.incrementalAlterConfigs(configs, options);
-        whenComplete(alterConfigsResult.all(), ctx, (ignore, error) -> {
-            if (error == null) {
-                var responseBearer = new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, null);
-                ctx.writeAndFlush(responseBearer);
-            } else if (!handleError(ctx, error)) {
-                logger.error("Unable to alter config.", error);
-                HttpUtils.writeInternalServerErrorAndClose(ctx, error.getMessage());
-            }
-        });
+        respondWith(alterConfigsResult.all(), ctx, requestBearer, HttpResponseStatus.OK, "alter config", ignore -> null);
     }
 
     // endregion
@@ -653,15 +572,8 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         if (request.getTimeoutMs() != null)
             options.timeoutMs(request.getTimeoutMs());
         var describeResult = admin.describeUserScramCredentials(request.getUsers(), options);
-        whenComplete(describeResult.all(), ctx, (descriptions, error) -> {
-            if (error == null) {
-                var response = AdminDescribeUserScramCredentialsResponse.of(descriptions);
-                ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
-            } else if (!handleError(ctx, error)) {
-                logger.error("Unable to describe user SCRAM credentials.", error);
-                HttpUtils.writeInternalServerErrorAndClose(ctx, error.getMessage());
-            }
-        });
+        respondWith(describeResult.all(), ctx, requestBearer, HttpResponseStatus.OK,
+                "describe user SCRAM credentials", AdminDescribeUserScramCredentialsResponse::of);
     }
 
     private void processUpsertUserScramCredentials(ChannelHandlerContext ctx, RequestBearer requestBearer) {
@@ -689,15 +601,8 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         if (timeoutMs != null)
             options.timeoutMs(timeoutMs);
         var alterationResult = admin.alterUserScramCredentials(Collections.singletonList(alteration), options);
-        whenComplete(alterationResult.all(), ctx, (ignore, error) -> {
-            if (error == null) {
-                var responseBearer = new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, null);
-                ctx.writeAndFlush(responseBearer);
-            } else if (!handleError(ctx, error)) {
-                logger.error("Unable to alter user SCRAM credentials.", error);
-                HttpUtils.writeInternalServerErrorAndClose(ctx, error.getMessage());
-            }
-        });
+        respondWith(alterationResult.all(), ctx, requestBearer, HttpResponseStatus.OK,
+                "alter user SCRAM credentials", ignore -> null);
     }
 
     // endregion
@@ -712,15 +617,8 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         if (request.getTimeoutMs() != null)
             options.timeoutMs(request.getTimeoutMs());
         var describeResult = admin.describeAcls(filter, options);
-        whenComplete(describeResult.values(), ctx, (aclBindings, error) -> {
-            if (error == null) {
-                var response = AdminDescribeAclsResponse.of(aclBindings);
-                ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
-            } else if (!handleError(ctx, error)) {
-                logger.error("Unable to describe ACLs.", error);
-                HttpUtils.writeInternalServerErrorAndClose(ctx, error.getMessage());
-            }
-        });
+        respondWith(describeResult.values(), ctx, requestBearer, HttpResponseStatus.OK,
+                "describe ACLs", AdminDescribeAclsResponse::of);
     }
 
     private void processCreateAcls(ChannelHandlerContext ctx, RequestBearer requestBearer) {
@@ -731,14 +629,7 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         if (request.getTimeoutMs() != null)
             options.timeoutMs(request.getTimeoutMs());
         var createAclsResult = admin.createAcls(acls, options);
-        whenComplete(createAclsResult.all(), ctx, (ignore, error) -> {
-            if (error == null)
-                ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null));
-            else if (!handleError(ctx, error)) {
-                logger.error("Unable to create ACLs.", error);
-                HttpUtils.writeInternalServerErrorAndClose(ctx, error.getMessage());
-            }
-        });
+        respondWith(createAclsResult.all(), ctx, requestBearer, HttpResponseStatus.NO_CONTENT, "create ACLs", ignore -> null);
     }
 
     private void processDeleteAcls(ChannelHandlerContext ctx, RequestBearer requestBearer) {
@@ -749,14 +640,7 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         if (request.getTimeoutMs() != null)
             options.timeoutMs(request.getTimeoutMs());
         var createAclsResult = admin.deleteAcls(filters, options);
-        whenComplete(createAclsResult.all(), ctx, (ignore, error) -> {
-            if (error == null)
-                ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null));
-            else if (!handleError(ctx, error)) {
-                logger.error("Unable to delete ACLs.", error);
-                HttpUtils.writeInternalServerErrorAndClose(ctx, error.getMessage());
-            }
-        });
+        respondWith(createAclsResult.all(), ctx, requestBearer, HttpResponseStatus.NO_CONTENT, "delete ACLs", ignore -> null);
     }
 
     // endregion
@@ -771,15 +655,8 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         if (request.getTimeoutMs() != null)
             options.timeoutMs(request.getTimeoutMs());
         var describeResult = admin.describeProducers(partitions, options);
-        whenComplete(describeResult.all(), ctx, (producerStates, error) -> {
-            if (error == null) {
-                var response = AdminDescribeProducersResponse.of(producerStates);
-                ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
-            } else if (!handleError(ctx, error)) {
-                logger.error("Unable to describe producers.", error);
-                HttpUtils.writeInternalServerErrorAndClose(ctx, error.getMessage());
-            }
-        });
+        respondWith(describeResult.all(), ctx, requestBearer, HttpResponseStatus.OK,
+                "describe producers", AdminDescribeProducersResponse::of);
     }
 
     private void processAbortTransaction(ChannelHandlerContext ctx, RequestBearer requestBearer) {
@@ -790,14 +667,8 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         var options = new AbortTransactionOptions();
         if (request.getTimeoutMs() != null)
             options.timeoutMs(request.getTimeoutMs());
-        whenComplete(admin.abortTransaction(spec, options).all(), ctx, (ignore, error) -> {
-            if (error == null)
-                ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null));
-            else if (!handleError(ctx, error)) {
-                logger.error("Unable to abort transaction.", error);
-                HttpUtils.writeInternalServerErrorAndClose(ctx, error.getMessage());
-            }
-        });
+        respondWith(admin.abortTransaction(spec, options).all(), ctx, requestBearer, HttpResponseStatus.NO_CONTENT,
+                "abort transaction", ignore -> null);
     }
 
     // endregion
@@ -839,15 +710,8 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         if (request.getTimeoutMs() != null)
             options = options.timeoutMs(request.getTimeoutMs());
         var listGroupsResult = admin.listGroups(options);
-        whenComplete(listGroupsResult.all(), ctx, (groupListings, error) -> {
-            if (error == null) {
-                var response = AdminListGroupsResponse.of(groupListings);
-                ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
-            } else if (!handleError(ctx, error)) {
-                logger.error("Unable to get group listings.", error);
-                HttpUtils.writeInternalServerErrorAndClose(ctx, error.getMessage());
-            }
-        });
+        respondWith(listGroupsResult.all(), ctx, requestBearer, HttpResponseStatus.OK,
+                "get group listings", AdminListGroupsResponse::of);
     }
 
     private void processDescribeClassicGroup(ChannelHandlerContext ctx, RequestBearer requestBearer) {
@@ -860,22 +724,10 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
             options = options.timeoutMs(request.getTimeoutMs());
         var groupIds = Collections.singleton(request.getGroupId());
         var describeResult = admin.describeClassicGroups(groupIds, options);
-        whenComplete(describeResult.all(), ctx, (classicGroupDescriptions, error) -> {
-            if (error == null) {
-                if (classicGroupDescriptions.isEmpty()) {
-                    HttpUtils.writeNotFoundAndClose(ctx, "Classic group not found.");
-                    return;
-                }
-                for (var classicGroupDescription : classicGroupDescriptions.values()) {
-                    var response = AdminDescribeClassicGroupResponse.of(classicGroupDescription);
-                    ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
-                    break;
-                }
-            } else if (!handleError(ctx, error)) {
-                logger.error("Unable to get classic group description.", error);
-                HttpUtils.writeInternalServerErrorAndClose(ctx, error.getMessage());
-            }
-        });
+        respondWithOrNotFound(describeResult.all(), ctx, requestBearer, "get classic group description",
+                "Classic group not found.",
+                descriptions -> descriptions.isEmpty() ? null
+                        : AdminDescribeClassicGroupResponse.of(descriptions.values().iterator().next()));
     }
 
     private void processDescribeConsumerGroup(ChannelHandlerContext ctx, RequestBearer requestBearer) {
@@ -888,22 +740,10 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
             options = options.timeoutMs(request.getTimeoutMs());
         var groupIds = Collections.singleton(request.getGroupId());
         var describeResult = admin.describeConsumerGroups(groupIds, options);
-        whenComplete(describeResult.all(), ctx, (consumerGroupDescriptions, error) -> {
-            if (error == null) {
-                if (consumerGroupDescriptions.isEmpty()) {
-                    HttpUtils.writeNotFoundAndClose(ctx, "Consumer group not found.");
-                    return;
-                }
-                for (var consumerGroupDescription : consumerGroupDescriptions.values()) {
-                    var response = AdminDescribeConsumerGroupResponse.of(consumerGroupDescription);
-                    ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
-                    break;
-                }
-            } else if (!handleError(ctx, error)) {
-                logger.error("Unable to get consumer group description.", error);
-                HttpUtils.writeInternalServerErrorAndClose(ctx, error.getMessage());
-            }
-        });
+        respondWithOrNotFound(describeResult.all(), ctx, requestBearer, "get consumer group description",
+                "Consumer group not found.",
+                descriptions -> descriptions.isEmpty() ? null
+                        : AdminDescribeConsumerGroupResponse.of(descriptions.values().iterator().next()));
     }
 
     private void processDescribeShareGroup(ChannelHandlerContext ctx, RequestBearer requestBearer) {
@@ -916,22 +756,10 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
             options = options.timeoutMs(request.getTimeoutMs());
         var groupIds = Collections.singleton(request.getGroupId());
         var describeResult = admin.describeShareGroups(groupIds, options);
-        whenComplete(describeResult.all(), ctx, (shareGroupDescriptions, error) -> {
-            if (error == null) {
-                if (shareGroupDescriptions.isEmpty()) {
-                    HttpUtils.writeNotFoundAndClose(ctx, "Share group not found.");
-                    return;
-                }
-                for (var shareGroupDescription : shareGroupDescriptions.values()) {
-                    var response = AdminDescribeShareGroupResponse.of(shareGroupDescription);
-                    ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
-                    break;
-                }
-            } else if (!handleError(ctx, error)) {
-                logger.error("Unable to get share group description.", error);
-                HttpUtils.writeInternalServerErrorAndClose(ctx, error.getMessage());
-            }
-        });
+        respondWithOrNotFound(describeResult.all(), ctx, requestBearer, "get share group description",
+                "Share group not found.",
+                descriptions -> descriptions.isEmpty() ? null
+                        : AdminDescribeShareGroupResponse.of(descriptions.values().iterator().next()));
     }
 
     private void processDescribeStreamsGroup(ChannelHandlerContext ctx, RequestBearer requestBearer) {
@@ -944,22 +772,10 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
             options = options.timeoutMs(request.getTimeoutMs());
         var groupIds = Collections.singleton(request.getGroupId());
         var describeResult = admin.describeStreamsGroups(groupIds, options);
-        whenComplete(describeResult.all(), ctx, (streamsGroupDescriptions, error) -> {
-            if (error == null) {
-                if (streamsGroupDescriptions.isEmpty()) {
-                    HttpUtils.writeNotFoundAndClose(ctx, "Streams group not found.");
-                    return;
-                }
-                for (var streamsGroupDescription : streamsGroupDescriptions.values()) {
-                    var response = AdminDescribeStreamsGroupResponse.of(streamsGroupDescription);
-                    ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
-                    break;
-                }
-            } else if (!handleError(ctx, error)) {
-                logger.error("Unable to get streams group description.", error);
-                HttpUtils.writeInternalServerErrorAndClose(ctx, error.getMessage());
-            }
-        });
+        respondWithOrNotFound(describeResult.all(), ctx, requestBearer, "get streams group description",
+                "Streams group not found.",
+                descriptions -> descriptions.isEmpty() ? null
+                        : AdminDescribeStreamsGroupResponse.of(descriptions.values().iterator().next()));
     }
 
     private void processListConsumerGroupOffsets(ChannelHandlerContext ctx, RequestBearer requestBearer) {
@@ -972,22 +788,10 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         if (request.getTimeoutMs() != null)
             options = options.timeoutMs(request.getTimeoutMs());
         var listResult = admin.listConsumerGroupOffsets(groupId, options);
-        whenComplete(listResult.all(), ctx, (offsets, error) -> {
-            if (error == null) {
-                if (offsets.isEmpty()) {
-                    HttpUtils.writeNotFoundAndClose(ctx, "Consumer group not found.");
-                    return;
-                }
-                for (var consumerGroupOffsets : offsets.values()) {
-                    var response = AdminListConsumerGroupOffsetsResponse.of(consumerGroupOffsets);
-                    ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
-                    break;
-                }
-            } else if (!handleError(ctx, error)) {
-                logger.error("Unable to list consumer group offsets.", error);
-                HttpUtils.writeInternalServerErrorAndClose(ctx, error.getMessage());
-            }
-        });
+        respondWithOrNotFound(listResult.all(), ctx, requestBearer, "list consumer group offsets",
+                "Consumer group not found.",
+                offsets -> offsets.isEmpty() ? null
+                        : AdminListConsumerGroupOffsetsResponse.of(offsets.values().iterator().next()));
     }
 
     private void processAlterConsumerGroupOffsets(ChannelHandlerContext ctx, RequestBearer requestBearer) {
@@ -999,14 +803,8 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         if (request.getTimeoutMs() != null)
             options.timeoutMs(request.getTimeoutMs());
         var alterResult = admin.alterConsumerGroupOffsets(groupId, offsets, options);
-        whenComplete(alterResult.all(), ctx, (ignore, error) -> {
-            if (error == null)
-                ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null));
-            else if (!handleError(ctx, error)) {
-                logger.error("Unable to alter consumer group offsets.", error);
-                HttpUtils.writeInternalServerErrorAndClose(ctx, error.getMessage());
-            }
-        });
+        respondWith(alterResult.all(), ctx, requestBearer, HttpResponseStatus.NO_CONTENT,
+                "alter consumer group offsets", ignore -> null);
     }
 
     private void processDeleteConsumerGroupOffsets(ChannelHandlerContext ctx, RequestBearer requestBearer) {
@@ -1018,14 +816,8 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         if (request.getTimeoutMs() != null)
             options.timeoutMs(request.getTimeoutMs());
         var deleteResult = admin.deleteConsumerGroupOffsets(groupId, partitions, options);
-        whenComplete(deleteResult.all(), ctx, (ignore, error) -> {
-            if (error == null)
-                ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null));
-            else if (!handleError(ctx, error)) {
-                logger.error("Unable to delete consumer group offsets.", error);
-                HttpUtils.writeInternalServerErrorAndClose(ctx, error.getMessage());
-            }
-        });
+        respondWith(deleteResult.all(), ctx, requestBearer, HttpResponseStatus.NO_CONTENT,
+                "delete consumer group offsets", ignore -> null);
     }
 
     private void processRemoveMembersFromConsumerGroup(ChannelHandlerContext ctx, RequestBearer requestBearer) {
@@ -1047,14 +839,8 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         if (request.getTimeoutMs() != null)
             options.timeoutMs(request.getTimeoutMs());
         var removeResult = admin.removeMembersFromConsumerGroup(groupId, options);
-        whenComplete(removeResult.all(), ctx, (ignore, error) -> {
-            if (error == null)
-                ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null));
-            else if (!handleError(ctx, error)) {
-                logger.error("Unable to remove members from consumer group.", error);
-                HttpUtils.writeInternalServerErrorAndClose(ctx, error.getMessage());
-            }
-        });
+        respondWith(removeResult.all(), ctx, requestBearer, HttpResponseStatus.NO_CONTENT,
+                "remove members from consumer group", ignore -> null);
     }
 
     private void processDeleteConsumerGroup(ChannelHandlerContext ctx, RequestBearer requestBearer) {
@@ -1065,14 +851,8 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         if (request.getTimeoutMs() != null)
             options.timeoutMs(request.getTimeoutMs());
         var deleteResult = admin.deleteConsumerGroups(groupIds, options);
-        whenComplete(deleteResult.all(), ctx, (ignore, error) -> {
-            if (error == null)
-                ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null));
-            else if (!handleError(ctx, error)) {
-                logger.error("Unable to delete consumer group.", error);
-                HttpUtils.writeInternalServerErrorAndClose(ctx, error.getMessage());
-            }
-        });
+        respondWith(deleteResult.all(), ctx, requestBearer, HttpResponseStatus.NO_CONTENT,
+                "delete consumer group", ignore -> null);
     }
 
     private void processDeleteConsumerGroups(ChannelHandlerContext ctx, RequestBearer requestBearer) {
@@ -1083,14 +863,8 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         if (request.getTimeoutMs() != null)
             options.timeoutMs(request.getTimeoutMs());
         var deleteResult = admin.deleteConsumerGroups(groupIds, options);
-        whenComplete(deleteResult.all(), ctx, (ignore, error) -> {
-            if (error == null)
-                ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null));
-            else if (!handleError(ctx, error)) {
-                logger.error("Unable to delete consumer groups.", error);
-                HttpUtils.writeInternalServerErrorAndClose(ctx, error.getMessage());
-            }
-        });
+        respondWith(deleteResult.all(), ctx, requestBearer, HttpResponseStatus.NO_CONTENT,
+                "delete consumer groups", ignore -> null);
     }
 
     private void processDeleteShareGroup(ChannelHandlerContext ctx, RequestBearer requestBearer) {
@@ -1101,14 +875,8 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         if (request.getTimeoutMs() != null)
             options.timeoutMs(request.getTimeoutMs());
         var deleteResult = admin.deleteShareGroups(groupIds, options);
-        whenComplete(deleteResult.all(), ctx, (ignore, error) -> {
-            if (error == null)
-                ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null));
-            else if (!handleError(ctx, error)) {
-                logger.error("Unable to delete share group.", error);
-                HttpUtils.writeInternalServerErrorAndClose(ctx, error.getMessage());
-            }
-        });
+        respondWith(deleteResult.all(), ctx, requestBearer, HttpResponseStatus.NO_CONTENT,
+                "delete share group", ignore -> null);
     }
 
     private void processDeleteShareGroups(ChannelHandlerContext ctx, RequestBearer requestBearer) {
@@ -1119,14 +887,8 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         if (request.getTimeoutMs() != null)
             options.timeoutMs(request.getTimeoutMs());
         var deleteResult = admin.deleteShareGroups(groupIds, options);
-        whenComplete(deleteResult.all(), ctx, (ignore, error) -> {
-            if (error == null)
-                ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null));
-            else if (!handleError(ctx, error)) {
-                logger.error("Unable to delete share groups.", error);
-                HttpUtils.writeInternalServerErrorAndClose(ctx, error.getMessage());
-            }
-        });
+        respondWith(deleteResult.all(), ctx, requestBearer, HttpResponseStatus.NO_CONTENT,
+                "delete share groups", ignore -> null);
     }
 
     private void processDeleteStreamsGroup(ChannelHandlerContext ctx, RequestBearer requestBearer) {
@@ -1137,14 +899,8 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         if (request.getTimeoutMs() != null)
             options.timeoutMs(request.getTimeoutMs());
         var deleteResult = admin.deleteStreamsGroups(groupIds, options);
-        whenComplete(deleteResult.all(), ctx, (ignore, error) -> {
-            if (error == null)
-                ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null));
-            else if (!handleError(ctx, error)) {
-                logger.error("Unable to delete streams group.", error);
-                HttpUtils.writeInternalServerErrorAndClose(ctx, error.getMessage());
-            }
-        });
+        respondWith(deleteResult.all(), ctx, requestBearer, HttpResponseStatus.NO_CONTENT,
+                "delete streams group", ignore -> null);
     }
 
     private void processDeleteStreamsGroups(ChannelHandlerContext ctx, RequestBearer requestBearer) {
@@ -1155,14 +911,8 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         if (request.getTimeoutMs() != null)
             options.timeoutMs(request.getTimeoutMs());
         var deleteResult = admin.deleteStreamsGroups(groupIds, options);
-        whenComplete(deleteResult.all(), ctx, (ignore, error) -> {
-            if (error == null)
-                ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.NO_CONTENT, null));
-            else if (!handleError(ctx, error)) {
-                logger.error("Unable to delete streams groups.", error);
-                HttpUtils.writeInternalServerErrorAndClose(ctx, error.getMessage());
-            }
-        });
+        respondWith(deleteResult.all(), ctx, requestBearer, HttpResponseStatus.NO_CONTENT,
+                "delete streams groups", ignore -> null);
     }
 
     // endregion
@@ -1219,15 +969,8 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
         if (request.getTimeoutMs() != null)
             options = options.timeoutMs(request.getTimeoutMs());
         var listOffsetsResult = admin.listOffsets(topicPartitionOffsets, options);
-        whenComplete(listOffsetsResult.all(), ctx, (offsets, error) -> {
-            if (error == null) {
-                var response = AdminListOffsetsResponse.of(offsets);
-                ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
-            } else if (!handleError(ctx, error)) {
-                logger.error("Unable to list offsets.", error);
-                HttpUtils.writeInternalServerErrorAndClose(ctx, error.getMessage());
-            }
-        });
+        respondWith(listOffsetsResult.all(), ctx, requestBearer, HttpResponseStatus.OK,
+                "list offsets", AdminListOffsetsResponse::of);
     }
 
     // endregion
@@ -1249,6 +992,45 @@ public class AdminRequestProcessor extends AbstractRequestProcessor {
 
     private <T> void whenComplete(CompletableFuture<T> future, ChannelHandlerContext ctx, Completion<T> completion) {
         future.whenComplete((result, error) -> ensureResponse(ctx, () -> completion.complete(result, error)));
+    }
+
+    /**
+     * The common shape of an admin endpoint: map the completed Kafka result to a response and write
+     * it, or report the failure. A null response means an empty body.
+     */
+    private <T> void respondWith(KafkaFuture<T> future, ChannelHandlerContext ctx, RequestBearer requestBearer,
+                                 HttpResponseStatus status, String action, Function<T, AdminResponse> mapper) {
+        whenComplete(future, ctx, (result, error) -> {
+            if (error == null)
+                ctx.writeAndFlush(new AdminResponseBearer(requestBearer, status, mapper.apply(result)));
+            else
+                handleCompletionError(ctx, action, error);
+        });
+    }
+
+    /**
+     * Same as {@link #respondWith} for the single-entity describes: a null response means the entity
+     * is not there, answered with 404.
+     */
+    private <T> void respondWithOrNotFound(KafkaFuture<T> future, ChannelHandlerContext ctx, RequestBearer requestBearer,
+                                           String action, String notFoundMessage, Function<T, AdminResponse> mapper) {
+        whenComplete(future, ctx, (result, error) -> {
+            if (error == null) {
+                var response = mapper.apply(result);
+                if (response == null)
+                    HttpUtils.writeNotFoundAndClose(ctx, notFoundMessage);
+                else
+                    ctx.writeAndFlush(new AdminResponseBearer(requestBearer, HttpResponseStatus.OK, response));
+            } else
+                handleCompletionError(ctx, action, error);
+        });
+    }
+
+    private void handleCompletionError(ChannelHandlerContext ctx, String action, Throwable error) {
+        if (!handleError(ctx, error)) {
+            logger.error("Unable to {}.", action, error);
+            HttpUtils.writeInternalServerErrorAndClose(ctx, error.getMessage());
+        }
     }
 
     @FunctionalInterface
